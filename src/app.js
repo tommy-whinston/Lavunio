@@ -75,7 +75,14 @@ const S = {
   publisherLoaded: false,
   publisherLoading: false,
   publisherUpload: null,
-  publisherReleaseMode: null
+  publisherReleaseMode: null,
+  moderationQueue: [],
+  moderationModes: [],
+  moderationHistory: [],
+  moderationLoaded: false,
+  moderationLoading: false,
+  moderationTab: 'queue',
+  moderationNoteAction: null
 };
 
 const els = {
@@ -96,6 +103,7 @@ const els = {
   storeView: $('store-view'),
   libraryView: $('library-view'),
   publisherView: $('publisher-view'),
+  moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
   libraryStatTotal: $('library-stat-total'),
@@ -190,6 +198,7 @@ async function init() {
   bindSettings();
   bindAccountModal();
   bindPublisher();
+  bindModeration();
   bindUpdateModal();
 
   if (api && api.onGameEvent) api.onGameEvent(onGameEvent);
@@ -431,17 +440,22 @@ function bindSidebar() {
 
 function showSection(section) {
   if (section === 'publisher' && !publisherAllowed()) section = 'store';
-  S.section = section === 'library' || section === 'publisher' ? section : 'store';
+  if (section === 'moderation' && !moderatorAllowed()) section = 'store';
+  S.section = section === 'library' || section === 'publisher' || section === 'moderation' ? section : 'store';
   S.view = S.section;
   els.storeView.hidden = S.section !== 'store';
   els.libraryView.hidden = S.section !== 'library';
   if (els.publisherView) els.publisherView.hidden = S.section !== 'publisher';
+  if (els.moderationView) els.moderationView.hidden = S.section !== 'moderation';
   els.detailView.hidden = true;
   updateSidebar();
   if (S.section === 'library') renderLibrary();
   else if (S.section === 'publisher') {
     renderPublisher();
     loadPublisher();
+  } else if (S.section === 'moderation') {
+    renderModeration();
+    loadModeration();
   } else renderStore();
   requestAnimationFrame(() => {
     $('app').scrollTop = 0;
@@ -453,11 +467,13 @@ function updateSidebar() {
     btn.classList.toggle('active', btn.dataset.section === S.section);
   });
   updatePublisherNav();
+  updateModerationNav();
 }
 
 function renderCurrentSection() {
   if (S.section === 'library') renderLibrary();
   else if (S.section === 'publisher') renderPublisher();
+  else if (S.section === 'moderation') renderModeration();
   else renderStore();
 }
 
@@ -1307,6 +1323,7 @@ function openDetail(id) {
   els.storeView.hidden = true;
   els.libraryView.hidden = true;
   if (els.publisherView) els.publisherView.hidden = true;
+  if (els.moderationView) els.moderationView.hidden = true;
   els.detailView.hidden = false;
   S.view = 'detail';
   els.detailBackLabel.textContent = S.detailFrom === 'library' ? 'Назад в библиотеку' : 'Назад в каталог';
@@ -1973,6 +1990,7 @@ function renderLavunioPane() {
     if (error) error.hidden = true;
   }
   updatePublisherNav();
+  updateModerationNav();
 }
 
 async function submitLavunioForm() {
@@ -2326,6 +2344,31 @@ function updatePublisherNav() {
     if (els.storeView) els.storeView.hidden = false;
     if (els.libraryView) els.libraryView.hidden = true;
     if (els.publisherView) els.publisherView.hidden = true;
+    if (els.moderationView) els.moderationView.hidden = true;
+    if (els.detailView) els.detailView.hidden = true;
+    document.querySelectorAll('.side-link').forEach((link) => {
+      link.classList.toggle('active', link.dataset.section === 'store');
+    });
+    renderStore();
+  }
+}
+
+function moderatorAllowed() {
+  const user = S.lavunio && S.lavunio.user;
+  return !!(S.lavunio && S.lavunio.configured && user && (user.role === 'moderator' || user.role === 'admin'));
+}
+
+function updateModerationNav() {
+  const allowed = moderatorAllowed();
+  const button = $('side-moderator');
+  if (button) button.hidden = !allowed;
+  if (!allowed && S.section === 'moderation') {
+    S.section = 'store';
+    S.view = 'store';
+    if (els.storeView) els.storeView.hidden = false;
+    if (els.libraryView) els.libraryView.hidden = true;
+    if (els.publisherView) els.publisherView.hidden = true;
+    if (els.moderationView) els.moderationView.hidden = true;
     if (els.detailView) els.detailView.hidden = true;
     document.querySelectorAll('.side-link').forEach((link) => {
       link.classList.toggle('active', link.dataset.section === 'store');
@@ -2549,6 +2592,9 @@ function publisherReleaseCard(mode, release) {
   const uploadedAction = uploading
     ? '<span class="pub-uploading">Загрузка…</span>'
     : '';
+  const rejectionHtml = release.rejectionNote
+    ? `<div class="mod-reject-note">Причина отклонения: ${escapeHtml(release.rejectionNote)}</div>`
+    : '';
 
   let actions = '';
   if (release.status === 'draft') {
@@ -2575,6 +2621,7 @@ function publisherReleaseCard(mode, release) {
       </div>
       <div class="hint">${archiveHtml}</div>
       ${changelogHtml}
+      ${rejectionHtml}
       <div class="pub-release-actions">${actions}</div>
     </div>
   `;
@@ -2744,4 +2791,271 @@ function updatePublisherProgress(upload) {
   if (stage) stage.textContent = upload.stage || 'Загрузка';
   if (percent) percent.textContent = `${Math.round(upload.percent || 0)}%`;
   if (bar) bar.style.width = `${Math.max(0, Math.min(100, upload.percent || 0))}%`;
+}
+
+// ---------------------------------------------------------------- модерация
+
+const MODERATION_ACTIONS = {
+  approve: 'Одобрил релиз',
+  reject: 'Отклонил релиз',
+  hide: 'Скрыл режим',
+  unhide: 'Показал режим'
+};
+
+function bindModeration() {
+  const refresh = $('moderation-refresh');
+  if (refresh) refresh.onclick = () => loadModeration(true);
+
+  document.querySelectorAll('[data-mod-tab]').forEach((tab) => {
+    tab.onclick = () => setModerationTab(tab.getAttribute('data-mod-tab'));
+  });
+
+  const form = $('moderation-note-form');
+  if (form) form.onsubmit = (event) => {
+    event.preventDefault();
+    submitModerationNote();
+  };
+
+  const content = $('moderation-content');
+  if (content) content.onclick = (event) => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const action = button.dataset.action;
+    const id = button.dataset.id;
+    const title = button.dataset.title || '';
+    if (action === 'approve') approveModerationRelease(id, title);
+    else if (action === 'reject') openModerationNote('reject', id, title);
+    else if (action === 'hide') openModerationNote('hide', id, title);
+    else if (action === 'unhide') unhideModerationMode(id, title);
+  };
+
+  updateModerationNav();
+}
+
+function setModerationTab(tab) {
+  S.moderationTab = ['queue', 'modes', 'history'].includes(tab) ? tab : 'queue';
+  renderModeration();
+}
+
+async function loadModeration(force = false) {
+  if (!moderatorAllowed()) {
+    updateModerationNav();
+    return;
+  }
+  if (S.moderationLoading) return;
+  if (S.moderationLoaded && !force) {
+    renderModeration();
+    return;
+  }
+
+  S.moderationLoading = true;
+  renderModeration();
+  try {
+    const [queue, modes, history] = await Promise.all([
+      api.adminQueue(),
+      api.adminModes(),
+      api.adminHistory()
+    ]);
+    S.moderationQueue = Array.isArray(queue) ? queue : [];
+    S.moderationModes = Array.isArray(modes) ? modes : [];
+    S.moderationHistory = Array.isArray(history) ? history : [];
+    S.moderationLoaded = true;
+  } catch (err) {
+    toast('Не удалось загрузить модерацию: ' + err, 'error');
+  } finally {
+    S.moderationLoading = false;
+    renderModeration();
+  }
+}
+
+function renderModeration() {
+  if (!els.moderationView || !moderatorAllowed()) return;
+
+  const pending = S.moderationQueue.length;
+  const hidden = S.moderationModes.filter((mode) => mode.status === 'hidden').length;
+  const statPending = $('moderation-stat-pending');
+  const statHidden = $('moderation-stat-hidden');
+  if (statPending) statPending.textContent = String(pending);
+  if (statHidden) statHidden.textContent = String(hidden);
+
+  document.querySelectorAll('[data-mod-tab]').forEach((tab) => {
+    tab.classList.toggle('active', tab.getAttribute('data-mod-tab') === S.moderationTab);
+  });
+
+  const content = $('moderation-content');
+  if (!content) return;
+  if (S.moderationLoading && !S.moderationLoaded) {
+    content.innerHTML = '<div class="mod-empty">Загрузка модерации…</div>';
+    return;
+  }
+
+  if (S.moderationTab === 'modes') {
+    content.innerHTML = moderationModesHtml();
+  } else if (S.moderationTab === 'history') {
+    content.innerHTML = moderationHistoryHtml();
+  } else {
+    content.innerHTML = moderationQueueHtml();
+  }
+}
+
+function moderationQueueHtml() {
+  const items = S.moderationQueue || [];
+  if (!items.length) {
+    return '<div class="mod-empty">Очередь пуста. Новые релизы появятся здесь после отправки автором.</div>';
+  }
+  return items.map((item) => `
+    <article class="pub-card">
+      <div class="pub-card-head">
+        <div>
+          <div class="pub-title">${escapeHtml(item.modeTitle)}</div>
+          <div class="pub-sub">${escapeHtml(item.modeSlug)} · релиз ${escapeHtml(item.version)}</div>
+        </div>
+        <span class="pub-status pending">На модерации</span>
+      </div>
+      <div class="pub-meta">
+        <span>Автор: ${escapeHtml(item.authorName)} (@${escapeHtml(item.authorUsername)})</span>
+        <span>Отправлен ${escapeHtml(publisherDate(item.createdAt))}</span>
+      </div>
+      <div class="mod-changelog">${escapeHtml(item.changelog || 'Без changelog')}</div>
+      <div class="pub-release-actions">
+        <button class="btn btn-primary" type="button" data-action="approve" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">Одобрить</button>
+        <button class="btn btn-ghost" type="button" data-action="reject" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">Отклонить</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+function moderationModesHtml() {
+  const modes = S.moderationModes || [];
+  if (!modes.length) {
+    return '<div class="mod-empty">Режимов пока нет.</div>';
+  }
+  return modes.map((mode) => {
+    const status = PUBLISHER_STATUS[mode.status] || mode.status;
+    const action = mode.status === 'hidden'
+      ? `<button class="btn btn-primary" type="button" data-action="unhide" data-id="${escapeHtml(mode.id)}" data-title="${escapeHtml(mode.title)}">Показать</button>`
+      : `<button class="btn btn-ghost" type="button" data-action="hide" data-id="${escapeHtml(mode.id)}" data-title="${escapeHtml(mode.title)}">Скрыть</button>`;
+    return `
+      <article class="pub-card">
+        <div class="pub-card-head">
+          <div>
+            <div class="pub-title">${escapeHtml(mode.title)}</div>
+            <div class="pub-sub">${escapeHtml(mode.slug)}</div>
+          </div>
+          <span class="pub-status ${escapeHtml(mode.status)}">${escapeHtml(status)}</span>
+        </div>
+        <div class="pub-meta">
+          <span>Автор: ${escapeHtml(mode.authorName)} (@${escapeHtml(mode.authorUsername)})</span>
+          <span>Обновлён ${escapeHtml(publisherDate(mode.updatedAt))}</span>
+        </div>
+        <div class="pub-release-actions">${action}</div>
+      </article>
+    `;
+  }).join('');
+}
+
+function moderationHistoryHtml() {
+  const items = S.moderationHistory || [];
+  if (!items.length) {
+    return '<div class="mod-empty">Журнал пока пуст.</div>';
+  }
+  return items.map((item) => {
+    const action = MODERATION_ACTIONS[item.action] || item.action;
+    const target = item.targetType === 'mode'
+      ? `режим ${String(item.targetId).slice(0, 8)}`
+      : `релиз ${String(item.targetId).slice(0, 8)}`;
+    return `
+      <div class="mod-history-row">
+        <span class="mod-history-action">${escapeHtml(action)}</span>
+        <span class="mod-history-moderator">${escapeHtml(item.moderatorName)}</span>
+        <span class="mod-history-note">${escapeHtml(item.note || target)}</span>
+        <span class="mod-history-date">${escapeHtml(publisherDate(item.createdAt))}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function openModerationNote(kind, id, title) {
+  S.moderationNoteAction = { kind, id };
+  const reject = kind === 'reject';
+  $('moderation-note-title').textContent = reject ? 'Отклонить релиз' : 'Скрыть режим';
+  $('moderation-note-hint').textContent = reject
+    ? `Релиз «${title}» будет отклонён. Автор увидит причину.`
+    : `Режим «${title}» исчезнет из каталога.`;
+  $('moderation-note-text').value = '';
+  $('moderation-note-error').hidden = true;
+  $('moderation-note-submit').textContent = reject ? 'Отклонить' : 'Скрыть';
+  openModal('modal-moderation-note');
+  setTimeout(() => $('moderation-note-text').focus(), 50);
+}
+
+async function submitModerationNote() {
+  const action = S.moderationNoteAction;
+  if (!action) return;
+  const note = $('moderation-note-text').value.trim();
+  const error = $('moderation-note-error');
+  if (!note) {
+    error.textContent = 'Укажи причину';
+    error.hidden = false;
+    return;
+  }
+
+  const button = $('moderation-note-submit');
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    if (action.kind === 'reject') {
+      await api.adminReject(action.id, note);
+      toast('Релиз отклонён', 'ok');
+    } else {
+      await api.adminHideMode(action.id, note);
+      toast('Режим скрыт', 'ok');
+    }
+    $('modal-moderation-note').hidden = true;
+    S.moderationNoteAction = null;
+    S.moderationLoaded = false;
+    S.publisherLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось выполнить действие');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function approveModerationRelease(id, title) {
+  const ok = await askConfirm(
+    'Одобрить релиз?',
+    `«${title || 'Релиз'}» появится в каталоге после одобрения.`,
+    'Одобрить'
+  );
+  if (!ok) return;
+  try {
+    await api.adminApprove(id);
+    toast('Релиз опубликован', 'ok');
+    S.moderationLoaded = false;
+    S.publisherLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    toast('Не удалось одобрить релиз: ' + err, 'error');
+  }
+}
+
+async function unhideModerationMode(id, title) {
+  const ok = await askConfirm(
+    'Показать режим?',
+    `«${title || 'Режим'}» снова появится в каталоге.`,
+    'Показать'
+  );
+  if (!ok) return;
+  try {
+    await api.adminUnhideMode(id);
+    toast('Режим снова в каталоге', 'ok');
+    S.moderationLoaded = false;
+    S.publisherLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    toast('Не удалось показать режим: ' + err, 'error');
+  }
 }

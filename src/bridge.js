@@ -62,6 +62,15 @@
     publisherUploadBuild: (modeId, releaseId, version, source) => invoke("publisher_upload_build", { modeId, releaseId, version, source }),
     onPublisherProgress: (cb) => listen("publisher:progress", (e) => cb(e.payload)),
 
+    // модерация
+    adminQueue: () => invoke("admin_queue"),
+    adminModes: () => invoke("admin_modes"),
+    adminHistory: () => invoke("admin_history"),
+    adminApprove: (releaseId) => invoke("admin_approve", { releaseId }),
+    adminReject: (releaseId, note) => invoke("admin_reject", { releaseId, note }),
+    adminHideMode: (modeId, note) => invoke("admin_hide_mode", { modeId, note }),
+    adminUnhideMode: (modeId) => invoke("admin_unhide_mode", { modeId }),
+
     // игра
     install: (modeId) => invoke("game_install", { modeId }),
     play: (modeId) => invoke("game_play", { modeId }),

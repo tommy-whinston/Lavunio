@@ -2193,3 +2193,57 @@ body::before {
 @media (max-width: 640px) {
   .pub-grid { grid-template-columns: 1fr; }
 }
+
+/* ---- Модерация ---- */
+.mod-tabs { margin: 18px 0 16px; }
+.moderation-list { display: flex; flex-direction: column; gap: 12px; }
+.mod-changelog {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.mod-reject-note {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: rgba(255, 92, 108, 0.1);
+  border: 1px solid rgba(255, 92, 108, 0.3);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.mod-history-row {
+  display: grid;
+  grid-template-columns: 140px 120px minmax(0, 1fr) 150px;
+  gap: 12px;
+  align-items: start;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.mod-history-action { font-weight: 700; color: var(--accent-2); }
+.mod-history-moderator { color: var(--muted); }
+.mod-history-note { color: var(--text); line-height: 1.4; }
+.mod-history-date { color: var(--muted-2); text-align: right; font-size: 11px; }
+.mod-empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+@media (max-width: 760px) {
+  .mod-history-row { grid-template-columns: 1fr; gap: 4px; }
+  .mod-history-date { text-align: left; }
+}

@@ -610,6 +610,71 @@ pub async fn publisher_submit(
 }
 
 #[tauri::command]
+pub async fn admin_queue(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/admin/moderation/queue".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_modes(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(state.inner(), "GET", "/v1/admin/modes".to_string(), None).await
+}
+
+#[tauri::command]
+pub async fn admin_history(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/admin/moderation/history?limit=100".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_approve(
+    state: State<'_, AppState>,
+    release_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/moderation/{release_id}/approve");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn admin_reject(
+    state: State<'_, AppState>,
+    release_id: String,
+    note: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/moderation/{release_id}/reject");
+    publisher_request(state.inner(), "POST", path, Some(json!({ "note": note }))).await
+}
+
+#[tauri::command]
+pub async fn admin_hide_mode(
+    state: State<'_, AppState>,
+    mode_id: String,
+    note: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/modes/{mode_id}/hide");
+    publisher_request(state.inner(), "POST", path, Some(json!({ "note": note }))).await
+}
+
+#[tauri::command]
+pub async fn admin_unhide_mode(
+    state: State<'_, AppState>,
+    mode_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/modes/{mode_id}/unhide");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
 pub async fn publisher_pick_folder() -> Result<Option<String>, String> {
     let picked = blocking(|| rfd::FileDialog::new().pick_folder()).await?;
     Ok(picked.map(|path| path_string(&path)))
