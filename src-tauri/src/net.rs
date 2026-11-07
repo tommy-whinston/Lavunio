@@ -106,6 +106,40 @@ fn get_json(url: &str, token: Option<&str>) -> Result<Value, String> {
     Ok(data)
 }
 
+pub fn api_request_json(
+    api_base: &str,
+    method: &str,
+    path: &str,
+    token: Option<&str>,
+    body: Option<Value>,
+) -> Result<Value, String> {
+    let url = format!("{}{}", api_base.trim_end_matches('/'), path);
+    let method = reqwest::Method::from_bytes(method.as_bytes())
+        .map_err(|_| "Некорректный HTTP-метод".to_string())?;
+    let mut req = client()
+        .request(method, &url)
+        .header(ACCEPT, "application/json");
+    if let Some(token) = token.filter(|value| !value.trim().is_empty()) {
+        req = req.header(AUTHORIZATION, format!("Bearer {}", token.trim()));
+    }
+    if let Some(body) = body {
+        req = req.json(&body);
+    }
+    let res = req
+        .send()
+        .map_err(|e| format!("Нет связи с Lavunio API: {}", format_error(e)))?;
+    let status = res.status();
+    let data: Value = res.json().unwrap_or_else(|_| Value::Null);
+    if !status.is_success() {
+        let message = data
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("Ошибка Lavunio API");
+        return Err(message.to_string());
+    }
+    Ok(data)
+}
+
 /// Читает modes.json из настроенного источника. Сначала catalogUrl, затем GitHub как резерв.
 pub fn fetch_remote_modes(
     repo: &str,

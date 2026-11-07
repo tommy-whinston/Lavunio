@@ -409,25 +409,77 @@
 
   <!-- Аккаунт -->
   <div class="modal-overlay" id="modal-account" hidden role="dialog" aria-modal="true" aria-labelledby="account-title">
-    <div class="modal">
+    <div class="modal modal-account">
       <div class="modal-head">
         <h2 id="account-title">Аккаунт</h2>
         <button class="modal-close" data-close="modal-account">✕</button>
       </div>
 
-      <div id="acc-current" class="acc-current"></div>
-
-      <button class="btn btn-primary btn-block btn-ely" id="btn-ely-open">
-        <span class="ely-mark">E</span>
-        <span id="ely-open-label">Войти через Ely.by</span>
-      </button>
-      <div class="hint center">Официальный вход Ely.by. Скин подтянется автоматически, пароль вводится в отдельном окне и не сохраняется.</div>
-      <div class="hint center">
-        Нет аккаунта? <span class="link" id="ely-register">Регистрация на ely.by</span> — бесплатно
+      <div class="settings-tabs acc-tabs" id="acc-tabs">
+        <button class="settings-tab active" type="button" data-acc-tab="lavunio">Lavunio ID</button>
+        <button class="settings-tab" type="button" data-acc-tab="ely">Ely.by</button>
       </div>
 
-      <div class="acc-list-head">СОХРАНЁННЫЕ АККАУНТЫ</div>
-      <div id="acc-list" class="acc-list"></div>
+      <section class="acc-pane" id="acc-pane-lavunio">
+        <div class="acc-current" id="lavunio-current" hidden>
+          <span class="avatar" id="lavunio-avatar"></span>
+          <div>
+            <div class="acc-name" id="lavunio-name"></div>
+            <div class="acc-sub" id="lavunio-sub"></div>
+          </div>
+        </div>
+
+        <div class="lavunio-verify" id="lavunio-verify" hidden>
+          <span id="lavunio-verify-text">Почта не подтверждена</span>
+          <button class="link link-btn" type="button" id="lavunio-verify-btn">Подтвердить</button>
+        </div>
+
+        <form class="acc-form" id="lavunio-form" autocomplete="on">
+          <div class="field">
+            <label for="lavunio-email">Email</label>
+            <input id="lavunio-email" type="email" autocomplete="email" placeholder="you@example.com">
+          </div>
+          <div class="field">
+            <label for="lavunio-password">Пароль</label>
+            <input id="lavunio-password" type="password" autocomplete="current-password" placeholder="Минимум 8 символов">
+          </div>
+          <div class="field" id="lavunio-username-field" hidden>
+            <label for="lavunio-username">Имя пользователя</label>
+            <input id="lavunio-username" type="text" autocomplete="username" placeholder="steve">
+          </div>
+          <div class="form-error" id="lavunio-error" hidden></div>
+          <button class="btn btn-primary btn-block" id="lavunio-submit" type="submit">Войти</button>
+          <div class="hint center">
+            <span id="lavunio-switch-text">Нет аккаунта?</span>
+            <button class="link link-btn" type="button" id="lavunio-switch">Регистрация</button>
+          </div>
+        </form>
+
+        <div id="lavunio-signed" hidden>
+          <button class="btn btn-ghost btn-block" id="lavunio-logout" type="button">Выйти из Lavunio</button>
+        </div>
+
+        <div class="hint center" id="lavunio-api-hint" hidden>
+          Lavunio API не настроен. Задайте <b>LAVUNIO_API_URL</b> при запуске лаунчера.
+        </div>
+        <div class="hint center">Lavunio ID нужен для публикации режимов, отзывов и облачных функций. Игровой аккаунт Ely.by выбирается на вкладке Ely.by.</div>
+      </section>
+
+      <section class="acc-pane" id="acc-pane-ely" hidden>
+        <div id="acc-current" class="acc-current"></div>
+
+        <button class="btn btn-primary btn-block btn-ely" id="btn-ely-open">
+          <span class="ely-mark">E</span>
+          <span id="ely-open-label">Войти через Ely.by</span>
+        </button>
+        <div class="hint center">Официальный вход Ely.by. Скин подтянется автоматически, пароль вводится в отдельном окне и не сохраняется.</div>
+        <div class="hint center">
+          Нет аккаунта? <span class="link" id="ely-register">Регистрация на ely.by</span> — бесплатно
+        </div>
+
+        <div class="acc-list-head">СОХРАНЁННЫЕ АККАУНТЫ</div>
+        <div id="acc-list" class="acc-list"></div>
+      </section>
     </div>
   </div>
 

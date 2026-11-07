@@ -125,7 +125,7 @@ async function waitFor(check, timeoutMs, intervalMs = 150) {
       return {
         hasCatalogInput: !!document.getElementById('set-catalog-url'),
         hasDataDirInput: !!document.getElementById('set-data-dir'),
-        tabCount: document.querySelectorAll('.settings-tab').length,
+        tabCount: document.querySelectorAll('#modal-settings .settings-tab').length,
         hasAdvanced: !!advanced,
         advancedClosed: advanced ? !advanced.open : null,
         hasCatalogUrl: Object.prototype.hasOwnProperty.call(S.settings || {}, 'catalogUrl'),

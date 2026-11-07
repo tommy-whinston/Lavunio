@@ -1,6 +1,6 @@
 use crate::auth;
 use crate::game;
-use crate::models::{Account, Mode, Settings};
+use crate::models::{Account, LavunioSession, LavunioUser, Mode, Settings};
 use crate::net;
 use crate::state::AppState;
 use crate::util::{now_ms, open_path, open_url, path_string};
@@ -423,6 +423,221 @@ pub fn accounts_remove(state: State<'_, AppState>, id: String) -> Value {
         "accounts": store.accounts.clone(),
         "current": store.current_account()
     })
+}
+
+// ---------------------------------------------------------------- Lavunio ID
+
+fn lavunio_api() -> Result<String, String> {
+    net::api_base_url()
+        .ok_or_else(|| "Lavunio API не настроен. Для входа нужен LAVUNIO_API_URL.".to_string())
+}
+
+fn lavunio_status_value(configured: bool, session: &LavunioSession) -> Value {
+    json!({
+        "configured": configured,
+        "hasSession": !session.access_token.is_empty(),
+        "user": session.user,
+    })
+}
+
+fn parse_lavunio_session(data: &Value) -> Result<LavunioSession, String> {
+    let user: LavunioUser = serde_json::from_value(
+        data.get("user")
+            .cloned()
+            .ok_or_else(|| "API не вернул профиль Lavunio".to_string())?,
+    )
+    .map_err(|error| format!("Некорректный профиль Lavunio: {error}"))?;
+    let tokens = data
+        .get("tokens")
+        .ok_or_else(|| "API не вернул токены Lavunio".to_string())?;
+    let access_token = tokens
+        .get("accessToken")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "API не вернул access-токен".to_string())?
+        .to_string();
+    let refresh_token = tokens
+        .get("refreshToken")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "API не вернул refresh-токен".to_string())?
+        .to_string();
+    let expires_in = tokens
+        .get("expiresIn")
+        .and_then(Value::as_i64)
+        .unwrap_or(900)
+        .max(0) as u64;
+
+    Ok(LavunioSession {
+        user: Some(user),
+        access_token,
+        refresh_token,
+        access_expires_at: now_ms().saturating_add(expires_in.saturating_mul(1000)),
+    })
+}
+
+fn save_lavunio_session(state: &AppState, session: LavunioSession) -> Result<(), String> {
+    let mut store = state.store.lock().unwrap();
+    store.lavunio = session;
+    store.save_lavunio()
+}
+
+#[tauri::command]
+pub fn lavunio_status(state: State<'_, AppState>) -> Value {
+    let session = state.store.lock().unwrap().lavunio.clone();
+    lavunio_status_value(net::api_base_url().is_some(), &session)
+}
+
+#[tauri::command]
+pub async fn lavunio_register(
+    state: State<'_, AppState>,
+    email: String,
+    password: String,
+    username: Option<String>,
+) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let payload = json!({
+        "email": email,
+        "password": password,
+        "username": username,
+    });
+    let data = blocking(move || {
+        net::api_request_json(&api, "POST", "/v1/auth/register", None, Some(payload))
+    })
+    .await??;
+
+    let mut session = parse_lavunio_session(&data)?;
+
+    if let Some(token) = data
+        .get("verificationToken")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+    {
+        let api = lavunio_api()?;
+        let verified = blocking(move || {
+            net::api_request_json(
+                &api,
+                "POST",
+                "/v1/auth/verify-email",
+                None,
+                Some(json!({ "token": token })),
+            )
+        })
+        .await;
+        if matches!(verified, Ok(Ok(_))) {
+            if let Some(user) = session.user.as_mut() {
+                user.email_verified = true;
+            }
+        }
+    }
+
+    save_lavunio_session(state.inner(), session.clone())?;
+    crate::logging::log(format!(
+        "lavunio: registered {}",
+        session
+            .user
+            .as_ref()
+            .map(|user| user.username.as_str())
+            .unwrap_or("?")
+    ));
+    Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
+pub async fn lavunio_login(
+    state: State<'_, AppState>,
+    email: String,
+    password: String,
+) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let payload = json!({ "email": email, "password": password });
+    let data = blocking(move || {
+        net::api_request_json(&api, "POST", "/v1/auth/login", None, Some(payload))
+    })
+    .await??;
+
+    let session = parse_lavunio_session(&data)?;
+    save_lavunio_session(state.inner(), session.clone())?;
+    crate::logging::log(format!(
+        "lavunio: logged in {}",
+        session
+            .user
+            .as_ref()
+            .map(|user| user.username.as_str())
+            .unwrap_or("?")
+    ));
+    Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
+pub async fn lavunio_logout(state: State<'_, AppState>) -> Result<Value, String> {
+    let session = state.store.lock().unwrap().lavunio.clone();
+    if let Some(api) = net::api_base_url() {
+        if !session.access_token.is_empty() || !session.refresh_token.is_empty() {
+            let access = session.access_token.clone();
+            let refresh = session.refresh_token.clone();
+            let _ = blocking(move || {
+                net::api_request_json(
+                    &api,
+                    "POST",
+                    "/v1/auth/logout",
+                    Some(&access),
+                    Some(json!({ "refreshToken": refresh })),
+                )
+            })
+            .await;
+        }
+    }
+    save_lavunio_session(state.inner(), LavunioSession::default())?;
+    crate::logging::log("lavunio: logged out");
+    Ok(json!({ "ok": true }))
+}
+
+#[tauri::command]
+pub async fn lavunio_resend_verification(state: State<'_, AppState>) -> Result<Value, String> {
+    let session = state.store.lock().unwrap().lavunio.clone();
+    if session.access_token.is_empty() {
+        return Err("Сначала войдите в аккаунт Lavunio".to_string());
+    }
+    let api = lavunio_api()?;
+    let access = session.access_token.clone();
+    let data = blocking(move || {
+        net::api_request_json(
+            &api,
+            "POST",
+            "/v1/auth/verify-email/resend",
+            Some(&access),
+            None,
+        )
+    })
+    .await??;
+
+    let mut session = session;
+    if let Some(token) = data
+        .get("verificationToken")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+    {
+        let api = lavunio_api()?;
+        let verified = blocking(move || {
+            net::api_request_json(
+                &api,
+                "POST",
+                "/v1/auth/verify-email",
+                None,
+                Some(json!({ "token": token })),
+            )
+        })
+        .await;
+        if matches!(verified, Ok(Ok(_))) {
+            if let Some(user) = session.user.as_mut() {
+                user.email_verified = true;
+            }
+        }
+    }
+
+    save_lavunio_session(state.inner(), session.clone())?;
+    Ok(lavunio_status_value(true, &session))
 }
 
 #[tauri::command]

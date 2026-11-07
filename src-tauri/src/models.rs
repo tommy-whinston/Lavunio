@@ -7,6 +7,27 @@ fn default_loader() -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
+pub struct LavunioUser {
+    pub id: String,
+    pub username: String,
+    pub display_name: String,
+    pub email: Option<String>,
+    pub email_verified: bool,
+    pub role: String,
+    pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct LavunioSession {
+    pub user: Option<LavunioUser>,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub access_expires_at: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
 pub struct HistoryEntry {
     pub version: String,
     pub title: Option<String>,

@@ -47,6 +47,13 @@
     removeAccount: (id) => invoke("accounts_remove", { id }),
     refreshSession: () => invoke("accounts_refresh"),
 
+    // Lavunio ID
+    lavunioStatus: () => invoke("lavunio_status"),
+    lavunioRegister: (email, password, username) => invoke("lavunio_register", { email, password, username }),
+    lavunioLogin: (email, password) => invoke("lavunio_login", { email, password }),
+    lavunioLogout: () => invoke("lavunio_logout"),
+    lavunioResendVerification: () => invoke("lavunio_resend_verification"),
+
     // игра
     install: (modeId) => invoke("game_install", { modeId }),
     play: (modeId) => invoke("game_play", { modeId }),

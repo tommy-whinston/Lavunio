@@ -1,4 +1,4 @@
-use crate::models::{Account, Mode, ModeState, ModeStates, RemoteCache, Settings};
+use crate::models::{Account, LavunioSession, Mode, ModeState, ModeStates, RemoteCache, Settings};
 use crate::util::{now_ms, read_json, write_json};
 use std::collections::HashMap;
 use std::fs;
@@ -63,6 +63,7 @@ pub struct Store {
     pub client_token: String,
     pub current_account_id: Option<String>,
     pub refresh_tokens: HashMap<String, String>,
+    pub lavunio: LavunioSession,
 }
 
 impl Store {
@@ -134,6 +135,8 @@ impl Store {
         let current_account_id: Option<String> = read_json(&dir.join("current-account.json"));
         let refresh_tokens: HashMap<String, String> =
             read_json(&dir.join("refresh-tokens.json")).unwrap_or_default();
+        let lavunio: LavunioSession =
+            read_json(&dir.join("lavunio-session.json")).unwrap_or_default();
 
         Self {
             dir,
@@ -143,6 +146,7 @@ impl Store {
             client_token,
             current_account_id,
             refresh_tokens,
+            lavunio,
         }
     }
 
@@ -160,6 +164,10 @@ impl Store {
 
     pub fn save_refresh_tokens(&self) -> Result<(), String> {
         write_json(&self.path("refresh-tokens.json"), &self.refresh_tokens)
+    }
+
+    pub fn save_lavunio(&self) -> Result<(), String> {
+        write_json(&self.path("lavunio-session.json"), &self.lavunio)
     }
 
     pub fn save_state(&self) -> Result<(), String> {

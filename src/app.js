@@ -71,7 +71,10 @@ const S = {
   storeSort: 'date',
   libraryFilter: 'all',
   librarySort: 'date',
-  pendingPlay: null
+  pendingPlay: null,
+  lavunio: null,
+  accTab: null,
+  lavunioRegisterMode: false
 };
 
 const els = {
@@ -202,12 +205,13 @@ async function init() {
   const startupUpdate = checkLauncherUpdate();
 
   try {
-    const [cachedModes, state, settings, accounts, current] = await Promise.all([
+    const [cachedModes, state, settings, accounts, current, lavunio] = await Promise.all([
       api.getCachedModes ? api.getCachedModes() : Promise.resolve([]),
       api.getState(),
       api.getSettings(),
       api.getAccounts(),
-      api.getCurrentAccount()
+      api.getCurrentAccount(),
+      api.lavunioStatus ? api.lavunioStatus().catch(() => null) : Promise.resolve(null)
     ]);
     let modes = Array.isArray(cachedModes) ? cachedModes : [];
     if (!modes.length) {
@@ -222,6 +226,8 @@ async function init() {
     S.settings = settings || null;
     S.accounts = Array.isArray(accounts) ? accounts : [];
     S.current = current || null;
+    S.lavunio = lavunio || null;
+    S.accTab = S.accTab || (S.lavunio && S.lavunio.configured ? 'lavunio' : 'ely');
     S.loading = false;
     renderAccountChip();
     renderStore();
@@ -1880,7 +1886,7 @@ function renderAccountChip() {
 }
 
 function bindAccountModal() {
-  els.accChip.onclick = () => openModal('modal-account');
+  els.accChip.onclick = () => openAccountModal();
   $('btn-ely-open').onclick = () => openElyLogin();
   $('btn-ely-start').onclick = () => startElyLogin();
   $('btn-ely-window').onclick = () => {
@@ -1891,6 +1897,182 @@ function bindAccountModal() {
   };
   $('btn-ely-cancel').onclick = () => cancelElyLogin();
   $('ely-register').onclick = () => api.openUrl('https://account.ely.by/register').catch(() => {});
+
+  document.querySelectorAll('[data-acc-tab]').forEach((tab) => {
+    tab.onclick = () => setAccTab(tab.getAttribute('data-acc-tab'));
+  });
+  $('lavunio-form').onsubmit = (event) => {
+    event.preventDefault();
+    submitLavunioForm();
+  };
+  $('lavunio-switch').onclick = () => {
+    S.lavunioRegisterMode = !S.lavunioRegisterMode;
+    renderLavunioPane();
+    $('lavunio-email').focus();
+  };
+  $('lavunio-logout').onclick = () => logoutLavunio();
+  $('lavunio-verify-btn').onclick = () => verifyLavunioEmail();
+}
+
+function openAccountModal() {
+  openModal('modal-account');
+}
+
+async function refreshLavunioStatus() {
+  if (!api.lavunioStatus) return;
+  try {
+    S.lavunio = await api.lavunioStatus();
+    renderLavunioPane();
+  } catch (_) {}
+}
+
+function setAccTab(tab) {
+  S.accTab = tab === 'ely' ? 'ely' : 'lavunio';
+  renderAccountModal();
+}
+
+function renderLavunioPane() {
+  const available = !!(S.lavunio && S.lavunio.configured);
+  const user = S.lavunio && S.lavunio.user;
+  const form = $('lavunio-form');
+  const signed = $('lavunio-signed');
+  const current = $('lavunio-current');
+  const hint = $('lavunio-api-hint');
+  const error = $('lavunio-error');
+
+  if (!form) return;
+  if (hint) hint.hidden = available;
+  if (current) current.hidden = !user;
+  if (form) form.hidden = !!user;
+  if (signed) signed.hidden = !user;
+
+  if (user) {
+    $('lavunio-name').textContent = user.displayName || user.username;
+    const bits = [];
+    if (user.email) bits.push(user.email);
+    bits.push(user.emailVerified ? 'почта подтверждена' : 'почта не подтверждена');
+    bits.push(
+      user.role === 'admin' ? 'администратор' :
+      user.role === 'author' ? 'автор' :
+      user.role === 'moderator' ? 'модератор' : 'игрок'
+    );
+    const sub = $('lavunio-sub');
+    sub.innerHTML = '';
+    bits.forEach((text, index) => {
+      if (index) sub.appendChild(document.createTextNode(' · '));
+      const span = document.createElement('span');
+      span.textContent = text;
+      if (index === 1) span.className = user.emailVerified ? 'ok' : 'warn';
+      sub.appendChild(span);
+    });
+    const av = $('lavunio-avatar');
+    av.textContent = (user.displayName || user.username || '?').slice(0, 1).toUpperCase();
+    $('lavunio-verify').hidden = !!user.emailVerified;
+  } else {
+    const register = !!S.lavunioRegisterMode;
+    $('lavunio-username-field').hidden = !register;
+    $('lavunio-password').autocomplete = register ? 'new-password' : 'current-password';
+    $('lavunio-submit').textContent = register ? 'Создать аккаунт' : 'Войти';
+    $('lavunio-switch-text').textContent = register ? 'Уже есть аккаунт?' : 'Нет аккаунта?';
+    $('lavunio-switch').textContent = register ? 'Войти' : 'Регистрация';
+    if (error) error.hidden = true;
+  }
+  syncAccTabs();
+}
+
+function syncAccTabs() {
+  const configured = !!(S.lavunio && S.lavunio.configured);
+  const lavunioTab = document.querySelector('[data-acc-tab="lavunio"]');
+  if (lavunioTab) lavunioTab.hidden = !configured;
+  if (!configured) S.accTab = 'ely';
+  if (!S.accTab) S.accTab = 'lavunio';
+  document.querySelectorAll('[data-acc-tab]').forEach((tab) => {
+    tab.classList.toggle('active', tab.getAttribute('data-acc-tab') === S.accTab);
+  });
+  const lavunioPane = $('acc-pane-lavunio');
+  const elyPane = $('acc-pane-ely');
+  if (lavunioPane) lavunioPane.hidden = S.accTab !== 'lavunio';
+  if (elyPane) elyPane.hidden = S.accTab !== 'ely';
+}
+
+async function submitLavunioForm() {
+  const error = $('lavunio-error');
+  const email = $('lavunio-email').value.trim();
+  const password = $('lavunio-password').value;
+  const username = $('lavunio-username').value.trim();
+  const register = !!S.lavunioRegisterMode;
+
+  error.hidden = true;
+  if (!email || !password) {
+    error.textContent = 'Заполните email и пароль';
+    error.hidden = false;
+    return;
+  }
+  if (register && !username) {
+    error.textContent = 'Придумайте имя пользователя';
+    error.hidden = false;
+    return;
+  }
+  if (!S.lavunio || !S.lavunio.configured) {
+    error.textContent = 'Lavunio API не настроен';
+    error.hidden = false;
+    return;
+  }
+
+  const button = $('lavunio-submit');
+  button.disabled = true;
+  button.textContent = register ? 'Создаём…' : 'Входим…';
+  try {
+    const status = register
+      ? await api.lavunioRegister(email, password, username || null)
+      : await api.lavunioLogin(email, password);
+    S.lavunio = status;
+    $('lavunio-password').value = '';
+    renderLavunioPane();
+    const name = status && status.user ? (status.user.displayName || status.user.username) : '';
+    toast(register ? 'Аккаунт Lavunio создан' : `С возвращением, ${name || 'игрок'}!`, 'ok');
+    if (status && status.user && !status.user.emailVerified) {
+      toast('Почта не подтверждена', 'warn');
+    }
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось выполнить вход');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    if (!S.lavunio || !S.lavunio.user) {
+      button.textContent = register ? 'Создать аккаунт' : 'Войти';
+    }
+  }
+}
+
+async function logoutLavunio() {
+  try {
+    await api.lavunioLogout();
+  } catch (_) {}
+  S.lavunio = { configured: true, hasSession: false, user: null };
+  renderLavunioPane();
+  toast('Вы вышли из Lavunio', 'ok');
+}
+
+async function verifyLavunioEmail() {
+  const button = $('lavunio-verify-btn');
+  button.disabled = true;
+  button.textContent = 'Отправляем…';
+  try {
+    const status = await api.lavunioResendVerification();
+    S.lavunio = status;
+    renderLavunioPane();
+    const verified = !!(status && status.user && status.user.emailVerified);
+    toast(
+      verified ? 'Почта подтверждена' : 'Письмо отправлено. Проверьте почту.',
+      verified ? 'ok' : 'warn'
+    );
+  } catch (err) {
+    toast('Не удалось подтвердить почту: ' + err, 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Подтвердить';
+  }
 }
 
 function openElyLogin() {
@@ -2060,6 +2242,7 @@ function renderAccountModal() {
   if (label) {
     label.textContent = cur && cur.type === 'ely' ? 'Сменить аккаунт Ely.by' : 'Войти через Ely.by';
   }
+  renderLavunioPane();
 }
 
 function renderAccountList() {
@@ -2195,7 +2378,10 @@ function openModal(id) {
   if (id === 'modal-settings') {
     fillSettingsForm();
   }
-  if (id === 'modal-account') renderAccountModal();
+  if (id === 'modal-account') {
+    renderAccountModal();
+    refreshLavunioStatus();
+  }
   if (id === 'modal-ely-login') {
     resetElyLoginUI();
   }
