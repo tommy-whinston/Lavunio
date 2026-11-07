@@ -113,10 +113,7 @@ pub async fn check_update() -> Result<UpdateInfo, String> {
     .map_err(|e| format!("Не удалось проверить обновление: {e}"))?
 }
 
-fn download_installer(
-    url: &str,
-    mut on_progress: impl FnMut(u64, u64),
-) -> Result<PathBuf, String> {
+fn download_installer(url: &str, mut on_progress: impl FnMut(u64, u64)) -> Result<PathBuf, String> {
     if !url.starts_with("https://github.com/") {
         return Err("Некорректная ссылка на обновление".to_string());
     }

@@ -30,6 +30,16 @@ async fn load_modes(state: &AppState) -> Vec<Mode> {
     };
 
     let remote: Result<Vec<Mode>, String> = match blocking(move || {
+        if let Some(api_base) = net::api_base_url() {
+            match net::fetch_api_modes(&api_base) {
+                Ok(modes) if !modes.is_empty() => {
+                    crate::logging::log(format!("catalog: API loaded {} modes", modes.len()));
+                    return Ok(modes);
+                }
+                Ok(_) => crate::logging::log("catalog: API returned no modes; using GitHub"),
+                Err(err) => crate::logging::error("catalog API", &err),
+            }
+        }
         net::fetch_remote_modes(
             &repo,
             net::CATALOG_URL,
@@ -209,8 +219,7 @@ pub fn app_open_logs() -> Result<(), String> {
     let Some(parent) = path.parent() else {
         return Err("Не удалось найти папку логов".to_string());
     };
-    std::fs::create_dir_all(parent)
-        .map_err(|e| format!("Не удалось создать папку логов: {e}"))?;
+    std::fs::create_dir_all(parent).map_err(|e| format!("Не удалось создать папку логов: {e}"))?;
     crate::util::open_path(parent)
 }
 
@@ -239,11 +248,7 @@ pub fn game_uninstall(state: State<'_, AppState>, mode_id: String) -> Value {
 }
 
 #[tauri::command]
-pub fn game_set_library(
-    state: State<'_, AppState>,
-    mode_id: String,
-    library: bool,
-) -> Value {
+pub fn game_set_library(state: State<'_, AppState>, mode_id: String, library: bool) -> Value {
     let mut store = state.store.lock().unwrap();
     match store.set_mode_library(&mode_id, library) {
         Ok(()) => json!({ "ok": true }),
@@ -265,11 +270,7 @@ pub fn game_add_playtime(state: State<'_, AppState>, mode_id: String, seconds: u
 
 #[tauri::command]
 pub fn game_open_mode_folder(state: State<'_, AppState>, mode_id: String) -> Result<(), String> {
-    if mode_id.is_empty()
-        || mode_id == ".."
-        || mode_id.contains('/')
-        || mode_id.contains('\\')
-    {
+    if mode_id.is_empty() || mode_id == ".." || mode_id.contains('/') || mode_id.contains('\\') {
         return Err("Некорректный режим".to_string());
     }
     let settings = state.store.lock().unwrap().settings.clone();

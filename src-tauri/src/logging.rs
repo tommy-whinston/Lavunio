@@ -7,7 +7,9 @@ use std::sync::{Mutex, OnceLock};
 static LOG_FILE: OnceLock<Mutex<File>> = OnceLock::new();
 
 pub fn log_path() -> PathBuf {
-    crate::store::app_data_dir().join("logs").join("launcher.log")
+    crate::store::app_data_dir()
+        .join("logs")
+        .join("launcher.log")
 }
 
 pub fn init() {

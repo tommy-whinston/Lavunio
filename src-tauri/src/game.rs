@@ -104,7 +104,11 @@ fn java_candidate_dirs() -> Vec<PathBuf> {
             PathBuf::from(r"C:\Program Files\Semeru"),
         ]);
         if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-            roots.push(PathBuf::from(local).join("Programs").join("Eclipse Adoptium"));
+            roots.push(
+                PathBuf::from(local)
+                    .join("Programs")
+                    .join("Eclipse Adoptium"),
+            );
         }
         if let Some(home) = std::env::var_os("USERPROFILE") {
             roots.push(PathBuf::from(home).join(".jdks"));
@@ -308,11 +312,7 @@ fn run(
 }
 
 pub fn uninstall(settings: &Settings, mode_id: &str) -> Result<(), String> {
-    if mode_id.is_empty()
-        || mode_id == ".."
-        || mode_id.contains('/')
-        || mode_id.contains('\\')
-    {
+    if mode_id.is_empty() || mode_id == ".." || mode_id.contains('/') || mode_id.contains('\\') {
         return Err("Некорректный режим".to_string());
     }
     let base = Path::new(&settings.dir);
@@ -747,11 +747,12 @@ fn launch(
     if account.is_ely() {
         match ensure_authlib_injector(settings, on_event) {
             Ok(path) => {
-                launch.args.insert(
-                    0,
-                    format!("-javaagent:{}=ely.by", path.to_string_lossy()),
-                );
-                launch.args.insert(0, "-Dauthlibinjector.side=client".to_string());
+                launch
+                    .args
+                    .insert(0, format!("-javaagent:{}=ely.by", path.to_string_lossy()));
+                launch
+                    .args
+                    .insert(0, "-Dauthlibinjector.side=client".to_string());
             }
             Err(err) => {
                 status(

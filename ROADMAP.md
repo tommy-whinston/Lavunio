@@ -319,9 +319,10 @@ GET  /v1/admin/reports
   - `night-demon` и `eclipse` получают UUID, релизы и файлы в R2.
   - Готово, когда лаунчер ставит их из нового API.
   - Статус: seed импортировал оба режима; `migrate_assets` загрузил обложки, ZIP и split-части в S3-совместимое хранилище. Осталось прогнать на реальном R2 и проверить установку лаунчером.
-- [ ] **P1-09. Лаунчер читает API.**
+- [~] **P1-09. Лаунчер читает API.**
   - Новый источник каталога, кэш, fallback на текущий GitHub-каталог `Lavunio-Catalog` на один релиз.
   - Готово, когда каталог и установка работают при выключенном GitHub-каталоге.
+  - Статус: API-first каталог и сборки реализованы и проверены локально (`LAVUNIO_API_URL`). Каталог, установка и fallback работают. Осталось вшить production API URL и проверить с реальным сервером.
 - [ ] **P1-10. Встроить публикатор в лаунчер.**
   - Перенести публикацию режимов, релизов и файлов внутрь лаунчера.
   - Убрать отдельный Lavunio Publisher и GitHub-токены из пользовательского сценария.
@@ -599,3 +600,5 @@ cmd /c "call E:\Desktop\Lavunio\build-env.bat && cd /d E:\Desktop\LavunioPublish
 - **2026-11-07** — API: добавлен S3/R2-адаптер, pre-signed PUT, endpoint complete, миграция `0002_storage_keys`; добавлены интеграционные тесты с PostgreSQL (каталог и полный publisher-flow) и тест presign; CI теперь запускает тесты с Postgres. Осталось проверить живой MinIO/R2.
 
 - **2026-11-07** — S3/R2 проверен end-to-end на S3-совместимом сервере: presigned PUT → complete → публичный GET → submit → approve. Добавлен `migrate_assets`: переносит обложки, ZIP и split-части из GitHub в S3/R2 и обновляет `release_assets`; проверено на `night-demon` и `eclipse`. Осталось прогнать на реальном R2 с ключами.
+
+- **2026-11-07** — P1-09: лаунчер получил API-first каталог и загрузку сборок через API (`LAVUNIO_API_URL`), с fallback на GitHub. Проверены каталог, install/uninstall и fallback. Осталось вшить production API URL.

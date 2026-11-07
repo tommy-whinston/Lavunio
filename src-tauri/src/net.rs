@@ -1,5 +1,5 @@
 use crate::events::GameEvent;
-use crate::models::{Mode, Settings};
+use crate::models::{Author, BuildInfo, Mode, Settings};
 use crate::util::{format_error, safe_join, sha256_file, write_json};
 use reqwest::blocking::{Client, Response};
 use reqwest::header::{ACCEPT, AUTHORIZATION, USER_AGENT};
@@ -15,8 +15,16 @@ use std::time::Duration;
 use url::Url;
 
 pub const API: &str = "https://api.github.com";
-pub const CATALOG_URL: &str = "https://raw.githubusercontent.com/tommy-whinston/Lavunio-Catalog/main/modes/modes.json";
+pub const CATALOG_URL: &str =
+    "https://raw.githubusercontent.com/tommy-whinston/Lavunio-Catalog/main/modes/modes.json";
 pub const RAW: &str = "https://raw.githubusercontent.com";
+
+pub fn api_base_url() -> Option<String> {
+    std::env::var("LAVUNIO_API_URL")
+        .ok()
+        .map(|value| value.trim().trim_end_matches('/').to_string())
+        .filter(|value| !value.is_empty())
+}
 
 fn client() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
@@ -208,6 +216,147 @@ fn parse_modes(data: Value) -> Result<Vec<Mode>, String> {
     Ok(modes)
 }
 
+pub fn fetch_api_modes(api_base: &str) -> Result<Vec<Mode>, String> {
+    let url = format!(
+        "{}/v1/catalog?page=1&limit=100",
+        api_base.trim_end_matches('/')
+    );
+    let response = client()
+        .get(&url)
+        .header(ACCEPT, "application/json")
+        .send()
+        .map_err(|error| format!("Не удалось загрузить API-каталог: {}", format_error(error)))?;
+    if !response.status().is_success() {
+        return Err(format!("API-каталог: HTTP {}", response.status()));
+    }
+    let data: Value = response
+        .json()
+        .map_err(|error| format!("Не удалось прочитать API-каталог: {error}"))?;
+    let Some(items) = data.get("items").and_then(Value::as_array) else {
+        return Err("В API-каталоге нет массива items".to_string());
+    };
+    let mut modes = Vec::new();
+    for item in items {
+        if let Some(mode) = api_mode(item) {
+            modes.push(mode);
+        }
+    }
+    Ok(modes)
+}
+
+fn api_mode(item: &Value) -> Option<Mode> {
+    let id = item.get("slug").and_then(Value::as_str)?.trim().to_string();
+    if id.is_empty() {
+        return None;
+    }
+    let title = item
+        .get("title")
+        .and_then(Value::as_str)
+        .unwrap_or(&id)
+        .to_string();
+    let author = item.get("author").and_then(|author| {
+        let username = author.get("username").and_then(Value::as_str)?;
+        let name = author
+            .get("displayName")
+            .and_then(Value::as_str)
+            .unwrap_or(username);
+        Some(Author {
+            id: username.to_string(),
+            name: name.to_string(),
+            avatar: author
+                .get("avatarUrl")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+            verified: false,
+        })
+    });
+    let latest = item.get("latestRelease");
+    let version = latest
+        .and_then(|release| release.get("version"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let release_date = latest
+        .and_then(|release| release.get("publishedAt"))
+        .and_then(Value::as_str)
+        .map(|value| value.chars().take(10).collect::<String>());
+    let build = item.get("build").and_then(|build| {
+        let files = build.get("files").and_then(Value::as_u64).unwrap_or(0);
+        let bytes = build.get("bytes").and_then(Value::as_u64).unwrap_or(0);
+        if files == 0 && bytes == 0 {
+            return None;
+        }
+        Some(BuildInfo {
+            files,
+            bytes,
+            version: build
+                .get("version")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+        })
+    });
+    let tags = item
+        .get("tags")
+        .and_then(Value::as_array)
+        .map(|tags| {
+            tags.iter()
+                .filter_map(|tag| tag.get("name").and_then(Value::as_str))
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let authors = author.clone().into_iter().collect();
+
+    Some(Mode {
+        id,
+        title,
+        mc_version: item
+            .get("mcVersion")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        version,
+        release_date,
+        version_id: None,
+        loader: item
+            .get("loader")
+            .and_then(Value::as_str)
+            .unwrap_or("vanilla")
+            .to_string(),
+        loader_version: item
+            .get("loaderVersion")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        size: item.get("size").and_then(Value::as_str).map(str::to_string),
+        players: None,
+        accent: None,
+        tags,
+        image_url: item
+            .get("coverUrl")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        image: None,
+        author,
+        authors,
+        description: item
+            .get("description")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        short_description: item
+            .get("shortDescription")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        status: item
+            .get("status")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        changelog: String::new(),
+        history: Vec::new(),
+        build,
+    })
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
 pub struct FileMeta {
@@ -221,6 +370,7 @@ pub struct ArchivePart {
     pub path: String,
     pub size: u64,
     pub sha256: Option<String>,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -232,6 +382,7 @@ pub struct ArchiveMeta {
     pub files: u64,
     pub bytes: u64,
     pub parts: Vec<ArchivePart>,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -314,6 +465,128 @@ pub fn fetch_manifest(
     ))
 }
 
+pub fn fetch_api_build(api_base: &str, mode_id: &str) -> Result<(Manifest, ArchiveMeta), String> {
+    let url = format!(
+        "{}/v1/modes/{mode_id}/releases",
+        api_base.trim_end_matches('/')
+    );
+    let response = client()
+        .get(&url)
+        .header(ACCEPT, "application/json")
+        .send()
+        .map_err(|error| {
+            format!(
+                "Не удалось загрузить сборку из API: {}",
+                format_error(error)
+            )
+        })?;
+    if !response.status().is_success() {
+        return Err(format!("API сборки: HTTP {}", response.status()));
+    }
+    let data: Value = response
+        .json()
+        .map_err(|error| format!("Не удалось прочитать сборку из API: {error}"))?;
+    let Some(releases) = data.as_array() else {
+        return Err("API вернул не массив релизов".to_string());
+    };
+
+    for release in releases {
+        if release.get("status").and_then(Value::as_str) != Some("published") {
+            continue;
+        }
+        let version = release
+            .get("version")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let Some(asset) = release
+            .get("assets")
+            .and_then(Value::as_array)
+            .and_then(|assets| {
+                assets.iter().find(|asset| {
+                    asset.get("kind").and_then(Value::as_str) == Some("archive")
+                        && asset
+                            .get("url")
+                            .and_then(Value::as_str)
+                            .map(|url| !url.is_empty())
+                            .unwrap_or(false)
+                })
+            })
+        else {
+            continue;
+        };
+
+        let asset_url = asset
+            .get("url")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "У сборки нет URL".to_string())?;
+        let mut manifest = match asset.get("manifest").filter(|value| !value.is_null()) {
+            Some(manifest) => parse_manifest(manifest.clone())?,
+            None => Manifest::default(),
+        };
+        if manifest.version.is_empty() {
+            manifest.version = version.to_string();
+        }
+        let mut archive = manifest.archive.clone().unwrap_or_default();
+        archive.url = Some(asset_url.to_string());
+        archive.size = asset
+            .get("size")
+            .and_then(Value::as_u64)
+            .unwrap_or(archive.size);
+        archive.sha256 = asset
+            .get("sha256")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .or(archive.sha256);
+        let base = asset_url
+            .rsplit_once('/')
+            .map(|(base, _)| base)
+            .unwrap_or(asset_url);
+        let parts = asset
+            .get("parts")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        if !parts.is_empty() {
+            archive.parts = parts
+                .iter()
+                .map(|part| {
+                    let path = part
+                        .get("path")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string();
+                    let url = part
+                        .get("url")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                        .or_else(|| {
+                            if path.is_empty() {
+                                None
+                            } else {
+                                Some(format!("{base}/{path}"))
+                            }
+                        });
+                    ArchivePart {
+                        path,
+                        size: part.get("size").and_then(Value::as_u64).unwrap_or(0),
+                        sha256: part
+                            .get("sha256")
+                            .and_then(Value::as_str)
+                            .map(str::to_string),
+                        url,
+                    }
+                })
+                .collect();
+        } else {
+            archive.parts.clear();
+        }
+        manifest.archive = Some(archive.clone());
+        return Ok((manifest, archive));
+    }
+
+    Err("В API нет опубликованной сборки".to_string())
+}
+
 pub fn download_file(
     url: &str,
     dest: &Path,
@@ -383,8 +656,7 @@ pub fn download_file(
 
 /// Инкрементальный синк сборки по манифесту: качаем изменённое, удаляем лишнее.
 fn extract_archive(zip_path: &Path, dest: &Path) -> Result<(), String> {
-    let file = fs::File::open(zip_path)
-        .map_err(|e| format!("Не удалось открыть архив: {e}"))?;
+    let file = fs::File::open(zip_path).map_err(|e| format!("Не удалось открыть архив: {e}"))?;
     let mut archive =
         zip::ZipArchive::new(file).map_err(|e| format!("Не удалось прочитать архив: {e}"))?;
     for index in 0..archive.len() {
@@ -402,11 +674,10 @@ fn extract_archive(zip_path: &Path, dest: &Path) -> Result<(), String> {
             continue;
         };
         if let Some(parent) = out.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("Не удалось создать папку: {e}"))?;
+            fs::create_dir_all(parent).map_err(|e| format!("Не удалось создать папку: {e}"))?;
         }
-        let mut target = fs::File::create(&out)
-            .map_err(|e| format!("Не удалось создать файл: {e}"))?;
+        let mut target =
+            fs::File::create(&out).map_err(|e| format!("Не удалось создать файл: {e}"))?;
         std::io::copy(&mut entry, &mut target)
             .map_err(|e| format!("Не удалось распаковать файл: {e}"))?;
     }
@@ -426,7 +697,10 @@ fn sync_build_archive(
     on_event: &mut dyn FnMut(GameEvent),
 ) -> Result<(), String> {
     let same = local.version == manifest.version
-        && local.archive.as_ref().and_then(|item| item.sha256.as_deref())
+        && local
+            .archive
+            .as_ref()
+            .and_then(|item| item.sha256.as_deref())
             == archive.sha256.as_deref()
         && local.files.len() == manifest.files.len();
     if same {
@@ -457,6 +731,7 @@ fn sync_build_archive(
             path: archive.path.clone(),
             size: archive.size,
             sha256: archive.sha256.clone(),
+            url: archive.url.clone(),
         }]
     } else {
         archive.parts.clone()
@@ -467,13 +742,9 @@ fn sync_build_archive(
         .sum::<u64>()
         .max(archive.size)
         .max(1);
-    let temp = std::env::temp_dir().join(format!(
-        "lavunio-{}-{}.zip",
-        mode.id,
-        std::process::id()
-    ));
-    let mut combined = fs::File::create(&temp)
-        .map_err(|e| format!("Не удалось создать файл: {e}"))?;
+    let temp = std::env::temp_dir().join(format!("lavunio-{}-{}.zip", mode.id, std::process::id()));
+    let mut combined =
+        fs::File::create(&temp).map_err(|e| format!("Не удалось создать файл: {e}"))?;
     let mut offset = 0u64;
     for (index, part) in parts.iter().enumerate() {
         let part_path = std::env::temp_dir().join(format!(
@@ -482,27 +753,32 @@ fn sync_build_archive(
             std::process::id(),
             index + 1
         ));
-        let url = raw_url(
-            &settings.github_repo,
-            branch,
-            &["modes", &mode.id, &part.path],
-        )?;
+        let url = if let Some(url) = part.url.as_deref().filter(|url| !url.is_empty()) {
+            url.to_string()
+        } else {
+            raw_url(
+                &settings.github_repo,
+                branch,
+                &["modes", &mode.id, &part.path],
+            )?
+        };
+        let token = if url.starts_with("https://raw.githubusercontent.com/")
+            || url.starts_with("https://api.github.com/")
+        {
+            Some(settings.github_token.as_str())
+        } else {
+            None
+        };
         let mut last_emit = 0u64;
-        let download = download_file(
-            &url,
-            &part_path,
-            Some(&settings.github_token),
-            cancel,
-            |done, _| {
-                if done == part.size || done.saturating_sub(last_emit) >= 256 * 1024 {
-                    last_emit = done;
-                    on_event(GameEvent::Progress {
-                        task: offset.saturating_add(done),
-                        total: total_bytes,
-                    });
-                }
-            },
-        );
+        let download = download_file(&url, &part_path, token, cancel, |done, _| {
+            if done == part.size || done.saturating_sub(last_emit) >= 256 * 1024 {
+                last_emit = done;
+                on_event(GameEvent::Progress {
+                    task: offset.saturating_add(done),
+                    total: total_bytes,
+                });
+            }
+        });
         if let Err(err) = download {
             let _ = fs::remove_file(&part_path);
             let _ = fs::remove_file(&temp);
@@ -541,15 +817,10 @@ fn sync_build_archive(
     Ok(())
 }
 
-pub fn sync_build(
+fn fetch_github_build(
     mode: &Mode,
     settings: &Settings,
-    game_dir: &Path,
-    cancel: &AtomicBool,
-    on_event: &mut dyn FnMut(GameEvent),
-) -> Result<(), String> {
-    on_event(GameEvent::Status("Проверка режима".into()));
-
+) -> Result<(Manifest, ArchiveMeta, String), String> {
     let mut manifest = fetch_manifest(
         &settings.github_repo,
         Some(&settings.github_token),
@@ -564,12 +835,55 @@ pub fn sync_build(
     } else {
         manifest.branch.clone()
     };
+    let Some(archive) = manifest.archive.clone() else {
+        return Err(
+            "Этот режим использует старый формат. Перепубликуйте его в Lavunio Publisher."
+                .to_string(),
+        );
+    };
+    Ok((manifest, archive, branch))
+}
+
+pub fn sync_build(
+    mode: &Mode,
+    settings: &Settings,
+    game_dir: &Path,
+    cancel: &AtomicBool,
+    on_event: &mut dyn FnMut(GameEvent),
+) -> Result<(), String> {
+    on_event(GameEvent::Status("Проверка режима".into()));
+
+    let manifest;
+    let archive;
+    let mut branch = String::new();
+    if let Some(api_base) = api_base_url() {
+        match fetch_api_build(&api_base, &mode.id) {
+            Ok((api_manifest, api_archive)) => {
+                crate::logging::log(format!(
+                    "build: api mode={} version={}",
+                    mode.id, api_manifest.version
+                ));
+                manifest = api_manifest;
+                archive = api_archive;
+            }
+            Err(err) => {
+                crate::logging::error("api build", &err);
+                let (github_manifest, github_archive, github_branch) =
+                    fetch_github_build(mode, settings)?;
+                manifest = github_manifest;
+                archive = github_archive;
+                branch = github_branch;
+            }
+        }
+    } else {
+        let (github_manifest, github_archive, github_branch) = fetch_github_build(mode, settings)?;
+        manifest = github_manifest;
+        archive = github_archive;
+        branch = github_branch;
+    }
+
     let local_path = game_dir.join(".manifest.json");
     let local: Manifest = crate::util::read_json(&local_path).unwrap_or_default();
-
-    let Some(archive) = manifest.archive.clone() else {
-        return Err("Этот режим использует старый формат. Перепубликуйте его в Lavunio Publisher.".to_string());
-    };
     sync_build_archive(
         mode,
         settings,
@@ -583,5 +897,3 @@ pub fn sync_build(
         on_event,
     )
 }
-
-
