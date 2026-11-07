@@ -361,11 +361,13 @@ GET  /v1/admin/reports
 >
 > Подробнее: [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
 
-- [ ] **A-01. Модель аккаунтов Lavunio.**
+- [x] **A-01. Модель аккаунтов Lavunio.**
   - `users`, `identities`, `sessions`, `link_codes`, `skin_profiles`.
   - Email + пароль (Argon2id), подтверждение почты, сброс пароля.
-- [ ] **A-02. Сессии и безопасность.**
+  - Статус: backend готов и покрыт тестами. Отправка писем — следующий шаг; локально токены доступны через `LAVUNIO_DEV_MODE=1`.
+- [~] **A-02. Сессии и безопасность.**
   - Access/refresh токены, отзыв сессий, rate limit, 2FA позже.
+  - Статус: токены, ротация, отзыв сессий и метаданные устройств готовы. Rate limit и 2FA остались.
 - [ ] **A-03. Привязка внешних аккаунтов.**
   - Ely.by, Microsoft/Minecraft official и другие OAuth-провайдеры.
   - Пароли внешних сервисов не хранить.
@@ -602,3 +604,4 @@ cmd /c "call E:\Desktop\Lavunio\build-env.bat && cd /d E:\Desktop\LavunioPublish
 - **2026-11-07** — S3/R2 проверен end-to-end на S3-совместимом сервере: presigned PUT → complete → публичный GET → submit → approve. Добавлен `migrate_assets`: переносит обложки, ZIP и split-части из GitHub в S3/R2 и обновляет `release_assets`; проверено на `night-demon` и `eclipse`. Осталось прогнать на реальном R2 с ключами.
 
 - **2026-11-07** — P1-09: лаунчер получил API-first каталог и загрузку сборок через API (`LAVUNIO_API_URL`), с fallback на GitHub. Проверены каталог, install/uninstall и fallback. Осталось вшить production API URL.
+- **2026-11-07** — A-01: в API добавлены аккаунты Lavunio: регистрация по email, Argon2id, сессии, access/refresh-токены, подтверждение почты и сброс пароля. Dev-режим (`LAVUNIO_DEV_MODE=1`) возвращает токены локально. Добавлены миграция `0004_accounts`, `routes/auth.rs` и тесты `tests/auth.rs`.

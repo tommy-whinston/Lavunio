@@ -1,6 +1,6 @@
 # Lavunio Accounts and Skin Providers
 
-> Статус: план на будущее. Сейчас лаунчер использует Ely.by-аккаунты, а API — токены авторов. Этот документ описывает, как перейти к собственным аккаунтам Lavunio и подключить внешние системы скинов.
+> Статус: A-01 (backend) готов — регистрация по email, вход, сессии, refresh-токены, подтверждение почты и сброс пароля. Писем пока нет: в dev-режиме токены возвращаются в API и пишутся в лог. UI аккаунтов в лаунчере и внешние провайдеры — следующие этапы.
 
 ## 1. Цель
 
@@ -138,6 +138,8 @@ POST /v1/auth/login
 POST /v1/auth/refresh
 POST /v1/auth/logout
 POST /v1/auth/verify-email
+POST /v1/auth/verify-email/resend
+POST /v1/auth/password/forgot
 POST /v1/auth/password/reset
 
 GET  /v1/me
@@ -150,6 +152,8 @@ GET  /v1/skins/providers
 GET  /v1/skins/{provider}/profile
 POST /v1/skins/lavunio/upload
 ```
+
+A-01 реализует первую группу и `GET /v1/me`, `GET /v1/me/identities`. Письма пока не отправляются: при `LAVUNIO_DEV_MODE=1` токены подтверждения и сброса возвращаются в ответе и пишутся в лог. В production их нужно отправлять почтовым провайдером.
 
 ## 7. UI лаунчера
 
@@ -177,8 +181,8 @@ POST /v1/skins/lavunio/upload
 
 ## 9. Этапы
 
-1. **A-01.** Lavunio ID: регистрация, вход, сессии, email verification.
-2. **A-02.** Профиль и привязка Ely.by.
+1. **A-01.** Lavunio ID: регистрация, вход, сессии, email verification. — backend готов.
+2. **A-02.** Профиль и привязка Ely.by. — частично: профиль и identities готовы, привязка внешних аккаунтов дальше.
 3. **A-03.** Собственные скины Lavunio.
 4. **A-04.** Microsoft/Minecraft official.
 5. **A-05.** UI аккаунтов в лаунчере.
