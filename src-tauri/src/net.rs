@@ -2,7 +2,7 @@ use crate::events::GameEvent;
 use crate::models::{Author, BuildInfo, Mode, Settings};
 use crate::util::{format_error, safe_join, sha256_file, write_json};
 use reqwest::blocking::{Client, Response};
-use reqwest::header::{ACCEPT, AUTHORIZATION, USER_AGENT};
+use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -113,7 +113,11 @@ pub fn api_request_json(
     token: Option<&str>,
     body: Option<Value>,
 ) -> Result<Value, String> {
-    let url = format!("{}{}", api_base.trim_end_matches('/'), path);
+    let url = if path.starts_with("http://") || path.starts_with("https://") {
+        path.to_string()
+    } else {
+        format!("{}{}", api_base.trim_end_matches('/'), path)
+    };
     let method = reqwest::Method::from_bytes(method.as_bytes())
         .map_err(|_| "Некорректный HTTP-метод".to_string())?;
     let mut req = client()
@@ -138,6 +142,71 @@ pub fn api_request_json(
         return Err(message.to_string());
     }
     Ok(data)
+}
+
+pub fn upload_file(
+    url: &str,
+    path: &Path,
+    token: Option<&str>,
+    total: u64,
+    on_progress: impl FnMut(u64, u64) + Send + 'static,
+) -> Result<(), String> {
+    struct ProgressReader<R> {
+        inner: R,
+        done: u64,
+        total: u64,
+        on_progress: Box<dyn FnMut(u64, u64) + Send>,
+    }
+
+    impl<R: Read> Read for ProgressReader<R> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            let read = self.inner.read(buf)?;
+            self.done = self.done.saturating_add(read as u64);
+            (self.on_progress)(self.done, self.total);
+            Ok(read)
+        }
+    }
+
+    let file = File::open(path).map_err(|e| format!("Не удалось открыть файл загрузки: {e}"))?;
+    let size = if total > 0 {
+        total
+    } else {
+        file.metadata()
+            .map_err(|e| format!("Не удалось прочитать размер файла: {e}"))?
+            .len()
+    };
+
+    let mut req = download_client()
+        .put(url)
+        .header(CONTENT_LENGTH, size.to_string())
+        .body(reqwest::blocking::Body::new(ProgressReader {
+            inner: file,
+            done: 0,
+            total: size,
+            on_progress: Box::new(on_progress),
+        }));
+    if let Some(token) = token.filter(|value| !value.trim().is_empty()) {
+        req = req.header(AUTHORIZATION, format!("Bearer {}", token.trim()));
+    }
+
+    let res = req
+        .send()
+        .map_err(|e| format!("Ошибка загрузки: {}", format_error(e)))?;
+    let status = res.status();
+    if !status.is_success() {
+        let text = res.text().unwrap_or_default();
+        let message = serde_json::from_str::<Value>(&text)
+            .ok()
+            .and_then(|value| {
+                value
+                    .get("error")
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            })
+            .unwrap_or_else(|| format!("Сервер ответил {status}"));
+        return Err(message);
+    }
+    Ok(())
 }
 
 /// Читает modes.json из настроенного источника. Сначала catalogUrl, затем GitHub как резерв.

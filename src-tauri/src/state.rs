@@ -7,6 +7,7 @@ pub struct AppState {
     pub store: Mutex<Store>,
     pub modes: Mutex<Vec<Mode>>,
     pub active_game: Arc<Mutex<Option<Arc<AtomicBool>>>>,
+    pub publisher_busy: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -15,6 +16,7 @@ impl AppState {
             store: Mutex::new(Store::new()),
             modes: Mutex::new(Vec::new()),
             active_game: Arc::new(Mutex::new(None)),
+            publisher_busy: Arc::new(AtomicBool::new(false)),
         }
     }
 }

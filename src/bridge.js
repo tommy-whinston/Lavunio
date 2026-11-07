@@ -54,6 +54,16 @@
     lavunioLogout: () => invoke("lavunio_logout"),
     lavunioResendVerification: () => invoke("lavunio_resend_verification"),
 
+    // публикатор
+    publisherMyModes: () => invoke("publisher_my_modes"),
+    publisherCreateMode: (payload) => invoke("publisher_create_mode", { payload }),
+    publisherCreateRelease: (modeId, payload) => invoke("publisher_create_release", { modeId, payload }),
+    publisherSubmit: (releaseId) => invoke("publisher_submit", { releaseId }),
+    publisherPickFolder: () => invoke("publisher_pick_folder"),
+    publisherPickArchive: () => invoke("publisher_pick_archive"),
+    publisherUploadBuild: (modeId, releaseId, version, source) => invoke("publisher_upload_build", { modeId, releaseId, version, source }),
+    onPublisherProgress: (cb) => listen("publisher:progress", (e) => cb(e.payload)),
+
     // игра
     install: (modeId) => invoke("game_install", { modeId }),
     play: (modeId) => invoke("game_play", { modeId }),

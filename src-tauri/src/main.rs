@@ -7,6 +7,7 @@ mod game;
 mod logging;
 mod models;
 mod net;
+mod publisher;
 mod state;
 mod store;
 mod update;
@@ -50,6 +51,13 @@ fn main() {
             commands::lavunio_login,
             commands::lavunio_logout,
             commands::lavunio_resend_verification,
+            commands::publisher_my_modes,
+            commands::publisher_create_mode,
+            commands::publisher_create_release,
+            commands::publisher_submit,
+            commands::publisher_pick_folder,
+            commands::publisher_pick_archive,
+            commands::publisher_upload_build,
             commands::open_ely_window,
             commands::close_ely_window,
             commands::game_install,
