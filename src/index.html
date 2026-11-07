@@ -459,13 +459,8 @@
   <div class="modal-overlay" id="modal-account" hidden role="dialog" aria-modal="true" aria-labelledby="account-title">
     <div class="modal modal-account">
       <div class="modal-head">
-        <h2 id="account-title">Аккаунт</h2>
+        <h2 id="account-title">Lavunio ID</h2>
         <button class="modal-close" data-close="modal-account">✕</button>
-      </div>
-
-      <div class="settings-tabs acc-tabs" id="acc-tabs">
-        <button class="settings-tab active" type="button" data-acc-tab="lavunio">Lavunio ID</button>
-        <button class="settings-tab" type="button" data-acc-tab="ely">Ely.by</button>
       </div>
 
       <section class="acc-pane" id="acc-pane-lavunio">
@@ -504,29 +499,41 @@
         </form>
 
         <div id="lavunio-signed" hidden>
+          <div class="skin-panel">
+            <div class="skin-preview"><img id="lavunio-skin-img" alt="Скин" hidden></div>
+            <div class="skin-controls">
+              <div class="field">
+                <label for="lavunio-skin-model">Модель скина</label>
+                <select id="lavunio-skin-model">
+                  <option value="classic">Classic</option>
+                  <option value="slim">Slim</option>
+                </select>
+              </div>
+              <div class="skin-actions">
+                <button class="btn btn-ghost" id="lavunio-skin-upload" type="button">Загрузить скин</button>
+                <button class="btn btn-ghost" id="lavunio-skin-delete" type="button">Удалить скин</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="skin-panel">
+            <div class="skin-preview cape"><img id="lavunio-cape-img" alt="Плащ" hidden></div>
+            <div class="skin-controls">
+              <div class="skin-cape-label">Плащ</div>
+              <div class="skin-actions">
+                <button class="btn btn-ghost" id="lavunio-cape-upload" type="button">Загрузить плащ</button>
+                <button class="btn btn-ghost" id="lavunio-cape-delete" type="button">Удалить плащ</button>
+              </div>
+            </div>
+          </div>
+
           <button class="btn btn-ghost btn-block" id="lavunio-logout" type="button">Выйти из Lavunio</button>
         </div>
 
         <div class="hint center" id="lavunio-api-hint" hidden>
           Lavunio API не настроен. Задайте <b>LAVUNIO_API_URL</b> при запуске лаунчера.
         </div>
-        <div class="hint center">Lavunio ID нужен для публикации режимов, отзывов и облачных функций. Игровой аккаунт Ely.by выбирается на вкладке Ely.by.</div>
-      </section>
-
-      <section class="acc-pane" id="acc-pane-ely" hidden>
-        <div id="acc-current" class="acc-current"></div>
-
-        <button class="btn btn-primary btn-block btn-ely" id="btn-ely-open">
-          <span class="ely-mark">E</span>
-          <span id="ely-open-label">Войти через Ely.by</span>
-        </button>
-        <div class="hint center">Официальный вход Ely.by. Скин подтянется автоматически, пароль вводится в отдельном окне и не сохраняется.</div>
-        <div class="hint center">
-          Нет аккаунта? <span class="link" id="ely-register">Регистрация на ely.by</span> — бесплатно
-        </div>
-
-        <div class="acc-list-head">СОХРАНЁННЫЕ АККАУНТЫ</div>
-        <div id="acc-list" class="acc-list"></div>
+        <div class="hint center">Lavunio ID — это игровой аккаунт, скины и публикация режимов. Пароль хранится только на сервере Lavunio.</div>
       </section>
     </div>
   </div>
@@ -629,32 +636,6 @@
     </div>
   </div>
 
-  <!-- Вход Ely.by -->
-  <div class="modal-overlay" id="modal-ely-login" hidden role="dialog" aria-modal="true" aria-labelledby="ely-login-title">
-    <div class="modal modal-login">
-      <div class="modal-head">
-        <h2 id="ely-login-title">Вход через Ely.by</h2>
-        <button class="modal-close" data-close="modal-ely-login">✕</button>
-      </div>
-
-      <div class="ely-login-brand">
-        <span class="ely-mark big">E</span>
-        <div>
-          <b>Ely.by</b>
-          <span class="ely-login-sub">аккаунт Minecraft</span>
-        </div>
-      </div>
-
-      <div class="ely-status">
-        <p id="ely-status-text">Откроется окно Ely.by. Войди в аккаунт и подтверди вход.</p>
-        <div id="ely-login-error" class="form-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="btn-ely-start">Продолжить</button>
-        <button class="btn btn-ghost btn-block" id="btn-ely-window" hidden>Открыть окно Ely.by</button>
-        <button class="btn btn-ghost btn-block" id="btn-ely-cancel" hidden>Отмена</button>
-        <div class="hint center">Пароль вводится на сайте Ely.by и не попадает в лаунчер.</div>
-      </div>
-    </div>
-  </div>
 
   <div class="modal-overlay" id="modal-update" hidden role="dialog" aria-modal="true" aria-labelledby="update-title">
     <div class="modal modal-update">

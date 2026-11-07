@@ -1,6 +1,5 @@
-use crate::auth;
 use crate::game;
-use crate::models::{Account, LavunioSession, LavunioUser, Mode, Settings};
+use crate::models::{GameAccount, LavunioSession, LavunioUser, Mode, Settings};
 use crate::net;
 use crate::publisher as build_publisher;
 use crate::state::AppState;
@@ -291,142 +290,6 @@ pub fn game_open_mode_folder(state: State<'_, AppState>, mode_id: String) -> Res
     open_path(&dir)
 }
 
-// ---------------------------------------------------------------- аккаунты
-
-#[tauri::command]
-pub fn accounts_get(state: State<'_, AppState>) -> Vec<Account> {
-    state.store.lock().unwrap().accounts.clone()
-}
-
-#[tauri::command]
-pub fn accounts_current(state: State<'_, AppState>) -> Option<Account> {
-    state.store.lock().unwrap().current_account()
-}
-
-#[tauri::command]
-pub async fn accounts_device_start(state: State<'_, AppState>) -> Result<Value, String> {
-    let client_id = state
-        .store
-        .lock()
-        .unwrap()
-        .settings
-        .ely_client_id
-        .trim()
-        .to_string();
-    if client_id.is_empty() {
-        return Err("Не настроен Ely.by client_id. Добавь его в настройках.".to_string());
-    }
-    let data = blocking(move || auth::device_start(&client_id))
-        .await
-        .map_err(|e| format!("Не удалось начать вход: {e}"))??;
-    Ok(json!({
-        "deviceCode": data.device_code,
-        "verificationUriComplete": data.verification_uri_complete,
-        "interval": data.interval,
-    }))
-}
-
-#[tauri::command]
-pub async fn accounts_device_poll(
-    state: State<'_, AppState>,
-    device_code: String,
-) -> Result<Value, String> {
-    let client_id = state
-        .store
-        .lock()
-        .unwrap()
-        .settings
-        .ely_client_id
-        .trim()
-        .to_string();
-    if client_id.is_empty() {
-        return Err("Не настроен Ely.by client_id. Добавь его в настройках.".to_string());
-    }
-    let code = device_code.clone();
-    let poll = blocking(move || auth::device_poll(&client_id, &code))
-        .await
-        .map_err(|e| format!("Не удалось проверить вход: {e}"))??;
-    match poll {
-        auth::DevicePoll::Pending => Ok(json!({ "status": "pending" })),
-        auth::DevicePoll::SlowDown => Ok(json!({ "status": "slow_down" })),
-        auth::DevicePoll::Token(token) => {
-            let access = token.access_token.clone();
-            let info = blocking(move || auth::user_info(&access))
-                .await
-                .map_err(|e| format!("Не удалось получить профиль Ely.by: {e}"))??;
-            let client_token = state.store.lock().unwrap().client_token.clone();
-            let refresh_token = token.refresh_token.clone();
-            let account = Account {
-                id: uuid::Uuid::new_v4().to_string(),
-                kind: "ely".to_string(),
-                name: info.username,
-                uuid: info.uuid.replace('-', ""),
-                access_token: token.access_token,
-                client_token,
-                added_at: now_ms(),
-                session_error: false,
-                expires_at: now_ms().saturating_add(token.expires_in.saturating_mul(1000)),
-            };
-            let mut store = state.store.lock().unwrap();
-            let account = store.upsert_account(account)?;
-            if let Some(refresh) = refresh_token {
-                store.refresh_tokens.insert(account.id.clone(), refresh);
-                let _ = store.save_refresh_tokens();
-            }
-            store.set_current_account(Some(account.id.clone()))?;
-            Ok(json!({ "status": "ok", "account": account }))
-        }
-    }
-}
-
-#[tauri::command]
-pub async fn open_ely_window(app: AppHandle, url: String) -> Result<(), String> {
-    if !url.starts_with("https://account.ely.by/") {
-        return Err("Некорректный адрес Ely.by".to_string());
-    }
-    let parsed = url::Url::parse(&url).map_err(|e| format!("Некорректный адрес Ely.by: {e}"))?;
-    if let Some(window) = app.get_webview_window("ely-login") {
-        let _ = window.navigate(parsed);
-        let _ = window.show();
-        let _ = window.set_focus();
-        return Ok(());
-    }
-    let window =
-        tauri::WebviewWindowBuilder::new(&app, "ely-login", tauri::WebviewUrl::External(parsed))
-            .title("Ely.by")
-            .inner_size(520.0, 720.0)
-            .center()
-            .resizable(true)
-            .build()
-            .map_err(|e| format!("Не удалось открыть окно Ely.by: {e}"))?;
-    let _ = window.set_focus();
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn close_ely_window(app: AppHandle) {
-    if let Some(window) = app.get_webview_window("ely-login") {
-        let _ = window.close();
-    }
-}
-
-#[tauri::command]
-pub fn accounts_select(state: State<'_, AppState>, id: String) -> Result<Option<Account>, String> {
-    let mut store = state.store.lock().unwrap();
-    store.set_current_account(Some(id))?;
-    Ok(store.current_account())
-}
-
-#[tauri::command]
-pub fn accounts_remove(state: State<'_, AppState>, id: String) -> Value {
-    let mut store = state.store.lock().unwrap();
-    let _ = store.remove_account(&id);
-    json!({
-        "accounts": store.accounts.clone(),
-        "current": store.current_account()
-    })
-}
-
 // ---------------------------------------------------------------- Lavunio ID
 
 fn lavunio_api() -> Result<String, String> {
@@ -475,6 +338,9 @@ fn parse_lavunio_session(data: &Value) -> Result<LavunioSession, String> {
         access_token,
         refresh_token,
         access_expires_at: now_ms().saturating_add(expires_in.saturating_mul(1000)),
+        game_access_token: String::new(),
+        game_client_token: String::new(),
+        game_expires_at: 0,
     })
 }
 
@@ -578,6 +444,20 @@ pub async fn lavunio_logout(state: State<'_, AppState>) -> Result<Value, String>
         if !session.access_token.is_empty() || !session.refresh_token.is_empty() {
             let access = session.access_token.clone();
             let refresh = session.refresh_token.clone();
+            let game_api = api.clone();
+            if !session.access_token.is_empty() {
+                let game_access = session.access_token.clone();
+                let _ = blocking(move || {
+                    net::api_request_json(
+                        &game_api,
+                        "POST",
+                        "/v1/game/logout",
+                        Some(&game_access),
+                        None,
+                    )
+                })
+                .await;
+            }
             let _ = blocking(move || {
                 net::api_request_json(
                     &api,
@@ -666,7 +546,10 @@ async fn lavunio_access_token(state: &AppState) -> Result<String, String> {
         )
     })
     .await??;
-    let refreshed = parse_lavunio_session(&data)?;
+    let mut refreshed = parse_lavunio_session(&data)?;
+    refreshed.game_access_token = session.game_access_token.clone();
+    refreshed.game_client_token = session.game_client_token.clone();
+    refreshed.game_expires_at = session.game_expires_at;
     save_lavunio_session(state, refreshed.clone())?;
     Ok(refreshed.access_token)
 }
@@ -898,103 +781,153 @@ pub async fn publisher_upload_build(
     result
 }
 
-#[tauri::command]
-pub async fn accounts_refresh(state: State<'_, AppState>) -> Result<Option<Account>, String> {
-    let Some(mut account) = state.store.lock().unwrap().current_account() else {
-        return Ok(None);
+// ---------------------------------------------------------------- игра
+
+async fn ensure_game_account(state: &AppState) -> Result<GameAccount, String> {
+    let mut session = state.store.lock().unwrap().lavunio.clone();
+    let Some(user) = session.user.clone() else {
+        return Err("Сначала войдите в Lavunio ID".to_string());
     };
-    if !account.is_ely() {
-        return Ok(Some(account));
-    }
-    if account.expires_at > 0 {
-        let (client_id, refresh) = {
-            let store = state.store.lock().unwrap();
-            (
-                store.settings.ely_client_id.clone(),
-                store.refresh_tokens.get(&account.id).cloned(),
-            )
-        };
-        if let Some(refresh) = refresh {
-            let result = blocking(move || auth::oauth_refresh(&client_id, &refresh))
-                .await
-                .map_err(|e| format!("Не удалось обновить сессию: {e}"))?;
-            match result {
-                Ok(token) => {
-                    account.access_token = token.access_token;
-                    account.expires_at =
-                        now_ms().saturating_add(token.expires_in.saturating_mul(1000));
-                    account.session_error = false;
-                    let mut store = state.store.lock().unwrap();
-                    if let Some(existing) = store.accounts.iter_mut().find(|a| a.id == account.id) {
-                        *existing = account.clone();
-                    }
-                    if let Some(new_refresh) = token.refresh_token {
-                        store.refresh_tokens.insert(account.id.clone(), new_refresh);
-                    }
-                    let _ = store.save_accounts();
-                    let _ = store.save_refresh_tokens();
-                    return Ok(store.current_account());
-                }
-                Err(_) => {
-                    account.session_error = true;
-                    let mut store = state.store.lock().unwrap();
-                    if let Some(existing) = store.accounts.iter_mut().find(|a| a.id == account.id) {
-                        existing.session_error = true;
-                    }
-                    let _ = store.save_accounts();
-                    return Ok(Some(account));
-                }
-            }
-        }
-        account.session_error = now_ms() >= account.expires_at;
-        let mut store = state.store.lock().unwrap();
-        if let Some(existing) = store.accounts.iter_mut().find(|a| a.id == account.id) {
-            existing.session_error = account.session_error;
-            let _ = store.save_accounts();
-        }
-        return Ok(Some(account));
+    let Some(uuid) = user
+        .minecraft_uuid
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return Err("У аккаунта нет Minecraft UUID".to_string());
+    };
+
+    if session.game_access_token.is_empty() || session.game_expires_at <= now_ms() + 60_000 {
+        let api = lavunio_api()?;
+        let access = lavunio_access_token(state).await?;
+        let data = blocking(move || {
+            net::api_request_json(&api, "POST", "/v1/game/session", Some(&access), None)
+        })
+        .await??;
+        let access_token = data
+            .get("accessToken")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| "API не вернул игровой токен".to_string())?
+            .to_string();
+        let client_token = data
+            .get("clientToken")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let expires_in = data
+            .get("expiresIn")
+            .and_then(Value::as_i64)
+            .unwrap_or(30 * 24 * 60 * 60)
+            .max(60) as u64;
+        session.game_access_token = access_token;
+        session.game_client_token = client_token;
+        session.game_expires_at = now_ms().saturating_add(expires_in.saturating_mul(1000));
+        save_lavunio_session(state, session.clone())?;
     }
 
-    let access = account.access_token.clone();
-    let client = account.client_token.clone();
-    let result = blocking(move || {
-        if auth::ely_validate(&access, &client) {
-            return Ok(None);
-        }
-        auth::ely_refresh(&access, &client).map(Some)
+    Ok(GameAccount {
+        name: user.username,
+        uuid,
+        access_token: session.game_access_token,
     })
-    .await
-    .map_err(|e| format!("Не удалось проверить сессию: {e}"))?;
-
-    match result {
-        Ok(Some(data)) => {
-            account.access_token = data.access_token;
-            if let Some(token) = data.client_token {
-                account.client_token = token;
-            }
-            if let Some(profile) = data.selected_profile {
-                account.name = profile.name;
-                account.uuid = profile.id;
-            }
-            account.session_error = false;
-        }
-        Ok(None) => {
-            account.session_error = false;
-        }
-        Err(_) => {
-            account.session_error = true;
-        }
-    }
-
-    let mut store = state.store.lock().unwrap();
-    if let Some(existing) = store.accounts.iter_mut().find(|a| a.id == account.id) {
-        *existing = account.clone();
-        let _ = store.save_accounts();
-    }
-    Ok(store.current_account())
 }
 
-// ---------------------------------------------------------------- игра
+#[tauri::command]
+pub async fn lavunio_game_session(state: State<'_, AppState>) -> Result<Value, String> {
+    let account = ensure_game_account(state.inner()).await?;
+    let session = state.store.lock().unwrap().lavunio.clone();
+    Ok(json!({
+        "profile": {
+            "name": account.name,
+            "uuid": account.uuid,
+        },
+        "expiresAt": session.game_expires_at,
+    }))
+}
+
+fn save_lavunio_account(state: &AppState, data: Value) -> Result<Value, String> {
+    let user: LavunioUser = serde_json::from_value(data)
+        .map_err(|error| format!("Некорректный профиль Lavunio: {error}"))?;
+    let mut session = state.store.lock().unwrap().lavunio.clone();
+    session.user = Some(user);
+    save_lavunio_session(state, session.clone())?;
+    Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
+pub async fn lavunio_pick_skin() -> Result<Option<String>, String> {
+    let picked = blocking(|| {
+        rfd::FileDialog::new()
+            .add_filter("PNG-скин", &["png"])
+            .pick_file()
+    })
+    .await?;
+    Ok(picked.map(|path| path_string(&path)))
+}
+
+#[tauri::command]
+pub async fn lavunio_pick_cape() -> Result<Option<String>, String> {
+    let picked = blocking(|| {
+        rfd::FileDialog::new()
+            .add_filter("PNG-плащ", &["png"])
+            .pick_file()
+    })
+    .await?;
+    Ok(picked.map(|path| path_string(&path)))
+}
+
+async fn lavunio_upload_image(
+    state: &AppState,
+    path: String,
+    endpoint: String,
+) -> Result<Value, String> {
+    let bytes =
+        std::fs::read(&path).map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err("Файл больше 2 МБ".to_string());
+    }
+    let api = lavunio_api()?;
+    let token = lavunio_access_token(state).await?;
+    let data = blocking(move || {
+        net::api_request_bytes(&api, "PUT", &endpoint, Some(&token), bytes, "image/png")
+    })
+    .await??;
+    save_lavunio_account(state, data)
+}
+
+#[tauri::command]
+pub async fn lavunio_upload_skin(
+    state: State<'_, AppState>,
+    path: String,
+    model: String,
+) -> Result<Value, String> {
+    let model = model.trim().to_lowercase();
+    if !matches!(model.as_str(), "classic" | "slim") {
+        return Err("Модель скина: classic или slim".to_string());
+    }
+    let endpoint = format!("/v1/me/skin?model={model}");
+    lavunio_upload_image(state.inner(), path, endpoint).await
+}
+
+#[tauri::command]
+pub async fn lavunio_delete_skin(state: State<'_, AppState>) -> Result<Value, String> {
+    let data = publisher_request(state.inner(), "DELETE", "/v1/me/skin".to_string(), None).await?;
+    save_lavunio_account(state.inner(), data)
+}
+
+#[tauri::command]
+pub async fn lavunio_upload_cape(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<Value, String> {
+    lavunio_upload_image(state.inner(), path, "/v1/me/cape".to_string()).await
+}
+
+#[tauri::command]
+pub async fn lavunio_delete_cape(state: State<'_, AppState>) -> Result<Value, String> {
+    let data = publisher_request(state.inner(), "DELETE", "/v1/me/cape".to_string(), None).await?;
+    save_lavunio_account(state.inner(), data)
+}
 
 async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_only: bool) -> Value {
     crate::logging::log(format!(
@@ -1027,13 +960,13 @@ async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_onl
         return json!({ "ok": false, "error": "Режим не найден" });
     };
 
-    let (account, settings) = {
-        let store = state.store.lock().unwrap();
-        (store.current_account(), store.settings.clone())
-    };
-    let Some(account) = account else {
-        crate::logging::error("game", "no active account");
-        return json!({ "ok": false, "error": "Сначала войдите в аккаунт" });
+    let settings = state.store.lock().unwrap().settings.clone();
+    let account = match ensure_game_account(state).await {
+        Ok(account) => account,
+        Err(error) => {
+            crate::logging::error("game", format!("no game account: {error}"));
+            return json!({ "ok": false, "error": error });
+        }
     };
 
     let mode_id_for_store = mode.id.clone();

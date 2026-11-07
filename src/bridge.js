@@ -36,23 +36,21 @@
     installUpdate: (url) => invoke("install_update", { url }),
     onUpdateProgress: (cb) => listen("update:progress", (e) => cb(e.payload)),
 
-    // аккаунты
-    getAccounts: () => invoke("accounts_get"),
-    getCurrentAccount: () => invoke("accounts_current"),
-    deviceStart: () => invoke("accounts_device_start"),
-    devicePoll: (deviceCode) => invoke("accounts_device_poll", { deviceCode }),
-    openElyWindow: (url) => invoke("open_ely_window", { url }),
-    closeElyWindow: () => invoke("close_ely_window"),
-    selectAccount: (id) => invoke("accounts_select", { id }),
-    removeAccount: (id) => invoke("accounts_remove", { id }),
-    refreshSession: () => invoke("accounts_refresh"),
-
     // Lavunio ID
     lavunioStatus: () => invoke("lavunio_status"),
     lavunioRegister: (email, password, username) => invoke("lavunio_register", { email, password, username }),
     lavunioLogin: (email, password) => invoke("lavunio_login", { email, password }),
     lavunioLogout: () => invoke("lavunio_logout"),
     lavunioResendVerification: () => invoke("lavunio_resend_verification"),
+    lavunioGameSession: () => invoke("lavunio_game_session"),
+
+    // скины Lavunio
+    pickSkin: () => invoke("lavunio_pick_skin"),
+    uploadSkin: (path, model) => invoke("lavunio_upload_skin", { path, model }),
+    deleteSkin: () => invoke("lavunio_delete_skin"),
+    pickCape: () => invoke("lavunio_pick_cape"),
+    uploadCape: (path) => invoke("lavunio_upload_cape", { path }),
+    deleteCape: () => invoke("lavunio_delete_cape"),
 
     // публикатор
     publisherMyModes: () => invoke("publisher_my_modes"),

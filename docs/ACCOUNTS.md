@@ -1,136 +1,101 @@
-# Lavunio Accounts and Skin Providers
+# Lavunio Accounts and Skins
 
-> Статус: A-01 (backend) готов — регистрация по email, вход, сессии, refresh-токены, подтверждение почты и сброс пароля. Писем пока нет: в dev-режиме токены возвращаются в API и пишутся в лог. UI аккаунтов в лаунчере и внешние провайдеры — следующие этапы.
+> Статус: Lavunio ID — основной и единственный аккаунт лаунчера. Ely.by удалён. Игровые сессии и скины работают через Lavunio API и `authlib-injector`, внешние скины не используются.
 
 ## 1. Цель
 
-- Дать игроку **аккаунт Lavunio** для библиотеки, отзывов, друзей, облачных сохранений и статистики.
-- Не заставлять игрока отказываться от Ely.by или Minecraft/Microsoft.
-- Подключить несколько **провайдеров скинов и сессий** через единый интерфейс.
-- Не хранить пароли внешних сервисов.
-- Оставить возможность играть офлайн, если аккаунт уже привязан.
+- Один аккаунт Lavunio для игры, магазина, публикации и облачных функций.
+- Собственные скины и плащи Lavunio.
+- Вход в игру через `authlib-injector` и Yggdrasil-совместимые endpoints Lavunio API.
+- Не хранить пароли внешних сервисов и не зависеть от Ely.by.
 
 ## 2. Модель данных
 
 ```text
 users
-  id            uuid
-  username      text unique
-  email         text unique
-  password_hash text
-  role          player | author | moderator | admin
-  created_at
+  id                uuid
+  username          text unique
+  display_name      text
+  email             text unique
+  password_hash     text (Argon2id)
+  role              player | author | moderator | admin
   email_verified_at
-
-identities
-  id            uuid
-  user_id       uuid -> users
-  provider      lavunio | elyby | microsoft | ...
-  external_id   text
-  display_name  text
-  avatar_url    text
-  access_token  text nullable, encrypted
-  refresh_token text nullable, encrypted
-  expires_at
+  minecraft_uuid    uuid unique
+  skin_url          text
+  skin_model        classic | slim
+  cape_url          text
+  skin_updated_at
   created_at
-  unique (provider, external_id)
-
-sessions
-  id            uuid
-  user_id       uuid
-  refresh_hash  text
-  user_agent    text
-  ip            text
-  created_at
-  last_used_at
-  revoked_at
-
-link_codes
-  code          text
-  user_id       uuid
-  expires_at
-  used_at
-
-skin_profiles
-  id            uuid
-  identity_id   uuid
-  username      text
-  uuid          text
-  skin_url      text
-  cape_url      text
-  model         classic | slim
   updated_at
+
+sessions              сессии Lavunio ID (сайт/лаунчер)
+  id, user_id, access_hash, refresh_hash,
+  access_expires_at, refresh_expires_at,
+  user_agent, ip, created_at, last_used_at, revoked_at
+
+game_sessions         токены для Minecraft
+  id, user_id, access_hash, client_hash,
+  expires_at, created_at, last_used_at, revoked_at
+
+game_joins            вход на authlib-серверы
+  server_id, user_id, created_at
+
+identities            зарезервировано под будущие внешние провайдеры
+  id, user_id, provider, external_id, display_name, avatar_url, ...
 ```
+
+`minecraft_uuid` создаётся при регистрации и не меняется. В играх используется UUID без дефисов.
 
 ## 3. Авторизация Lavunio
 
 - Email + пароль.
 - Пароль: **Argon2id**, уникальная соль.
-- Подтверждение почты перед публикацией и социальными функциями.
-- Access-токен короткий, refresh-токен долгий и хранится в виде хеша.
-- Отзыв сессий и устройств.
-- Позже: 2FA (TOTP), вход по passkey.
-- Восстановление пароля по email.
+- Access-токен Lavunio короткий, refresh-токен долгий; в БД хранятся только SHA-256-хеши.
+- Подтверждение почты и сброс пароля.
+- Игровая сессия (`game_sessions`) живёт 30 дней и выдаётся через `POST /v1/game/session`.
+- Сброс пароля и выход отзывают игровые сессии.
 
-## 4. Привязка внешних аккаунтов
+## 4. Вход в Minecraft
 
-Внешний аккаунт — это `identity`, а не отдельный пользователь.
+Лаунчер передаёт `authlib-injector` адрес Lavunio API:
 
-- Игрок входит в Lavunio.
-- Нажимает «Привязать Ely.by» или «Привязать Microsoft».
-- Открывается OAuth-окно.
-- После callback сохраняется `external_id`, профиль и токены.
-- Один внешний аккаунт можно привязать только к одному Lavunio ID.
-- Отвязка требует подтверждения и не должна ломать текущую игровую сессию.
-
-### Ely.by
-
-- OAuth device flow или обычный OAuth.
-- Профиль и скин через Ely.by API.
-- Запуск игры через authlib-injector, как сейчас.
-
-### Microsoft / Minecraft official
-
-- OAuth Microsoft.
-- Xbox Live + XSTS.
-- Minecraft services: профиль, entitlements, скин, плащ.
-- Требуется регистрация приложения в Azure.
-- Токены Minecraft короткоживущие, нужен refresh.
-- Это самый сложный провайдер, делать после Ely.by.
-
-### Другие провайдеры
-
-- Добавлять через trait/интерфейс, а не хардкодом.
-- Кандидаты: собственные скины Lavunio, TLauncher-совместимые сервисы (если безопасно), другие authlib-серверы.
-
-## 5. Абстракция скинов
-
-```rust
-pub struct SkinProfile {
-    pub username: String,
-    pub uuid: String,
-    pub skin_url: Option<String>,
-    pub cape_url: Option<String>,
-    pub model: SkinModel,
-}
-
-pub trait SkinProvider {
-    fn id(&self) -> &'static str;
-    fn display_name(&self) -> &'static str;
-    fn profile(&self, identity: &Identity) -> Result<SkinProfile, Error>;
-    fn validate_session(&self, identity: &Identity) -> Result<bool, Error>;
-    fn refresh(&self, identity: &mut Identity) -> Result<(), Error>;
-}
+```text
+-javaagent:authlib-injector.jar=<LAVUNIO_API_URL>
 ```
 
-Провайдеры:
+Authlib-injector читает метаданные с корня API и использует Yggdrasil-совместимые endpoints:
 
-- `LavunioSkinProvider` — собственные скины, загрузка через API.
-- `ElyBySkinProvider` — Ely.by.
-- `MicrosoftSkinProvider` — Minecraft official.
-- Позже — дополнительные authlib-провайдеры.
+```text
+POST /authserver/authenticate
+POST /authserver/refresh
+POST /authserver/validate
+POST /authserver/invalidate
+POST /authserver/signout
 
-## 6. API
+GET  /sessionserver/session/minecraft/profile/{uuid}
+POST /sessionserver/session/minecraft/join
+GET  /sessionserver/session/minecraft/hasJoined
+```
+
+Профиль содержит `textures`-свойство с URL скина и плаща. Подпись текстур не используется: metadata API не публикует `signaturePublickey`, поэтому клиент не требует подпись. В metadata включён `feature.non_email_login`, чтобы можно было входить по имени пользователя.
+
+Лаунчер заранее загружает metadata и передаёт её в `-Dauthlibinjector.yggdrasil.prefetched=<base64>`, как рекомендует спецификация authlib-injector.
+
+Для production в `SKIN_DOMAINS` нужно указать домены API и CDN, иначе Minecraft не загрузит скин.
+
+## 5. Скины Lavunio
+
+- `PUT /v1/me/skin?model=classic|slim` — загрузка PNG 64×64 или 64×32.
+- `DELETE /v1/me/skin` — удалить скин.
+- `PUT /v1/me/cape` — загрузка PNG 64×32 или 22×17.
+- `DELETE /v1/me/cape` — удалить плащ.
+- Файлы хранятся в локальном storage или S3/R2 как `skins/{sha256}.png`.
+- Имя файла — SHA-256 очищенного PNG. Новый скин получает новый URL, поэтому клиент не кеширует старую картинку.
+- Перед сохранением PNG декодируется и перекодируется: это убирает лишние чанки и защищает клиентов от вредоносных файлов.
+
+Модель `classic` — обычные руки, `slim` — тонкие (Alex).
+
+## 6. API аккаунта и игровой сессии
 
 ```text
 POST /v1/auth/register
@@ -144,61 +109,52 @@ POST /v1/auth/password/reset
 
 GET  /v1/me
 GET  /v1/me/identities
-POST /v1/me/identities/{provider}/link/start
-POST /v1/me/identities/{provider}/link/complete
-DELETE /v1/me/identities/{provider}
-
-GET  /v1/skins/providers
-GET  /v1/skins/{provider}/profile
-POST /v1/skins/lavunio/upload
+POST /v1/game/session
+POST /v1/game/logout
+PUT  /v1/me/skin
+DELETE /v1/me/skin
+PUT  /v1/me/cape
+DELETE /v1/me/cape
 ```
 
-A-01 реализует первую группу и `GET /v1/me`, `GET /v1/me/identities`. Письма пока не отправляются: при `LAVUNIO_DEV_MODE=1` токены подтверждения и сброса возвращаются в ответе и пишутся в лог. В production их нужно отправлять почтовым провайдером.
+`POST /v1/game/session` возвращает `accessToken`, `clientToken`, `expiresIn`, игровой профиль и данные скина. Лаунчер сохраняет токен до истечения и переиспользует его при запуске игры.
 
 ## 7. UI лаунчера
 
-- Окно «Аккаунт»:
-  - вход/регистрация Lavunio;
-  - список привязанных аккаунтов;
-  - статус сессии;
-  - выбор активного игрового профиля;
-  - предпросмотр скина и плаща.
-- При запуске игры выбирается identity, через которую авторизуется Minecraft.
-- Если Lavunio ID нет, можно играть через Ely.by, как сейчас.
-- Если интернета нет, использовать сохранённую сессию, пока она валидна.
-
-Статус: вкладка Lavunio ID в окне аккаунта уже умеет регистрацию, вход, выход и подтверждение почты. Сессия хранится в `%APPDATA%\Lavunio\lavunio-session.json`; позже её нужно перенести в защищённое хранилище ОС.
+- Окно «Lavunio ID»:
+  - вход и регистрация;
+  - статус почты и роль;
+  - загрузка/удаление скина и плаща;
+  - предпросмотр скина.
+- Ely.by полностью удалён: нет вкладок, OAuth-окна, device flow и внешних скинов.
+- Без входа в Lavunio ID игра не запускается: сначала открывается окно аккаунта.
+- Аватар в шапке и карточке аккаунта строится из головы Lavunio-скина.
 
 ## 8. Безопасность
 
 - Argon2id для паролей.
-- Хеширование refresh-токенов.
-- Шифрование внешних токенов at rest.
-- Rate limit на login/register/reset.
-- Защита от перебора и email enumeration.
-- Журнал входов и привязок.
+- Хеширование access/refresh/game-токенов.
+- Отзыв сессий при сбросе пароля и выходе.
+- Ограничение размера скина 2 МБ.
+- Проверка PNG-сигнатуры и размеров.
+- Rate limit на login/register/reset — следующий этап.
 - Не логировать токены и пароли.
-- Отдельные scopes для публикатора.
-- Модерация скинов и имён.
 
 ## 9. Этапы
 
-1. **A-01.** Lavunio ID: регистрация, вход, сессии, email verification. — backend готов.
-2. **A-02.** Профиль и привязка Ely.by. — частично: профиль и identities готовы, привязка внешних аккаунтов дальше.
-3. **A-03.** Собственные скины Lavunio.
-4. **A-04.** Microsoft/Minecraft official.
-5. **A-05.** UI аккаунтов в лаунчере.
-6. **A-06.** Миграция текущих Ely.by-аккаунтов.
-7. **A-07.** 2FA, passkeys, управление устройствами.
+1. **A-01.** Lavunio ID: регистрация, вход, сессии, email verification. — готово.
+2. **A-02.** Сессии и безопасность: refresh, отзыв, game sessions. — готово, rate limit и 2FA позже.
+3. **A-03.** Собственные скины и плащи Lavunio. — готово.
+4. **A-04.** Вход в Minecraft через authlib-injector. — готово, проверить на реальном сервере.
+5. **A-05.** UI аккаунта и скинов в лаунчере. — готово.
+6. **A-06.** 2FA, passkeys, управление устройствами. — позже.
 
 ## 10. Открытые вопросы
 
-- Нужен ли отдельный Lavunio-аккаунт для игры или только для магазина/сообщества?
-- Какой email-сервис использовать для подтверждения и сброса?
-- Делать ли собственные скины обязательными или оставить выбор провайдера?
-- Нужна ли миграция старых Ely.by-аккаунтов в Lavunio ID автоматически?
-- Кто модерирует пользовательские скины и имена?
-- Нужен ли Microsoft-вход на первом этапе или достаточно Ely.by?
+- Нужна ли модерация пользовательских скинов.
+- Нужен ли Microsoft/Minecraft official как дополнительный провайдер в будущем.
+- Нужно ли подписывать textures-свойство собственным ключом.
+- Какой домен и CDN использовать для скинов в production.
 
 ## Связанные документы
 

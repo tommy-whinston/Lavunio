@@ -2,7 +2,7 @@ use crate::events::GameEvent;
 use crate::models::{Author, BuildInfo, Mode, Settings};
 use crate::util::{format_error, safe_join, sha256_file, write_json};
 use reqwest::blocking::{Client, Response};
-use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, USER_AGENT};
+use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -207,6 +207,44 @@ pub fn upload_file(
         return Err(message);
     }
     Ok(())
+}
+
+pub fn api_request_bytes(
+    api_base: &str,
+    method: &str,
+    path: &str,
+    token: Option<&str>,
+    bytes: Vec<u8>,
+    content_type: &str,
+) -> Result<Value, String> {
+    let url = if path.starts_with("http://") || path.starts_with("https://") {
+        path.to_string()
+    } else {
+        format!("{}{}", api_base.trim_end_matches('/'), path)
+    };
+    let method = reqwest::Method::from_bytes(method.as_bytes())
+        .map_err(|_| "Некорректный HTTP-метод".to_string())?;
+    let mut req = client()
+        .request(method, &url)
+        .header(ACCEPT, "application/json")
+        .header(CONTENT_TYPE, content_type)
+        .body(bytes);
+    if let Some(token) = token.filter(|value| !value.trim().is_empty()) {
+        req = req.header(AUTHORIZATION, format!("Bearer {}", token.trim()));
+    }
+    let res = req
+        .send()
+        .map_err(|e| format!("Нет связи с Lavunio API: {}", format_error(e)))?;
+    let status = res.status();
+    let data: Value = res.json().unwrap_or_else(|_| Value::Null);
+    if !status.is_success() {
+        let message = data
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("Ошибка Lavunio API");
+        return Err(message.to_string());
+    }
+    Ok(data)
 }
 
 /// Читает modes.json из настроенного источника. Сначала catalogUrl, затем GitHub как резерв.

@@ -1,6 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod auth;
 mod commands;
 mod events;
 mod game;
@@ -39,18 +38,18 @@ fn main() {
             commands::app_open_folder,
             commands::app_logs_path,
             commands::app_open_logs,
-            commands::accounts_get,
-            commands::accounts_current,
-            commands::accounts_device_start,
-            commands::accounts_device_poll,
-            commands::accounts_select,
-            commands::accounts_remove,
-            commands::accounts_refresh,
             commands::lavunio_status,
             commands::lavunio_register,
             commands::lavunio_login,
             commands::lavunio_logout,
             commands::lavunio_resend_verification,
+            commands::lavunio_game_session,
+            commands::lavunio_pick_skin,
+            commands::lavunio_upload_skin,
+            commands::lavunio_delete_skin,
+            commands::lavunio_pick_cape,
+            commands::lavunio_upload_cape,
+            commands::lavunio_delete_cape,
             commands::publisher_my_modes,
             commands::publisher_create_mode,
             commands::publisher_create_release,
@@ -58,8 +57,6 @@ fn main() {
             commands::publisher_pick_folder,
             commands::publisher_pick_archive,
             commands::publisher_upload_build,
-            commands::open_ely_window,
-            commands::close_ely_window,
             commands::game_install,
             commands::game_play,
             commands::game_cancel,

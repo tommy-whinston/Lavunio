@@ -49,8 +49,6 @@ const S = {
   state: {},
   settings: null,
   systemRamGb: 0,
-  accounts: [],
-  current: null,
   selectedId: null,
   featuredId: null,
   view: 'store',
@@ -62,7 +60,6 @@ const S = {
   search: '',
   loading: true,
   refreshing: false,
-  elyLogin: null,
   section: 'store',
   detailFrom: null,
   updateInfo: null,
@@ -73,7 +70,6 @@ const S = {
   librarySort: 'date',
   pendingPlay: null,
   lavunio: null,
-  accTab: null,
   lavunioRegisterMode: false,
   publisherModes: [],
   publisherLoaded: false,
@@ -212,12 +208,10 @@ async function init() {
   const startupUpdate = checkLauncherUpdate();
 
   try {
-    const [cachedModes, state, settings, accounts, current, lavunio] = await Promise.all([
+    const [cachedModes, state, settings, lavunio] = await Promise.all([
       api.getCachedModes ? api.getCachedModes() : Promise.resolve([]),
       api.getState(),
       api.getSettings(),
-      api.getAccounts(),
-      api.getCurrentAccount(),
       api.lavunioStatus ? api.lavunioStatus().catch(() => null) : Promise.resolve(null)
     ]);
     let modes = Array.isArray(cachedModes) ? cachedModes : [];
@@ -231,10 +225,7 @@ async function init() {
     S.modes = Array.isArray(modes) ? modes : [];
     S.state = state || {};
     S.settings = settings || null;
-    S.accounts = Array.isArray(accounts) ? accounts : [];
-    S.current = current || null;
     S.lavunio = lavunio || null;
-    S.accTab = S.accTab || (S.lavunio && S.lavunio.configured ? 'lavunio' : 'ely');
     S.loading = false;
     renderAccountChip();
     updatePublisherNav();
@@ -254,15 +245,6 @@ async function init() {
     }
 
     await handleStartupUpdate(startupUpdate);
-
-    if (api.refreshSession) {
-      api.refreshSession().then((acc) => {
-        if (acc) {
-          S.current = acc;
-          renderAccountChip();
-        }
-      }).catch(() => {});
-    }
   } catch (err) {
     S.loading = false;
     renderStore();
@@ -1176,9 +1158,9 @@ function bindDetail() {
       }
       return;
     }
-    if (!S.current) {
+    if (!lavunioLoggedIn()) {
       openModal('modal-account');
-      toast('Сначала войдите в аккаунт Ely.by', 'warn');
+      toast('Сначала войдите в Lavunio ID', 'warn');
       return;
     }
 
@@ -1233,9 +1215,9 @@ async function startMode(mode, autoPlay = false) {
       return;
     }
   }
-  if (!S.current) {
+  if (!lavunioLoggedIn()) {
     openModal('modal-account');
-    toast('Сначала войди в аккаунт Ely.by', 'warn');
+    toast('Сначала войдите в Lavunio ID', 'warn');
     return;
   }
 
@@ -1857,68 +1839,43 @@ async function startAutoUpdate(info) {
 
 // ---------------------------------------------------------------- аккаунт
 
-function avatarSkin(acc) {
-  if (!acc || acc.type !== 'ely' || !acc.name) return '';
-  return `url("https://skinsystem.ely.by/skins/${encodeURIComponent(acc.name)}.png")`;
+function lavunioLoggedIn() {
+  return !!(S.lavunio && S.lavunio.user);
 }
 
-function avatarLetter(acc) {
-  if (!acc || !acc.name) return 'Г';
-  return acc.name[0].toUpperCase();
+function lavunioName(user) {
+  if (!user) return 'Гость';
+  return user.displayName || user.username || 'Игрок';
 }
 
-function applyAvatar(el, acc) {
+function lavunioLetter(user) {
+  const name = lavunioName(user);
+  return name ? name[0].toUpperCase() : '?';
+}
+
+function applyLavunioAvatar(el, user) {
   if (!el) return;
-  el.classList.remove('loaded');
-  el.style.backgroundImage = '';
-  el.dataset.avatarUrl = '';
-
-  if (acc && acc.type === 'ely' && acc.name) {
-    const url = `https://skinsystem.ely.by/skins/${encodeURIComponent(acc.name)}.png`;
-    el.textContent = avatarLetter(acc);
-    el.dataset.avatarUrl = url;
-    const img = new Image();
-    img.onload = () => {
-      if (el.dataset.avatarUrl !== url) return;
-      const hasHat = img.naturalWidth >= 64 && img.naturalHeight >= 64;
-      el.style.backgroundImage = hasHat
-        ? `${avatarSkin(acc)}, ${avatarSkin(acc)}`
-        : avatarSkin(acc);
-      el.textContent = '';
-      el.classList.add('loaded');
-    };
-    img.onerror = () => {
-      if (el.dataset.avatarUrl !== url) return;
-      el.style.backgroundImage = '';
-      el.textContent = avatarLetter(acc);
-    };
-    img.src = url;
+  el.classList.remove('loaded', 'skin-head', 'lavunio-avatar');
+  const url = user && user.skinUrl;
+  if (url) {
+    el.textContent = '';
+    el.style.backgroundImage = `url("${url}")`;
+    el.classList.add('loaded', 'skin-head');
   } else {
-    el.textContent = avatarLetter(acc);
+    el.style.backgroundImage = '';
+    el.textContent = lavunioLetter(user);
+    el.classList.add('lavunio-avatar');
   }
 }
 
 function renderAccountChip() {
-  els.accName.textContent = S.current ? S.current.name : 'Гость';
-  applyAvatar(els.accAvatar, S.current);
+  const user = S.lavunio && S.lavunio.user;
+  els.accName.textContent = user ? lavunioName(user) : 'Гость';
+  applyLavunioAvatar(els.accAvatar, user);
 }
 
 function bindAccountModal() {
-  els.accChip.onclick = () => openAccountModal();
-  $('btn-ely-open').onclick = () => openElyLogin();
-  $('btn-ely-start').onclick = () => startElyLogin();
-  $('btn-ely-window').onclick = () => {
-    if (!S.elyLogin || !S.elyLogin.verificationUriComplete) return;
-    api.openElyWindow(S.elyLogin.verificationUriComplete).catch((err) => {
-      $('ely-status-text').textContent = 'Не удалось открыть окно: ' + err;
-    });
-  };
-  $('btn-ely-cancel').onclick = () => cancelElyLogin();
-  $('ely-register').onclick = () => api.openUrl('https://account.ely.by/register').catch(() => {});
-
-  document.querySelectorAll('[data-acc-tab]').forEach((tab) => {
-    tab.onclick = () => setAccTab(tab.getAttribute('data-acc-tab'));
-  });
+  els.accChip.onclick = () => openModal('modal-account');
   $('lavunio-form').onsubmit = (event) => {
     event.preventDefault();
     submitLavunioForm();
@@ -1930,10 +1887,10 @@ function bindAccountModal() {
   };
   $('lavunio-logout').onclick = () => logoutLavunio();
   $('lavunio-verify-btn').onclick = () => verifyLavunioEmail();
-}
-
-function openAccountModal() {
-  openModal('modal-account');
+  $('lavunio-skin-upload').onclick = () => uploadLavunioSkin();
+  $('lavunio-skin-delete').onclick = () => deleteLavunioSkin();
+  $('lavunio-cape-upload').onclick = () => uploadLavunioCape();
+  $('lavunio-cape-delete').onclick = () => deleteLavunioCape();
 }
 
 async function refreshLavunioStatus() {
@@ -1941,12 +1898,12 @@ async function refreshLavunioStatus() {
   try {
     S.lavunio = await api.lavunioStatus();
     renderLavunioPane();
+    renderAccountChip();
   } catch (_) {}
 }
 
-function setAccTab(tab) {
-  S.accTab = tab === 'ely' ? 'ely' : 'lavunio';
-  renderAccountModal();
+function renderAccountModal() {
+  renderLavunioPane();
 }
 
 function renderLavunioPane() {
@@ -1965,7 +1922,7 @@ function renderLavunioPane() {
   if (signed) signed.hidden = !user;
 
   if (user) {
-    $('lavunio-name').textContent = user.displayName || user.username;
+    $('lavunio-name').textContent = lavunioName(user);
     const bits = [];
     if (user.email) bits.push(user.email);
     bits.push(user.emailVerified ? 'почта подтверждена' : 'почта не подтверждена');
@@ -1983,9 +1940,29 @@ function renderLavunioPane() {
       if (index === 1) span.className = user.emailVerified ? 'ok' : 'warn';
       sub.appendChild(span);
     });
-    const av = $('lavunio-avatar');
-    av.textContent = (user.displayName || user.username || '?').slice(0, 1).toUpperCase();
+    applyLavunioAvatar($('lavunio-avatar'), user);
     $('lavunio-verify').hidden = !!user.emailVerified;
+
+    const skinImg = $('lavunio-skin-img');
+    if (user.skinUrl) {
+      skinImg.src = user.skinUrl;
+      skinImg.hidden = false;
+    } else {
+      skinImg.removeAttribute('src');
+      skinImg.hidden = true;
+    }
+    $('lavunio-skin-model').value = user.skinModel || 'classic';
+    $('lavunio-skin-delete').hidden = !user.skinUrl;
+
+    const capeImg = $('lavunio-cape-img');
+    if (user.capeUrl) {
+      capeImg.src = user.capeUrl;
+      capeImg.hidden = false;
+    } else {
+      capeImg.removeAttribute('src');
+      capeImg.hidden = true;
+    }
+    $('lavunio-cape-delete').hidden = !user.capeUrl;
   } else {
     const register = !!S.lavunioRegisterMode;
     $('lavunio-username-field').hidden = !register;
@@ -1995,23 +1972,7 @@ function renderLavunioPane() {
     $('lavunio-switch').textContent = register ? 'Войти' : 'Регистрация';
     if (error) error.hidden = true;
   }
-  syncAccTabs();
   updatePublisherNav();
-}
-
-function syncAccTabs() {
-  const configured = !!(S.lavunio && S.lavunio.configured);
-  const lavunioTab = document.querySelector('[data-acc-tab="lavunio"]');
-  if (lavunioTab) lavunioTab.hidden = !configured;
-  if (!configured) S.accTab = 'ely';
-  if (!S.accTab) S.accTab = 'lavunio';
-  document.querySelectorAll('[data-acc-tab]').forEach((tab) => {
-    tab.classList.toggle('active', tab.getAttribute('data-acc-tab') === S.accTab);
-  });
-  const lavunioPane = $('acc-pane-lavunio');
-  const elyPane = $('acc-pane-ely');
-  if (lavunioPane) lavunioPane.hidden = S.accTab !== 'lavunio';
-  if (elyPane) elyPane.hidden = S.accTab !== 'ely';
 }
 
 async function submitLavunioForm() {
@@ -2048,7 +2009,8 @@ async function submitLavunioForm() {
     S.lavunio = status;
     $('lavunio-password').value = '';
     renderLavunioPane();
-    const name = status && status.user ? (status.user.displayName || status.user.username) : '';
+    renderAccountChip();
+    const name = status && status.user ? lavunioName(status.user) : '';
     toast(register ? 'Аккаунт Lavunio создан' : `С возвращением, ${name || 'игрок'}!`, 'ok');
     if (status && status.user && !status.user.emailVerified) {
       toast('Почта не подтверждена', 'warn');
@@ -2070,6 +2032,7 @@ async function logoutLavunio() {
   } catch (_) {}
   S.lavunio = { configured: true, hasSession: false, user: null };
   renderLavunioPane();
+  renderAccountChip();
   toast('Вы вышли из Lavunio', 'ok');
 }
 
@@ -2094,232 +2057,75 @@ async function verifyLavunioEmail() {
   }
 }
 
-function openElyLogin() {
-  openModal('modal-ely-login');
-  resetElyLoginUI();
-  startElyLogin();
-}
-
-async function startElyLogin() {
-  if (S.elyLogin && S.elyLogin.polling) return;
-  resetElyLoginUI();
-
-  const status = $('ely-status-text');
-  status.textContent = 'Запускаем вход…';
-  $('btn-ely-start').hidden = true;
-  $('btn-ely-cancel').hidden = false;
-
-  let data;
+async function uploadLavunioSkin() {
+  if (!lavunioLoggedIn()) return;
+  let path;
   try {
-    data = await api.deviceStart();
+    path = await api.pickSkin();
   } catch (err) {
-    showElyError(String(err));
+    toast('Не удалось выбрать файл: ' + err, 'error');
     return;
   }
+  if (!path) return;
 
-  S.elyLogin = {
-    deviceCode: data.deviceCode,
-    verificationUriComplete: data.verificationUriComplete,
-    interval: Math.max(5, Number(data.interval) || 5),
-    polling: true,
-    timer: null
-  };
-
-  status.textContent = 'Подтверди вход в окне Ely.by…';
-  $('btn-ely-window').hidden = false;
-  $('btn-ely-cancel').hidden = false;
-
+  const button = $('lavunio-skin-upload');
+  button.disabled = true;
   try {
-    await api.openElyWindow(data.verificationUriComplete);
+    S.lavunio = await api.uploadSkin(path, $('lavunio-skin-model').value);
+    renderLavunioPane();
+    renderAccountChip();
+    toast('Скин обновлён', 'ok');
   } catch (err) {
-    status.textContent = 'Не удалось открыть окно. Нажми «Открыть окно Ely.by».';
+    toast('Не удалось загрузить скин: ' + err, 'error');
+  } finally {
+    button.disabled = false;
   }
-  scheduleElyPoll();
 }
 
-function scheduleElyPoll() {
-  if (!S.elyLogin) return;
-  if (S.elyLogin.timer) clearTimeout(S.elyLogin.timer);
-  S.elyLogin.timer = setTimeout(pollElyLogin, S.elyLogin.interval * 1000);
-}
-
-async function pollElyLogin() {
-  if (!S.elyLogin || !S.elyLogin.polling) return;
-  let res;
+async function deleteLavunioSkin() {
+  if (!lavunioLoggedIn()) return;
   try {
-    res = await api.devicePoll(S.elyLogin.deviceCode);
+    S.lavunio = await api.deleteSkin();
+    renderLavunioPane();
+    renderAccountChip();
+    toast('Скин удалён', 'ok');
   } catch (err) {
-    showElyError(String(err));
-    return;
+    toast('Не удалось удалить скин: ' + err, 'error');
   }
-  if (!S.elyLogin) return;
-  if (res && res.status === 'pending') {
-    scheduleElyPoll();
-    return;
-  }
-  if (res && res.status === 'slow_down') {
-    S.elyLogin.interval += 5;
-    scheduleElyPoll();
-    return;
-  }
-  if (res && res.status === 'ok' && res.account) {
-    await finishElyLogin(res.account);
-    return;
-  }
-  showElyError('Ely.by вернул неожиданный ответ');
 }
 
-async function finishElyLogin(account) {
-  stopElyLogin();
-  S.current = account;
+async function uploadLavunioCape() {
+  if (!lavunioLoggedIn()) return;
+  let path;
   try {
-    S.accounts = (await api.getAccounts()) || [];
-  } catch (_) {
-    S.accounts = [];
-  }
-  closeElyLogin();
-  renderAccountChip();
-  renderAccountModal();
-  toast(`Добро пожаловать, ${account.name}!`, 'ok');
-}
-
-function showElyError(message) {
-  if (S.elyLogin && S.elyLogin.timer) clearTimeout(S.elyLogin.timer);
-  S.elyLogin = null;
-  api.closeElyWindow().catch(() => {});
-  const err = $('ely-login-error');
-  err.textContent = message;
-  err.hidden = false;
-  $('ely-status-text').textContent = 'Вход не выполнен';
-  const start = $('btn-ely-start');
-  start.hidden = false;
-  start.disabled = false;
-  start.textContent = 'Повторить';
-  $('btn-ely-window').hidden = true;
-  $('btn-ely-cancel').hidden = true;
-}
-
-function cancelElyLogin() {
-  stopElyLogin();
-  resetElyLoginUI();
-}
-
-function stopElyLogin() {
-  if (S.elyLogin && S.elyLogin.timer) clearTimeout(S.elyLogin.timer);
-  S.elyLogin = null;
-  api.closeElyWindow().catch(() => {});
-}
-
-function resetElyLoginUI() {
-  const err = $('ely-login-error');
-  if (err) {
-    err.hidden = true;
-    err.textContent = '';
-  }
-  const status = $('ely-status-text');
-  if (status) status.textContent = 'Откроется окно Ely.by. Войди в аккаунт и подтверди вход.';
-  const start = $('btn-ely-start');
-  if (start) {
-    start.hidden = false;
-    start.disabled = false;
-    start.textContent = 'Продолжить';
-  }
-  const win = $('btn-ely-window');
-  if (win) win.hidden = true;
-  const cancel = $('btn-ely-cancel');
-  if (cancel) cancel.hidden = true;
-}
-
-function closeElyLogin() {
-  stopElyLogin();
-  const modal = $('modal-ely-login');
-  if (modal) modal.hidden = true;
-  resetElyLoginUI();
-}
-
-function renderAccountModal() {
-  const cur = S.current;
-  const box = $('acc-current');
-  box.innerHTML = '';
-  if (cur) {
-    const av = document.createElement('span');
-    av.className = 'avatar';
-    applyAvatar(av, cur);
-    const info = document.createElement('div');
-    const sub = cur.type === 'ely'
-      ? (cur.sessionError ? '<span class="warn">Сессия истекла — войдите заново</span>' : 'Аккаунт Ely.by')
-      : 'Офлайн-аккаунт';
-    info.innerHTML = `<div class="acc-name"></div><div class="acc-sub">${sub}</div>`;
-    info.querySelector('.acc-name').textContent = cur.name;
-    box.appendChild(av);
-    box.appendChild(info);
-  } else {
-    box.innerHTML = '<div style="color:var(--muted);font-size:12.5px;">Аккаунтов нет — войди через Ely.by</div>';
-  }
-  renderAccountList();
-  const label = $('ely-open-label');
-  if (label) {
-    label.textContent = cur && cur.type === 'ely' ? 'Сменить аккаунт Ely.by' : 'Войти через Ely.by';
-  }
-  renderLavunioPane();
-}
-
-function renderAccountList() {
-  const list = $('acc-list');
-  list.innerHTML = '';
-  if (!S.accounts.length) {
-    list.innerHTML = '<div style="color:var(--muted);font-size:12px;">Пока пусто</div>';
+    path = await api.pickCape();
+  } catch (err) {
+    toast('Не удалось выбрать файл: ' + err, 'error');
     return;
   }
-  for (const acc of S.accounts) {
-    const row = document.createElement('div');
-    row.className = 'acc-row' + (S.current && S.current.id === acc.id ? ' current' : '');
+  if (!path) return;
 
-    const av = document.createElement('span');
-    av.className = 'avatar';
-    applyAvatar(av, acc);
+  const button = $('lavunio-cape-upload');
+  button.disabled = true;
+  try {
+    S.lavunio = await api.uploadCape(path);
+    renderLavunioPane();
+    toast('Плащ обновлён', 'ok');
+  } catch (err) {
+    toast('Не удалось загрузить плащ: ' + err, 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
 
-    const name = document.createElement('span');
-    name.className = 'acc-name';
-    name.textContent = acc.name;
-
-    const type = document.createElement('span');
-    type.className = 'acc-type' + (acc.type === 'offline' ? ' offline' : '');
-    type.textContent = acc.type === 'ely' ? 'ely.by' : 'офлайн';
-
-    const pick = document.createElement('button');
-    pick.textContent = S.current && S.current.id === acc.id ? 'Выбран' : 'Выбрать';
-    pick.disabled = S.current && S.current.id === acc.id;
-    pick.onclick = async () => {
-      try {
-        S.current = await api.selectAccount(acc.id);
-        renderAccountChip();
-        renderAccountModal();
-        toast(`Аккаунт: ${acc.name}`, 'ok');
-      } catch (ex) {
-        toast('Не удалось выбрать аккаунт: ' + ex, 'error');
-      }
-    };
-
-    const del = document.createElement('button');
-    del.className = 'del';
-    del.textContent = '✕';
-    del.title = 'Удалить аккаунт';
-    del.onclick = async () => {
-      try {
-        const res = await api.removeAccount(acc.id);
-        S.accounts = res.accounts || [];
-        S.current = res.current || null;
-        renderAccountChip();
-        renderAccountModal();
-        toast('Аккаунт удалён', 'ok');
-      } catch (ex) {
-        toast('Не удалось удалить аккаунт: ' + ex, 'error');
-      }
-    };
-
-    row.append(av, name, type, pick, del);
-    list.appendChild(row);
+async function deleteLavunioCape() {
+  if (!lavunioLoggedIn()) return;
+  try {
+    S.lavunio = await api.deleteCape();
+    renderLavunioPane();
+    toast('Плащ удалён', 'ok');
+  } catch (err) {
+    toast('Не удалось удалить плащ: ' + err, 'error');
   }
 }
 
@@ -2401,15 +2207,11 @@ function openModal(id) {
     renderAccountModal();
     refreshLavunioStatus();
   }
-  if (id === 'modal-ely-login') {
-    resetElyLoginUI();
-  }
   $(id).hidden = false;
 }
 
 function closeModals() {
   document.querySelectorAll('.modal-overlay').forEach((m) => (m.hidden = true));
-  closeElyLogin();
 }
 
 let confirmResolve = null;
@@ -2438,9 +2240,7 @@ function closeTopModal() {
   const openModals = [...document.querySelectorAll('.modal-overlay:not([hidden])')];
   if (!openModals.length) return false;
   const top = openModals[openModals.length - 1];
-  if (top.id === 'modal-ely-login') {
-    closeElyLogin();
-  } else if (top.id === 'modal-confirm') {
+  if (top.id === 'modal-confirm') {
     closeConfirm(false);
   } else {
     top.hidden = true;
@@ -2454,9 +2254,7 @@ function bindModals() {
   els.btnConfirmX.onclick = () => closeConfirm(false);
   document.querySelectorAll('[data-close]').forEach((btn) => {
     btn.onclick = () => {
-      if (btn.dataset.close === 'modal-ely-login') {
-        closeElyLogin();
-      } else if (btn.dataset.close === 'modal-confirm') {
+      if (btn.dataset.close === 'modal-confirm') {
         closeConfirm(false);
       } else {
         const target = $(btn.dataset.close);
@@ -2467,8 +2265,7 @@ function bindModals() {
   document.querySelectorAll('.modal-overlay').forEach((ov) => {
     ov.addEventListener('mousedown', (e) => {
       if (e.target !== ov) return;
-      if (ov.id === 'modal-ely-login') closeElyLogin();
-      else if (ov.id === 'modal-confirm') closeConfirm(false);
+      if (ov.id === 'modal-confirm') closeConfirm(false);
       else ov.hidden = true;
     });
   });

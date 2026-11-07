@@ -15,6 +15,10 @@ pub struct LavunioUser {
     pub email_verified: bool,
     pub role: String,
     pub avatar_url: Option<String>,
+    pub minecraft_uuid: Option<String>,
+    pub skin_url: Option<String>,
+    pub skin_model: Option<String>,
+    pub cape_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -24,6 +28,9 @@ pub struct LavunioSession {
     pub access_token: String,
     pub refresh_token: String,
     pub access_expires_at: u64,
+    pub game_access_token: String,
+    pub game_client_token: String,
+    pub game_expires_at: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -131,7 +138,6 @@ pub struct Settings {
     pub github_repo: String,
     pub github_token: String,
     pub jvm_flags: bool,
-    pub ely_client_id: String,
     pub minimize_on_launch: bool,
 }
 
@@ -149,7 +155,6 @@ impl Default for Settings {
             github_repo: "tommy-whinston/Lavunio-Catalog".to_string(),
             github_token: String::new(),
             jvm_flags: true,
-            ely_client_id: "tm-launcher".to_string(),
             minimize_on_launch: true,
         }
     }
@@ -167,41 +172,12 @@ impl Settings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
-pub struct Account {
-    pub id: String,
-    #[serde(rename = "type")]
-    pub kind: String,
+pub struct GameAccount {
     pub name: String,
     pub uuid: String,
     pub access_token: String,
-    pub client_token: String,
-    pub added_at: u64,
-    pub session_error: bool,
-    pub expires_at: u64,
-}
-
-impl Default for Account {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            kind: "offline".to_string(),
-            name: String::new(),
-            uuid: String::new(),
-            access_token: "0".to_string(),
-            client_token: String::new(),
-            added_at: 0,
-            session_error: false,
-            expires_at: 0,
-        }
-    }
-}
-
-impl Account {
-    pub fn is_ely(&self) -> bool {
-        self.kind == "ely"
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -223,17 +199,3 @@ pub struct RemoteCache {
 }
 
 pub type ModeStates = HashMap<String, ModeState>;
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct ElyProfile {
-    pub id: String,
-    pub name: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ElyAuthResponse {
-    pub access_token: String,
-    pub client_token: Option<String>,
-    pub selected_profile: Option<ElyProfile>,
-}

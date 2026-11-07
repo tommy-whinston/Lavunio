@@ -1,5 +1,5 @@
 use crate::events::GameEvent;
-use crate::models::{Account, Mode, Settings};
+use crate::models::{GameAccount, Mode, Settings};
 use crate::net::{sync_build, Manifest};
 use crate::util::{format_error, read_json};
 use mc_launcher_core::prelude::{
@@ -191,7 +191,7 @@ fn select_java(settings: &Settings, mc_version: &str) -> Result<JavaInstall, Str
 
 pub fn start(
     mode: Mode,
-    account: Account,
+    account: GameAccount,
     settings: Settings,
     install_only: bool,
     app: tauri::AppHandle,
@@ -228,7 +228,7 @@ pub fn start(
 
 fn run(
     mode: &Mode,
-    account: &Account,
+    account: &GameAccount,
     settings: &Settings,
     install_only: bool,
     cancel: &AtomicBool,
@@ -695,7 +695,7 @@ fn ensure_authlib_injector(
 }
 
 fn launch(
-    account: &Account,
+    account: &GameAccount,
     settings: &Settings,
     version_id: &str,
     game_dir: &Path,
@@ -703,6 +703,10 @@ fn launch(
     on_event: &mut dyn FnMut(GameEvent),
 ) -> Result<(), String> {
     status(on_event, "Запуск игры");
+    crate::logging::log(format!(
+        "game: account={} uuid={}",
+        account.name, account.uuid
+    ));
     let launcher = Launcher::new(settings.dir.clone());
     let version = launcher
         .load_version(version_id)
@@ -744,20 +748,39 @@ fn launch(
             .args
             .splice(0..0, PERFORMANCE_FLAGS.iter().map(|flag| flag.to_string()));
     }
-    if account.is_ely() {
+    if let Some(api_base) = crate::net::api_base_url() {
         match ensure_authlib_injector(settings, on_event) {
             Ok(path) => {
+                let agent = path.to_string_lossy().to_string();
                 launch
                     .args
-                    .insert(0, format!("-javaagent:{}=ely.by", path.to_string_lossy()));
+                    .insert(0, format!("-javaagent:{agent}={api_base}"));
                 launch
                     .args
                     .insert(0, "-Dauthlibinjector.side=client".to_string());
+                if let Ok(metadata) =
+                    crate::net::api_request_json(&api_base, "GET", "/", None, None)
+                {
+                    if let Ok(bytes) = serde_json::to_vec(&metadata) {
+                        use base64::Engine as _;
+                        let prefetched = base64::engine::general_purpose::STANDARD.encode(bytes);
+                        launch.args.insert(
+                            0,
+                            format!("-Dauthlibinjector.yggdrasil.prefetched={prefetched}"),
+                        );
+                    }
+                } else {
+                    status(
+                        on_event,
+                        "Скины Lavunio: не удалось заранее загрузить профиль сервера",
+                    );
+                }
+                crate::logging::log(format!("game: authlib={api_base}"));
             }
             Err(err) => {
                 status(
                     on_event,
-                    format!("Скины Ely.by: не удалось загрузить authlib-injector ({err})"),
+                    format!("Скины Lavunio: не удалось загрузить authlib-injector ({err})"),
                 );
             }
         }

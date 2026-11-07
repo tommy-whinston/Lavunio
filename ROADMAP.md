@@ -64,7 +64,7 @@
 - Платные режимы, выплаты авторам и налоги — только после стабильного магазина и модерации.
 - Кроссплатформенность (сначала Windows 10/11).
 - DRM и античит.
-- Собственная система аккаунтов Minecraft — используем Ely.by.
+- Внешние OAuth-провайдеры (Microsoft и др.) — после стабилизации Lavunio ID.
 
 ---
 
@@ -79,7 +79,7 @@
 - Установка, обновление, удаление и запуск сборок.
 - Скачивание ZIP и частей, проверка sha256, безопасная распаковка.
 - Автоопределение Java, выбор версии под Minecraft.
-- Вход через Ely.by, скины, несколько аккаунтов.
+- Вход через Lavunio ID и собственные скины.
 - Настройки ОЗУ, папки игры, окна, Java и JVM-флагов.
 - Автообновление лаунчера через GitHub Releases.
 - Локальные логи и кнопка открытия папки логов в «Дополнительно».
@@ -170,7 +170,9 @@ Lavunio Publisher (Tauri + Rust)
 ## 4. Модель данных MVP
 
 ```text
-users              id, ely_id, username, display_name, avatar_url, role, created_at
+users              id, username, display_name, email, password_hash, role,
+                   minecraft_uuid, skin_url, skin_model, cape_url,
+                   email_verified_at, created_at, updated_at
 teams              id, slug, name, description, avatar_url, created_at
 team_members       team_id, user_id, role
 
@@ -226,8 +228,12 @@ GET  /v1/news
 Авторизованные игроки:
 
 ```text
-POST /v1/auth/ely/device/start
-POST /v1/auth/ely/device/poll
+POST /v1/auth/register
+POST /v1/auth/login
+POST /v1/auth/refresh
+POST /v1/game/session
+PUT  /v1/me/skin
+PUT  /v1/me/cape
 GET  /v1/me
 GET  /v1/library
 POST /v1/library/{mode_id}
@@ -304,9 +310,9 @@ GET  /v1/admin/reports
   - Готово, когда лаунчер получает список без GitHub.
   - Проверено: каталог, карточка режима, релизы и автор отдают данные из PostgreSQL.
 - [x] **P1-05. Авторизация авторов.**
-  - Вход через Ely.by или API-токены, роли `author`, `moderator`, `admin`.
+  - Вход через Lavunio ID или API-токены, роли `author`, `moderator`, `admin`.
   - Готово, когда автор создаёт черновик через токен.
-  - Проверено: bootstrap-токен и API-токены работают; Ely.by можно добавить позже.
+  - Проверено: bootstrap-токен, API-токены и Lavunio ID работают.
 - [~] **P1-06. Publisher API.**
   - Черновик, релиз, загрузка файлов, submit.
   - Готово, когда публикация идёт через API, а публикатор встроен в лаунчер.
@@ -358,28 +364,29 @@ GET  /v1/admin/reports
 
 ### Этап 2.5 — Аккаунты Lavunio и скины
 
-> Решение: у Lavunio будут собственные аккаунты. Ely.by, Minecraft/Microsoft и другие системы скинов подключаются как внешние провайдеры. Делать это после стабилизации API и магазина.
+> Решение: у Lavunio собственные аккаунты, скины и игровые сессии через `authlib-injector`. Ely.by удалён. Внешние провайдеры (Microsoft и др.) — только в будущем.
 >
 > Подробнее: [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
 
 - [x] **A-01. Модель аккаунтов Lavunio.**
-  - `users`, `identities`, `sessions`, `link_codes`, `skin_profiles`.
+  - `users`, `identities`, `sessions`, `game_sessions`, `game_joins`.
   - Email + пароль (Argon2id), подтверждение почты, сброс пароля.
   - Статус: backend готов и покрыт тестами. Отправка писем — следующий шаг; локально токены доступны через `LAVUNIO_DEV_MODE=1`.
 - [~] **A-02. Сессии и безопасность.**
   - Access/refresh токены, отзыв сессий, rate limit, 2FA позже.
-  - Статус: токены, ротация, отзыв сессий и метаданные устройств готовы. Rate limit и 2FA остались.
-- [ ] **A-03. Привязка внешних аккаунтов.**
-  - Ely.by, Microsoft/Minecraft official и другие OAuth-провайдеры.
+  - Статус: токены, ротация, отзыв сессий, game sessions и метаданные устройств готовы. Rate limit и 2FA остались.
+- [x] **A-03. Скины и вход в Minecraft.**
+  - Собственные скины и плащи Lavunio, PNG 64×64/64×32.
+  - Yggdrasil-совместимые `/authserver` и `/sessionserver` для `authlib-injector`.
+  - Статус: загрузка скина/плаща, textures property, authenticate/refresh/validate/join/hasJoined проверены тестами.
+- [ ] **A-04. Внешние провайдеры аккаунтов (позже).**
+  - Microsoft/Minecraft official и другие OAuth-провайдеры.
   - Пароли внешних сервисов не хранить.
-- [ ] **A-04. Абстракция скинов.**
-  - Провайдер: профиль, скин, плащ, проверка сессии.
-  - Lavunio skins + Ely.by + Microsoft.
-- [~] **A-05. UI аккаунтов в лаунчере.**
-  - Вход, привязка, выбор скина, статус аккаунта.
-  - Статус: в окне аккаунта появилась вкладка Lavunio ID — вход, регистрация, выход и подтверждение почты. Привязка Ely.by/Microsoft и выбор скина — дальше.
-- [ ] **A-06. Миграция текущих Ely.by аккаунтов.**
-  - Сохранить текущие аккаунты и дать привязать их к Lavunio ID.
+- [x] **A-05. UI аккаунтов и скинов в лаунчере.**
+  - Вход, регистрация, выход, статус почты.
+  - Загрузка и удаление скина и плаща, аватар из Lavunio-скина.
+  - Ely.by полностью удалён из UI и кода.
+- [ ] **A-06. 2FA, passkeys, управление устройствами.**
 
 ### Этап 3 — Библиотека и загрузки
 
@@ -446,7 +453,7 @@ GET  /v1/admin/reports
 ### Этап 5 — Социальные функции
 
 - [ ] **P5-01. Профиль игрока Lavunio.**
-  - Привязка Ely.by, аватар, статус, библиотека.
+  - Скин, аватар, статус, библиотека.
 - [ ] **P5-02. Друзья и присутствие.**
   - Заявки, список друзей, «играет в …».
 - [ ] **P5-03. Лента активности.**
@@ -578,7 +585,7 @@ cmd /c "call E:\Desktop\Lavunio\build-env.bat && cd /d E:\Desktop\LavunioPublish
 - [ ] Где хостить API: VPS, Railway, Fly.io, собственный сервер?
 - [ ] Где хранить файлы: Cloudflare R2, S3, Backblaze B2?
 - [ ] Домен магазина и API.
-- [ ] Авторизация авторов: только Ely.by или отдельные Lavunio-аккаунты?
+- [ ] Нужен ли Microsoft-вход как дополнительный провайдер в будущем?
 - [ ] Политика модерации: что запрещено, кто проверяет, сроки.
 - [ ] Нужны ли платные режимы и когда.
 - [ ] Нужны ли облачные сохранения в первом MVP.
@@ -609,3 +616,4 @@ cmd /c "call E:\Desktop\Lavunio\build-env.bat && cd /d E:\Desktop\LavunioPublish
 - **2026-11-07** — A-01: в API добавлены аккаунты Lavunio: регистрация по email, Argon2id, сессии, access/refresh-токены, подтверждение почты и сброс пароля. Dev-режим (`LAVUNIO_DEV_MODE=1`) возвращает токены локально. Добавлены миграция `0004_accounts`, `routes/auth.rs` и тесты `tests/auth.rs`.
 - **2026-11-07** — Lavunio 0.6.0: в окне аккаунта появилась вкладка Lavunio ID — регистрация, вход, выход и подтверждение почты через API. Сессия хранится в `%APPDATA%\Lavunio\lavunio-session.json`. Вкладка показывается только при настроенном `LAVUNIO_API_URL`. Обновлены smoke-тест и документация.
 - **2026-11-07** — Lavunio 0.7.0: встроенный публикатор. В лаунчере появился раздел «Публикация»: создание режима и релиза, сборка ZIP с манифестом, загрузка с прогрессом, submit на модерацию. API получил `GET /v1/publisher/modes` и сохранение манифеста в `upload-url`. Проверен полный цикл до публикации в каталоге.
+- **2026-11-07** — Lavunio 0.8.0: Ely.by полностью удалён. Лаунчер использует только Lavunio ID: свой Minecraft UUID, игровые сессии, скины и плащи. API получил Yggdrasil-совместимые `/authserver` и `/sessionserver` для authlib-injector, загрузку скинов/плащей и textures property. UI аккаунта переделан под Lavunio ID, добавлены предпросмотр скина и загрузка файлов.
