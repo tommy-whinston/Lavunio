@@ -389,6 +389,21 @@ pub fn lavunio_status(state: State<'_, AppState>) -> Value {
 }
 
 #[tauri::command]
+pub async fn lavunio_refresh_profile(state: State<'_, AppState>) -> Result<Value, String> {
+    let session = state.store.lock().unwrap().lavunio.clone();
+    if session.access_token.is_empty() {
+        return Ok(lavunio_status_value(true, &session));
+    }
+    let data = publisher_request(state.inner(), "GET", "/v1/me".to_string(), None).await?;
+    let user: LavunioUser = serde_json::from_value(data)
+        .map_err(|error| format!("Некорректный профиль Lavunio: {error}"))?;
+    let mut session = state.store.lock().unwrap().lavunio.clone();
+    session.user = Some(user);
+    save_lavunio_session(state.inner(), session.clone())?;
+    Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
 pub async fn lavunio_register(
     state: State<'_, AppState>,
     email: String,

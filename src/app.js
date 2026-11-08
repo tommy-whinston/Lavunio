@@ -3137,7 +3137,9 @@ function bindAccountModal() {
 async function refreshLavunioStatus() {
   if (!api.lavunioStatus) return;
   try {
-    S.lavunio = await api.lavunioStatus();
+    S.lavunio = api.lavunioRefreshProfile
+      ? await api.lavunioRefreshProfile()
+      : await api.lavunioStatus();
     renderLavunioPane();
     renderAccountChip();
     loadFollows();

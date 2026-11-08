@@ -40,6 +40,7 @@ fn main() {
             commands::app_logs_path,
             commands::app_open_logs,
             commands::lavunio_status,
+            commands::lavunio_refresh_profile,
             commands::lavunio_register,
             commands::lavunio_login,
             commands::lavunio_logout,

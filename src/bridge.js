@@ -39,6 +39,7 @@
 
     // Lavunio ID
     lavunioStatus: () => invoke("lavunio_status"),
+    lavunioRefreshProfile: () => invoke("lavunio_refresh_profile"),
     lavunioRegister: (email, password, username) => invoke("lavunio_register", { email, password, username }),
     lavunioLogin: (email, password) => invoke("lavunio_login", { email, password }),
     lavunioLogout: () => invoke("lavunio_logout"),
