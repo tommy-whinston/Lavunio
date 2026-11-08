@@ -245,6 +245,8 @@ const els = {
   ram: $('set-ram'),
   ramOut: $('ram-out'),
   setDir: $('set-dir'),
+  setDirSelect: $('set-dir-select'),
+  settingsDiskInfo: $('settings-disk-info'),
   setJava: $('set-java'),
   setWidth: $('set-width'),
   setHeight: $('set-height'),
@@ -3469,11 +3471,31 @@ function bindSettings() {
   $('btn-choose-dir').onclick = async () => {
     try {
       const dir = await api.chooseDir();
-      if (dir) els.setDir.value = dir;
+      if (!dir) return;
+      els.setDir.value = dir;
+      if (els.setDirSelect) {
+        const exists = [...els.setDirSelect.options].some(
+          (option) => option.value.toLowerCase() === dir.toLowerCase()
+        );
+        if (!exists) {
+          const option = document.createElement('option');
+          option.value = dir;
+          option.textContent = dir;
+          els.setDirSelect.appendChild(option);
+        }
+        els.setDirSelect.value = dir;
+      }
+      refreshDiskInfo();
     } catch (ex) {
       toast('Не удалось выбрать папку: ' + ex, 'error');
     }
   };
+  if (els.setDirSelect) {
+    els.setDirSelect.onchange = () => {
+      els.setDir.value = els.setDirSelect.value;
+      refreshDiskInfo();
+    };
+  }
   $('btn-open-dir').onclick = () => api.openGameFolder().catch(() => {});
   $('btn-open-logs').onclick = () => api.openLogs().catch((err) => {
     toast('Не удалось открыть папку логов: ' + err, 'error');
@@ -3506,16 +3528,51 @@ function fillSettingsForm() {
   els.ram.value = String(ram);
   els.ramOut.textContent = `${ram} ГБ`;
   els.setDir.value = s.dir || '';
+  fillDirOptions(s.dir || '', s.installDirs);
   els.setJava.value = s.javaPath || '';
   els.setWidth.value = s.width || 925;
   els.setHeight.value = s.height || 530;
   els.setFullscreen.checked = !!s.fullscreen;
   els.setJvmFlags.checked = s.jvmFlags !== false;
+  refreshDiskInfo();
   if (api.getLogsPath) {
     api.getLogsPath().then((logsPath) => {
       els.setLogsPath.value = logsPath || '';
     }).catch(() => {});
   }
+}
+
+function fillDirOptions(current, installDirs) {
+  if (!els.setDirSelect) return;
+  const dirs = Array.isArray(installDirs) ? [...installDirs] : [];
+  if (current && !dirs.some((dir) => dir.toLowerCase() === current.toLowerCase())) {
+    dirs.unshift(current);
+  }
+  els.setDirSelect.innerHTML = '';
+  dirs.forEach((dir) => {
+    const option = document.createElement('option');
+    option.value = dir;
+    option.textContent = dir;
+    els.setDirSelect.appendChild(option);
+  });
+  if (current) els.setDirSelect.value = current;
+}
+
+async function refreshDiskInfo() {
+  if (!api.diskInfo || !els.settingsDiskInfo) return;
+  const dir = els.setDir.value.trim();
+  try {
+    const info = await api.diskInfo(dir || null);
+    if (!info) return;
+    const free = formatBytes(info.availableBytes || 0);
+    const total = formatBytes(info.totalBytes || 0);
+    const library = formatBytes(info.libraryBytes || 0);
+    els.settingsDiskInfo.textContent = `Свободно: ${free} из ${total} · Библиотека: ${library}`;
+    els.settingsDiskInfo.classList.toggle(
+      'warn',
+      Number(info.availableBytes) > 0 && Number(info.availableBytes) < 2 * 1024 * 1024 * 1024
+    );
+  } catch (_) {}
 }
 
 // ---------------------------------------------------------------- модалки

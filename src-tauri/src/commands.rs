@@ -180,6 +180,71 @@ pub fn system_ram_gb() -> u32 {
     gb.round().max(2.0) as u32
 }
 
+fn directory_size(path: &std::path::Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return 0;
+    };
+    let mut total = 0u64;
+    for entry in entries.flatten() {
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if meta.is_dir() {
+            total = total.saturating_add(directory_size(&entry.path()));
+        } else if meta.is_file() {
+            total = total.saturating_add(meta.len());
+        }
+    }
+    total
+}
+
+#[tauri::command]
+pub fn disk_info(state: State<'_, AppState>, path: Option<String>) -> Value {
+    let store = state.store.lock().unwrap();
+    let target = path
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| store.settings.dir.clone());
+    let normalized = target
+        .trim_start_matches("\\\\?\\")
+        .to_lowercase();
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    let disk = disks
+        .iter()
+        .filter(|disk| {
+            let mount = disk.mount_point().to_string_lossy().to_lowercase();
+            !mount.is_empty() && normalized.starts_with(&mount)
+        })
+        .max_by_key(|disk| disk.mount_point().as_os_str().len());
+    let (total_bytes, available_bytes) = disk
+        .map(|disk| (disk.total_space(), disk.available_space()))
+        .unwrap_or((0, 0));
+
+    let mut library_bytes = 0u64;
+    for (mode_id, mode_state) in &store.state {
+        if !mode_state.installed {
+            continue;
+        }
+        let base = mode_state
+            .install_dir
+            .as_deref()
+            .unwrap_or(&store.settings.dir);
+        let current = std::path::Path::new(base).join("games").join(mode_id);
+        let legacy = std::path::Path::new(base).join(mode_id);
+        let dir = if current.is_dir() { current } else { legacy };
+        if dir.is_dir() {
+            library_bytes = library_bytes.saturating_add(directory_size(&dir));
+        }
+    }
+
+    json!({
+        "path": target,
+        "totalBytes": total_bytes,
+        "availableBytes": available_bytes,
+        "libraryBytes": library_bytes,
+    })
+}
+
 #[tauri::command]
 pub fn state_get(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     let store = state.store.lock().unwrap();
@@ -201,6 +266,7 @@ pub fn settings_save(state: State<'_, AppState>, patch: Value) -> Result<Setting
         }
     }
     store.settings = serde_json::from_value(current).map_err(|e| e.to_string())?;
+    store.settings.remember_install_dir();
     store.save_settings()?;
     crate::logging::log("settings: saved");
     Ok(store.settings.clone())
@@ -254,6 +320,14 @@ pub fn game_uninstall(state: State<'_, AppState>, mode_id: String) -> Value {
         return json!({ "ok": false, "error": "Сначала закрой игру" });
     }
     let settings = state.store.lock().unwrap().settings.clone();
+    let mut settings = settings;
+    settings.install_base = state
+        .store
+        .lock()
+        .unwrap()
+        .state
+        .get(&mode_id)
+        .and_then(|mode_state| mode_state.install_dir.clone());
     if let Err(err) = game::uninstall(&settings, &mode_id) {
         return json!({ "ok": false, "error": err });
     }
@@ -270,12 +344,28 @@ pub fn game_uninstall(state: State<'_, AppState>, mode_id: String) -> Value {
 #[tauri::command]
 pub async fn game_verify(state: State<'_, AppState>, mode_id: String) -> Result<Value, String> {
     let settings = state.store.lock().unwrap().settings.clone();
+    let mut settings = settings;
+    settings.install_base = state
+        .store
+        .lock()
+        .unwrap()
+        .state
+        .get(&mode_id)
+        .and_then(|mode_state| mode_state.install_dir.clone());
     blocking(move || game::verify_files(&settings, &mode_id)).await?
 }
 
 #[tauri::command]
 pub fn game_prepare_repair(state: State<'_, AppState>, mode_id: String) -> Result<Value, String> {
     let settings = state.store.lock().unwrap().settings.clone();
+    let mut settings = settings;
+    settings.install_base = state
+        .store
+        .lock()
+        .unwrap()
+        .state
+        .get(&mode_id)
+        .and_then(|mode_state| mode_state.install_dir.clone());
     game::prepare_repair(&settings, &mode_id)?;
     Ok(json!({ "ok": true }))
 }
@@ -324,8 +414,17 @@ pub fn game_open_mode_folder(state: State<'_, AppState>, mode_id: String) -> Res
     if mode_id.is_empty() || mode_id == ".." || mode_id.contains('/') || mode_id.contains('\\') {
         return Err("Некорректный режим".to_string());
     }
-    let settings = state.store.lock().unwrap().settings.clone();
-    let base = std::path::Path::new(&settings.dir);
+    let (settings, install_dir) = {
+        let store = state.store.lock().unwrap();
+        (
+            store.settings.clone(),
+            store
+                .state
+                .get(&mode_id)
+                .and_then(|mode_state| mode_state.install_dir.clone()),
+        )
+    };
+    let base = std::path::Path::new(install_dir.as_deref().unwrap_or(&settings.dir));
     let new_dir = base.join("games").join(&mode_id);
     let old_dir = base.join(&mode_id);
     let dir = if new_dir.exists() {
@@ -1481,7 +1580,17 @@ async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_onl
         return json!({ "ok": false, "error": "Режим не найден" });
     };
 
-    let settings = state.store.lock().unwrap().settings.clone();
+    let (mut settings, previous_install_dir) = {
+        let store = state.store.lock().unwrap();
+        (
+            store.settings.clone(),
+            store
+                .state
+                .get(&mode.id)
+                .and_then(|mode_state| mode_state.install_dir.clone()),
+        )
+    };
+    settings.install_base = previous_install_dir.clone();
     let account = match ensure_game_account(state).await {
         Ok(account) => account,
         Err(error) => {
@@ -1513,6 +1622,10 @@ async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_onl
 
     let mode_id_for_store = mode.id.clone();
     let mode_version_for_store = mode.version.clone();
+    let install_dir_for_store = settings
+        .install_base
+        .clone()
+        .unwrap_or_else(|| settings.dir.clone());
     let cancel = Arc::new(AtomicBool::new(false));
     *state.active_game.lock().unwrap() = Some(cancel.clone());
     let app_for_thread = app.clone();
@@ -1539,7 +1652,11 @@ async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_onl
         if install_only && result.is_ok() {
             let state = app_for_store.state::<AppState>();
             let mut store = state.store.lock().unwrap();
-            let _ = store.set_mode_installed(&mode_id_for_store, &mode_version_for_store);
+            let _ = store.set_mode_installed(
+                &mode_id_for_store,
+                &mode_version_for_store,
+                Some(&install_dir_for_store),
+            );
         }
         *active.lock().unwrap() = None;
     });

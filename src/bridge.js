@@ -23,6 +23,7 @@
     collectionsGet: () => invoke("collections_get"),
     getState: () => invoke("state_get"),
     getSystemRam: () => invoke("system_ram_gb"),
+    diskInfo: (path) => invoke("disk_info", { path }),
     getSettings: () => invoke("settings_get"),
     saveSettings: (patch) => invoke("settings_save", { patch }),
     chooseDir: () => invoke("settings_choose_dir"),

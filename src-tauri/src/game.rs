@@ -316,7 +316,7 @@ pub fn uninstall(settings: &Settings, mode_id: &str) -> Result<(), String> {
     if mode_id.is_empty() || mode_id == ".." || mode_id.contains('/') || mode_id.contains('\\') {
         return Err("Некорректный режим".to_string());
     }
-    let base = Path::new(&settings.dir);
+    let base = Path::new(settings.install_base.as_deref().unwrap_or(&settings.dir));
     for dir in [base.join("games").join(mode_id), base.join(mode_id)] {
         if dir.exists() {
             fs::remove_dir_all(&dir)
@@ -327,7 +327,7 @@ pub fn uninstall(settings: &Settings, mode_id: &str) -> Result<(), String> {
 }
 
 fn resolve_game_dir(mode: &Mode, settings: &Settings) -> PathBuf {
-    let base = PathBuf::from(&settings.dir);
+    let base = PathBuf::from(settings.install_base.as_deref().unwrap_or(&settings.dir));
     let new_dir = base.join("games").join(&mode.id);
     let old_dir = base.join(&mode.id);
     if old_dir.exists() && !new_dir.exists() {
@@ -345,7 +345,7 @@ fn installed_mode_dir(settings: &Settings, mode_id: &str) -> Result<PathBuf, Str
     if mode_id.is_empty() || mode_id == ".." || mode_id.contains('/') || mode_id.contains('\\') {
         return Err("Некорректный режим".to_string());
     }
-    let base = Path::new(&settings.dir);
+    let base = Path::new(settings.install_base.as_deref().unwrap_or(&settings.dir));
     let new_dir = base.join("games").join(mode_id);
     let old_dir = base.join(mode_id);
     if new_dir.exists() {

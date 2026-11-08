@@ -70,6 +70,7 @@ impl Store {
         if settings.dir.trim().is_empty() {
             settings.dir = default_dir.clone();
         }
+        settings.remember_install_dir();
         if settings.github_repo.trim().is_empty()
             || settings.github_repo == "tommy-whinston/TMLauncher"
             || settings.github_repo == "tommy-whinston/TMStore"
@@ -131,7 +132,12 @@ impl Store {
         write_json(&self.path("mode-state.json"), &self.state)
     }
 
-    pub fn set_mode_installed(&mut self, mode_id: &str, version: &str) -> Result<(), String> {
+    pub fn set_mode_installed(
+        &mut self,
+        mode_id: &str,
+        version: &str,
+        install_dir: Option<&str>,
+    ) -> Result<(), String> {
         let playtime_secs = self
             .state
             .get(mode_id)
@@ -147,6 +153,7 @@ impl Store {
                 library: Some(true),
                 playtime_secs,
                 skipped_version: None,
+                install_dir: install_dir.map(str::to_string),
             },
         );
         self.save_state()

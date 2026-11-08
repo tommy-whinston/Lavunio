@@ -139,6 +139,9 @@ pub struct BuildInfo {
 pub struct Settings {
     pub ram_gb: u32,
     pub dir: String,
+    pub install_dirs: Vec<String>,
+    #[serde(skip)]
+    pub install_base: Option<String>,
     pub java_path: String,
     pub width: u32,
     pub height: u32,
@@ -156,6 +159,8 @@ impl Default for Settings {
         Self {
             ram_gb: 4,
             dir: String::new(),
+            install_dirs: Vec::new(),
+            install_base: None,
             java_path: String::new(),
             width: 925,
             height: 530,
@@ -174,7 +179,25 @@ impl Settings {
     pub fn with_default_dir(default_dir: &str) -> Self {
         let mut s = Self::default();
         s.dir = default_dir.to_string();
+        s.remember_install_dir();
         s
+    }
+
+    pub fn remember_install_dir(&mut self) {
+        let dir = self.dir.trim();
+        if dir.is_empty() {
+            return;
+        }
+        if !self
+            .install_dirs
+            .iter()
+            .any(|item| item.eq_ignore_ascii_case(dir))
+        {
+            self.install_dirs.push(dir.to_string());
+        }
+        if self.install_dirs.len() > 10 {
+            self.install_dirs.remove(0);
+        }
     }
 
     pub fn ram_gb(&self) -> u32 {
@@ -200,6 +223,7 @@ pub struct ModeState {
     pub library: Option<bool>,
     pub playtime_secs: u64,
     pub skipped_version: Option<String>,
+    pub install_dir: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

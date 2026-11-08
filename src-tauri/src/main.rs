@@ -30,6 +30,7 @@ fn main() {
             commands::collections_get,
             commands::state_get,
             commands::system_ram_gb,
+            commands::disk_info,
             commands::settings_get,
             commands::settings_save,
             commands::settings_choose_dir,
