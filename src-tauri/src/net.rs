@@ -15,6 +15,7 @@ use std::time::Duration;
 use url::Url;
 
 pub const API: &str = "https://api.github.com";
+pub const DEFAULT_API_URL: &str = "https://api.lavunio.pro";
 pub const CATALOG_URL: &str =
     "https://raw.githubusercontent.com/tommy-whinston/Lavunio-Catalog/main/modes/modes.json";
 pub const RAW: &str = "https://raw.githubusercontent.com";
@@ -24,6 +25,7 @@ pub fn api_base_url() -> Option<String> {
         .ok()
         .map(|value| value.trim().trim_end_matches('/').to_string())
         .filter(|value| !value.is_empty())
+        .or_else(|| Some(DEFAULT_API_URL.to_string()))
 }
 
 fn client() -> &'static Client {
