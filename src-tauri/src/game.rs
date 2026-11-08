@@ -280,7 +280,7 @@ fn run(
                 if cancelled(cancel) {
                     return Err("Операция отменена".to_string());
                 }
-                install_profile(mode, settings, cancel, on_event)?;
+                install_profile(mode, settings, cancel, on_event, false)?;
             }
             on_event(GameEvent::Installed);
             return Ok(());
@@ -294,7 +294,7 @@ fn run(
         if cancelled(cancel) {
             return Err("Операция отменена".to_string());
         }
-        install_profile(mode, settings, cancel, on_event)?;
+        install_profile(mode, settings, cancel, on_event, false)?;
         on_event(GameEvent::Installed);
         return Ok(());
     }
@@ -304,7 +304,7 @@ fn run(
         return Err("Операция отменена".to_string());
     }
 
-    let version_id = install_profile(mode, settings, cancel, on_event)?;
+    let version_id = install_profile(mode, settings, cancel, on_event, true)?;
     if cancelled(cancel) {
         return Err("Операция отменена".to_string());
     }
@@ -563,6 +563,82 @@ fn expected_forge_id(mode: &Mode, settings: &Settings) -> Option<String> {
     found.pop()
 }
 
+fn find_version(versions: &Path, prefix: &str, suffix: &str) -> Option<String> {
+    let mut found: Vec<String> = fs::read_dir(versions)
+        .ok()?
+        .flatten()
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name.starts_with(prefix) && name.ends_with(suffix))
+        .collect();
+    found.sort();
+    found.pop()
+}
+
+fn existing_version_id(mode: &Mode, settings: &Settings) -> Option<String> {
+    let versions = Path::new(&settings.dir).join("versions");
+    let mc = mode.mc_version.trim();
+    if mc.is_empty() {
+        return None;
+    }
+    let has = |id: &str| versions.join(id).join(format!("{id}.json")).exists();
+    match mode.loader.as_str() {
+        "forge" => expected_forge_id(mode, settings).filter(|id| has(id)),
+        "fabric" => {
+            if let Some(version) = mode
+                .loader_version
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                let id = format!("fabric-loader-{version}-{mc}");
+                if has(&id) {
+                    return Some(id);
+                }
+            }
+            find_version(&versions, "fabric-loader-", &format!("-{mc}"))
+        }
+        "quilt" => {
+            if let Some(version) = mode
+                .loader_version
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                let id = format!("quilt-loader-{version}-{mc}");
+                if has(&id) {
+                    return Some(id);
+                }
+            }
+            find_version(&versions, "quilt-loader-", &format!("-{mc}"))
+        }
+        "neoforge" => {
+            if let Some(version) = mode
+                .loader_version
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                for id in [
+                    format!("neoforge-{version}"),
+                    format!("{mc}-neoforge-{version}"),
+                ] {
+                    if has(&id) {
+                        return Some(id);
+                    }
+                }
+            }
+            find_version(&versions, "neoforge-", "")
+        }
+        _ => {
+            if has(mc) {
+                Some(mc.to_string())
+            } else {
+                None
+            }
+        }
+    }
+}
+
 fn loader_spec(mode: &Mode) -> Option<LoaderSpec> {
     let mc = mode.mc_version.trim();
     let exact = mode
@@ -620,9 +696,17 @@ fn install_profile(
     settings: &Settings,
     cancel: &AtomicBool,
     on_event: &mut dyn FnMut(GameEvent),
+    quick: bool,
 ) -> Result<String, String> {
     if mode.mc_version.trim().is_empty() {
         return Err("В режиме не указана версия Minecraft".to_string());
+    }
+    if quick {
+        if let Some(id) = existing_version_id(mode, settings) {
+            crate::logging::log(format!("game: using existing profile {id}"));
+            status(on_event, "Запуск игры");
+            return Ok(id);
+        }
     }
     ensure_launcher_profiles(settings)?;
     let launcher = Launcher::new(settings.dir.clone());

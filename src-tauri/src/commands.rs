@@ -1438,6 +1438,32 @@ async fn report_mode_event(state: &AppState, mode_id: &str, event: &str, version
         .await;
 }
 
+async fn refresh_game_token(state: &AppState) -> Result<(String, String, u64), String> {
+    let api = lavunio_api()?;
+    let access = lavunio_access_token(state).await?;
+    let data = blocking(move || {
+        net::api_request_json(&api, "POST", "/v1/game/session", Some(&access), None)
+    })
+    .await??;
+    let access_token = data
+        .get("accessToken")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "API не вернул игровой токен".to_string())?
+        .to_string();
+    let client_token = data
+        .get("clientToken")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let expires_in = data
+        .get("expiresIn")
+        .and_then(Value::as_i64)
+        .unwrap_or(30 * 24 * 60 * 60)
+        .max(60) as u64;
+    Ok((access_token, client_token, expires_in))
+}
+
 async fn ensure_game_account(state: &AppState) -> Result<GameAccount, String> {
     let mut session = state.store.lock().unwrap().lavunio.clone();
     let Some(user) = session.user.clone() else {
@@ -1452,32 +1478,23 @@ async fn ensure_game_account(state: &AppState) -> Result<GameAccount, String> {
     };
 
     if session.game_access_token.is_empty() || session.game_expires_at <= now_ms() + 60_000 {
-        let api = lavunio_api()?;
-        let access = lavunio_access_token(state).await?;
-        let data = blocking(move || {
-            net::api_request_json(&api, "POST", "/v1/game/session", Some(&access), None)
-        })
-        .await??;
-        let access_token = data
-            .get("accessToken")
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| "API не вернул игровой токен".to_string())?
-            .to_string();
-        let client_token = data
-            .get("clientToken")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
-        let expires_in = data
-            .get("expiresIn")
-            .and_then(Value::as_i64)
-            .unwrap_or(30 * 24 * 60 * 60)
-            .max(60) as u64;
-        session.game_access_token = access_token;
-        session.game_client_token = client_token;
-        session.game_expires_at = now_ms().saturating_add(expires_in.saturating_mul(1000));
-        save_lavunio_session(state, session.clone())?;
+        match refresh_game_token(state).await {
+            Ok((access_token, client_token, expires_in)) => {
+                session.game_access_token = access_token;
+                session.game_client_token = client_token;
+                session.game_expires_at = now_ms().saturating_add(expires_in.saturating_mul(1000));
+                save_lavunio_session(state, session.clone())?;
+            }
+            Err(error) => {
+                crate::logging::error(
+                    "game",
+                    format!("game session refresh failed, using offline token: {error}"),
+                );
+                if session.game_access_token.is_empty() {
+                    session.game_access_token = "0".to_string();
+                }
+            }
+        }
     }
 
     Ok(GameAccount {
