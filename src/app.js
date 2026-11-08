@@ -486,6 +486,9 @@ function bindStore() {
     closeCardContext();
     if (!e.target.closest('.card-menu') && !e.target.closest('.card-menu-btn')) closeCardMenus();
   });
+  window.addEventListener('focus', () => {
+    if (S.lavunio && (S.lavunio.hasSession || S.lavunio.user)) refreshLavunioStatus();
+  });
   const appScroll = $('app');
   if (appScroll) appScroll.addEventListener('scroll', closeCardContext, true);
 
