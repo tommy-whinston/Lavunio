@@ -293,11 +293,17 @@
           <div class="filter-chips" id="library-filters">
             <button type="button" data-library-filter="all" class="active">Все</button>
             <button type="button" data-library-filter="installed">Установленные</button>
+            <button type="button" data-library-filter="favorites">Избранное</button>
+            <button type="button" data-library-filter="collections">Коллекции</button>
+            <button type="button" data-library-filter="hidden">Скрытые</button>
             <button type="button" data-library-filter="development">В разработке</button>
             <button type="button" data-library-filter="crowdfunding">Сбор на релиз</button>
           </div>
           <select id="library-sort" class="sort-select">
             <option value="date" selected>По дате</option>
+            <option value="installed">По установке</option>
+            <option value="size">По размеру</option>
+            <option value="playtime">По времени игры</option>
             <option value="title">По названию</option>
             <option value="default">По умолчанию</option>
           </select>

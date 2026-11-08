@@ -426,11 +426,26 @@ function syncFilterButtons(container, attr, active) {
 
 function modePassesFilter(mode, filter) {
   if (filter === 'installed') return isInstalled(mode);
-  if (filter === 'wishlist') return S.wishlist.includes(mode.id);
+  if (filter === 'wishlist' || filter === 'favorites') return S.wishlist.includes(mode.id);
   if (filter === 'following') return modeAuthorIds(mode).some((id) => S.follows.includes(id));
+  if (filter === 'hidden') {
+    const st = S.state[mode.id];
+    return !!(st && st.hidden);
+  }
+  if (filter === 'collections') return modeInCollections(mode);
   if (filter === 'development') return mode.status === 'development';
   if (filter === 'crowdfunding') return mode.status === 'crowdfunding';
   return true;
+}
+
+function modeInCollections(mode) {
+  if (!mode || !Array.isArray(S.collections)) return false;
+  const automatic = new Set(['featured', 'popular', 'new', 'updated']);
+  return S.collections
+    .filter((section) => section && !automatic.has(section.id))
+    .some((section) =>
+      collectionModes(section).some((item) => item && item.id === mode.id)
+    );
 }
 
 function modeAuthorIds(mode) {
@@ -454,7 +469,26 @@ function sortCatalog(list, sort) {
   if (sort === 'date' || sort === 'updated') {
     return [...list].sort((a, b) => modeUpdatedAt(b).localeCompare(modeUpdatedAt(a)));
   }
+  if (sort === 'installed') {
+    return [...list].sort((a, b) => modeInstalledAt(b) - modeInstalledAt(a));
+  }
+  if (sort === 'size') {
+    return [...list].sort((a, b) => parseDownloadSize(b.size) - parseDownloadSize(a.size));
+  }
+  if (sort === 'playtime') {
+    return [...list].sort((a, b) => modePlaytime(b) - modePlaytime(a));
+  }
   return sortModes(list);
+}
+
+function modeInstalledAt(mode) {
+  const st = S.state[mode.id];
+  return Number(st && st.installedAt) || 0;
+}
+
+function modePlaytime(mode) {
+  const st = S.state[mode.id];
+  return Number(st && st.playtimeSecs) || 0;
 }
 
 function updateDashboardStats() {
@@ -864,8 +898,14 @@ function renderLibrary() {
     els.libraryUpdateBanner.hidden = updates.length === 0 || S.updatesSnoozed;
   }
   if (els.libraryUpdateCount) els.libraryUpdateCount.textContent = String(updates.length);
+  const source = S.libraryFilter === 'hidden'
+    ? S.modes.filter((mode) => {
+        const st = S.state[mode.id];
+        return !!(st && st.hidden);
+      })
+    : S.modes.filter((mode) => inLibrary(mode));
   const list = sortCatalog(
-    S.modes.filter((mode) => inLibrary(mode) && matchesSearch(mode) && modePassesFilter(mode, S.libraryFilter)),
+    source.filter((mode) => matchesSearch(mode) && modePassesFilter(mode, S.libraryFilter)),
     S.librarySort
   );
   els.libraryCount.textContent = String(list.length);
@@ -873,10 +913,22 @@ function renderLibrary() {
   const showEmpty = list.length === 0;
   els.libraryEmpty.hidden = !showEmpty;
   if (showEmpty) {
-    els.libraryEmptyTitle.textContent = S.search ? 'Ничего не найдено' : 'Библиотека пуста';
-    els.libraryEmptySub.textContent = S.search
-      ? 'Попробуй изменить запрос или выбрать другой фильтр'
-      : 'Добавь режим в библиотеку, чтобы он появился здесь';
+    if (S.search) {
+      els.libraryEmptyTitle.textContent = 'Ничего не найдено';
+      els.libraryEmptySub.textContent = 'Попробуй изменить запрос или выбрать другой фильтр';
+    } else if (S.libraryFilter === 'hidden') {
+      els.libraryEmptyTitle.textContent = 'Скрытых режимов нет';
+      els.libraryEmptySub.textContent = 'Режимы, убранные из библиотеки, появятся здесь';
+    } else if (S.libraryFilter === 'favorites') {
+      els.libraryEmptyTitle.textContent = 'В избранном пусто';
+      els.libraryEmptySub.textContent = 'Добавляй режимы в список желаемого, чтобы они появились здесь';
+    } else if (S.libraryFilter === 'collections') {
+      els.libraryEmptyTitle.textContent = 'В коллекциях пусто';
+      els.libraryEmptySub.textContent = 'Режимы из подборок появятся здесь';
+    } else {
+      els.libraryEmptyTitle.textContent = 'Библиотека пуста';
+      els.libraryEmptySub.textContent = 'Добавь режим в библиотеку, чтобы он появился здесь';
+    }
   }
   updateSidebarCounts();
 }
@@ -965,6 +1017,7 @@ async function loadCollections() {
     S.collections = [];
   }
   if (S.view === 'store' && !S.search) renderStore();
+  if (S.section === 'library') renderLibrary();
 }
 
 function renderCollections() {
@@ -1244,6 +1297,26 @@ async function handleCardAction(modeId, action, autoPlay = false) {
       toast('Режим добавлен в библиотеку', 'ok');
     } catch (err) {
       toast('Не удалось добавить режим: ' + err, 'error');
+    }
+    return;
+  }
+
+  if (action === 'wish' || action === 'unwish') {
+    try {
+      if (action === 'wish') {
+        await api.wishlistAdd(modeId);
+        if (!S.wishlist.includes(modeId)) S.wishlist = [...S.wishlist, modeId];
+        toast('Добавлено в избранное', 'ok');
+      } else {
+        await api.wishlistRemove(modeId);
+        S.wishlist = S.wishlist.filter((id) => id !== modeId);
+        toast('Убрано из избранного', 'ok');
+      }
+      renderStore();
+      renderLibrary();
+      if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
+    } catch (err) {
+      toast('Не удалось обновить избранное: ' + err, 'error');
     }
     return;
   }
@@ -2150,6 +2223,13 @@ function openCardContext(card, x, y, playMode) {
     action: inLib ? 'hide' : 'addlib',
     label: inLib ? 'Убрать из библиотеки' : 'Добавить в библиотеку'
   });
+  if (lavunioLoggedIn()) {
+    const favorite = S.wishlist.includes(mode.id);
+    actions.push({
+      action: favorite ? 'unwish' : 'wish',
+      label: favorite ? 'Убрать из избранного' : 'В избранное'
+    });
+  }
   if (installed && action !== 'running') {
     actions.push({ action: 'uninstall', label: 'Удалить с устройства', danger: true });
   }
@@ -2466,6 +2546,7 @@ async function loadWishlist() {
   if (!lavunioLoggedIn() || !S.lavunio.configured) {
     S.wishlist = [];
     renderStore();
+    renderLibrary();
     return;
   }
   try {
@@ -2475,6 +2556,7 @@ async function loadWishlist() {
     S.wishlist = [];
   }
   renderStore();
+  renderLibrary();
   if (S.view === 'detail') renderDetail();
 }
 
