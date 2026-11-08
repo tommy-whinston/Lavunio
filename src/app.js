@@ -4562,6 +4562,17 @@ function renderModeration() {
   }
 }
 
+function moderationScanHtml(scan) {
+  if (!scan || !scan.checkedAt) return '';
+  const suspicious = Array.isArray(scan.suspicious) ? scan.suspicious : [];
+  if (suspicious.length) {
+    const shown = suspicious.slice(0, 5).map((name) => escapeHtml(name)).join(', ');
+    const rest = suspicious.length > 5 ? ` и ещё ${suspicious.length - 5}` : '';
+    return `<div class="mod-scan warn">Подозрительные файлы: ${shown}${rest}</div>`;
+  }
+  return `<div class="mod-scan ok">Архив проверен: ${Number(scan.files) || 0} файлов, ${formatBytes(Number(scan.bytes) || 0)}</div>`;
+}
+
 function moderationQueueHtml() {
   const items = S.moderationQueue || [];
   if (!items.length) {
@@ -4581,6 +4592,7 @@ function moderationQueueHtml() {
         <span>Отправлен ${escapeHtml(publisherDate(item.createdAt))}</span>
       </div>
       <div class="mod-changelog">${escapeHtml(item.changelog || 'Без changelog')}</div>
+      ${moderationScanHtml(item.scan)}
       <div class="pub-release-actions">
         <button class="btn btn-primary" type="button" data-action="approve" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">Одобрить</button>
         <button class="btn btn-ghost" type="button" data-action="reject" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">Отклонить</button>

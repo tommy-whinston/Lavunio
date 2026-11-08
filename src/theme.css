@@ -1030,6 +1030,23 @@ body::before {
   font-size: 12px;
 }
 .session-row b { color: #f7f1eb; font-weight: 600; }
+.mod-scan {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.mod-scan.ok {
+  color: #7ee787;
+  border: 1px solid rgba(46, 160, 67, 0.25);
+  background: rgba(46, 160, 67, 0.08);
+}
+.mod-scan.warn {
+  color: #f0b35a;
+  border: 1px solid rgba(240, 179, 90, 0.3);
+  background: rgba(240, 179, 90, 0.08);
+}
 
 .catalog-head { flex-wrap: wrap; }
 .shelf-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
