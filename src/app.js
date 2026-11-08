@@ -65,6 +65,7 @@ const S = {
   detailFrom: null,
   updateInfo: null,
   autoUpdating: false,
+  updatesSnoozed: false,
   storeFilter: 'all',
   storeSort: 'date',
   libraryFilter: 'all',
@@ -143,6 +144,11 @@ const els = {
   libraryEmpty: $('library-empty'),
   libraryEmptyTitle: $('library-empty-title'),
   libraryEmptySub: $('library-empty-sub'),
+  libraryUpdateBanner: $('library-update-banner'),
+  libraryUpdateCount: $('library-update-count'),
+  libraryUpdateAll: $('library-update-all'),
+  libraryUpdateLater: $('library-update-later'),
+  detailDefer: $('detail-defer'),
   detailView: $('detail-view'),
   detailBackLabel: $('detail-back-label'),
   featured: $('featured'),
@@ -321,6 +327,7 @@ async function init() {
         renderStore();
         renderLibrary();
         updateSidebar();
+        setTimeout(notifyModeUpdates, 1800);
       }).catch(() => {});
     }
 
@@ -394,6 +401,15 @@ function bindCatalogControls() {
   if (els.librarySort) {
     els.librarySort.onchange = () => {
       S.librarySort = els.librarySort.value;
+      renderLibrary();
+    };
+  }
+  if (els.libraryUpdateAll) {
+    els.libraryUpdateAll.onclick = () => updateAllModes();
+  }
+  if (els.libraryUpdateLater) {
+    els.libraryUpdateLater.onclick = () => {
+      S.updatesSnoozed = true;
       renderLibrary();
     };
   }
@@ -582,7 +598,12 @@ function inLibrary(mode) {
 
 function isUpdate(mode) {
   const st = S.state[mode.id];
-  return !!(st && st.installed && st.version !== mode.version);
+  return !!(
+    st &&
+    st.installed &&
+    st.version !== mode.version &&
+    st.skippedVersion !== mode.version
+  );
 }
 
 function cardStatus(mode) {
@@ -836,6 +857,11 @@ function renderLibrary() {
   if (!els.libraryView) return;
   updateDashboardStats();
   syncFilterButtons(els.libraryFilters, 'library-filter', S.libraryFilter);
+  const updates = S.modes.filter((mode) => isUpdate(mode));
+  if (els.libraryUpdateBanner) {
+    els.libraryUpdateBanner.hidden = updates.length === 0 || S.updatesSnoozed;
+  }
+  if (els.libraryUpdateCount) els.libraryUpdateCount.textContent = String(updates.length);
   const list = sortCatalog(
     S.modes.filter((mode) => inLibrary(mode) && matchesSearch(mode) && modePassesFilter(mode, S.libraryFilter)),
     S.librarySort
@@ -851,6 +877,25 @@ function renderLibrary() {
       : 'Добавь режим в библиотеку, чтобы он появился здесь';
   }
   updateSidebarCounts();
+}
+
+function updateAllModes() {
+  const updates = S.modes.filter((mode) => isUpdate(mode));
+  if (!updates.length) {
+    toast('Обновлений нет', 'info');
+    return;
+  }
+  updates.forEach((mode) => enqueueDownload(mode, 'update', false, true));
+  toast(`В очередь добавлено обновлений: ${updates.length}`, 'ok');
+}
+
+let modeUpdatesNotified = false;
+function notifyModeUpdates() {
+  if (modeUpdatesNotified || S.updatesSnoozed) return;
+  const count = S.modes.filter((mode) => isUpdate(mode)).length;
+  if (!count) return;
+  modeUpdatesNotified = true;
+  toast(`Доступны обновления режимов: ${count}. Открой Библиотеку.`, 'warn');
 }
 
 function renderFeatured(mode) {
@@ -1601,6 +1646,7 @@ function bindDetail() {
     if (action === 'play') enqueueDownload(mode, 'play');
     else enqueueDownload(mode, action);
   };
+  els.detailDefer.onclick = () => deferModeUpdate(modeById(S.selectedId));
 }
 
 // ---------------------------------------------------------------- загрузки
@@ -1670,11 +1716,13 @@ function downloadTaskForMode(modeId) {
   ) || null;
 }
 
-function enqueueDownload(mode, action, autoPlay = false) {
+function enqueueDownload(mode, action, autoPlay = false, silent = false) {
   if (!mode) return;
   const existing = downloadTaskForMode(mode.id);
   if (existing) {
-    toast(existing.status === 'downloading' ? 'Этот режим уже скачивается' : 'Этот режим уже в очереди', 'warn');
+    if (!silent) {
+      toast(existing.status === 'downloading' ? 'Этот режим уже скачивается' : 'Этот режим уже в очереди', 'warn');
+    }
     return;
   }
   const task = {
@@ -1700,7 +1748,9 @@ function enqueueDownload(mode, action, autoPlay = false) {
   S.downloads.push(task);
   renderDownloads();
   pumpDownloads();
-  toast(action === 'update' ? 'Обновление добавлено в очередь' : 'Загрузка добавлена в очередь', 'info');
+  if (!silent) {
+    toast(action === 'update' ? 'Обновление добавлено в очередь' : 'Загрузка добавлена в очередь', 'info');
+  }
 }
 
 function pumpDownloads() {
@@ -2702,6 +2752,7 @@ function updateDetailAction() {
   if (S.view !== 'detail') return;
   const mode = modeById(S.selectedId);
   if (!mode) return;
+  if (els.detailDefer) els.detailDefer.hidden = true;
 
   const task = downloadTaskForMode(mode.id);
   if (task && task.status === 'queued') {
@@ -2744,9 +2795,27 @@ function updateDetailAction() {
     els.detailAction.className = 'btn btn-primary btn-big btn-block';
     els.detailAction.disabled = false;
     els.detailStatus.textContent = defaultStatus(mode);
+    if (els.detailDefer) els.detailDefer.hidden = action !== 'update';
   }
   els.detailProgress.hidden = true;
   els.detailProgressBar.style.width = '0%';
+}
+
+async function deferModeUpdate(mode) {
+  if (!mode) return;
+  const version = mode.version || null;
+  try {
+    const res = api.gameSkipUpdate ? await api.gameSkipUpdate(mode.id, version) : null;
+    if (res && res.ok === false) throw new Error(res.error || 'Ошибка');
+    const st = S.state[mode.id] || { installed: true, version: null, installedAt: 0 };
+    S.state[mode.id] = { ...st, skippedVersion: version };
+    renderStore();
+    renderLibrary();
+    updateDetailAction();
+    toast('Обновление отложено до следующей версии', 'ok');
+  } catch (err) {
+    toast('Не удалось отложить обновление: ' + err, 'error');
+  }
 }
 
 // ---------------------------------------------------------------- события игры

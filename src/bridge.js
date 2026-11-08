@@ -113,6 +113,7 @@
     verify: (modeId) => invoke("game_verify", { modeId }),
     prepareRepair: (modeId) => invoke("game_prepare_repair", { modeId }),
     setLibrary: (modeId, library) => invoke("game_set_library", { modeId, library }),
+    gameSkipUpdate: (modeId, version) => invoke("game_skip_update", { modeId, version }),
     addPlaytime: (modeId, seconds) => invoke("game_add_playtime", { modeId, seconds }),
     openModeFolder: (modeId) => invoke("game_open_mode_folder", { modeId }),
     onGameEvent: (cb) => listen("game:event", (e) => cb(e.payload))

@@ -199,6 +199,7 @@ pub struct ModeState {
     pub hidden: bool,
     pub library: Option<bool>,
     pub playtime_secs: u64,
+    pub skipped_version: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

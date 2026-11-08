@@ -996,6 +996,24 @@ body::before {
   font-family: 'Unbounded', sans-serif;
   font-size: 15px;
 }
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border: 1px solid #3a2a12;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #1d1509, #12100d);
+}
+.update-banner-copy b { color: #f0b35a; font-size: 13px; }
+.update-banner-copy span { display: block; margin-top: 4px; color: #a69d95; font-size: 11.5px; }
+.update-banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.update-banner[hidden] { display: none; }
+@media (max-width: 760px) {
+  .update-banner { flex-direction: column; align-items: stretch; }
+}
 
 .catalog-head { flex-wrap: wrap; }
 .shelf-title { display: flex; align-items: center; gap: 8px; min-width: 0; }

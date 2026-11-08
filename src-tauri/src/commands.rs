@@ -1,5 +1,5 @@
 use crate::game;
-use crate::models::{GameAccount, LavunioSession, LavunioUser, Mode, Settings};
+use crate::models::{GameAccount, LavunioSession, LavunioUser, Mode, ModeState, Settings};
 use crate::net;
 use crate::publisher as build_publisher;
 use crate::state::AppState;
@@ -284,6 +284,24 @@ pub fn game_prepare_repair(state: State<'_, AppState>, mode_id: String) -> Resul
 pub fn game_set_library(state: State<'_, AppState>, mode_id: String, library: bool) -> Value {
     let mut store = state.store.lock().unwrap();
     match store.set_mode_library(&mode_id, library) {
+        Ok(()) => json!({ "ok": true }),
+        Err(err) => json!({ "ok": false, "error": err }),
+    }
+}
+
+#[tauri::command]
+pub fn game_skip_update(
+    state: State<'_, AppState>,
+    mode_id: String,
+    version: Option<String>,
+) -> Value {
+    let mut store = state.store.lock().unwrap();
+    let mode_state = store
+        .state
+        .entry(mode_id)
+        .or_insert_with(ModeState::default);
+    mode_state.skipped_version = version.filter(|value| !value.trim().is_empty());
+    match store.save_state() {
         Ok(()) => json!({ "ok": true }),
         Err(err) => json!({ "ok": false, "error": err }),
     }

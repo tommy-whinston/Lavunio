@@ -146,6 +146,7 @@ impl Store {
                 hidden: false,
                 library: Some(true),
                 playtime_secs,
+                skipped_version: None,
             },
         );
         self.save_state()

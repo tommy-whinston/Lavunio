@@ -102,6 +102,7 @@ fn main() {
             commands::game_verify,
             commands::game_prepare_repair,
             commands::game_set_library,
+            commands::game_skip_update,
             commands::game_add_playtime,
             commands::game_open_mode_folder,
             update::check_update,

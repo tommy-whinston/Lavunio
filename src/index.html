@@ -276,6 +276,17 @@
         </div>
       </div>
 
+      <div class="update-banner" id="library-update-banner" hidden>
+        <div class="update-banner-copy">
+          <b>Доступны обновления режимов: <span id="library-update-count">0</span></b>
+          <span>Обнови установленные режимы до актуальных версий.</span>
+        </div>
+        <div class="update-banner-actions">
+          <button class="btn btn-primary" id="library-update-all" type="button">Обновить все</button>
+          <button class="btn btn-ghost" id="library-update-later" type="button">Позже</button>
+        </div>
+      </div>
+
       <div class="shelf-head catalog-head">
         <div class="shelf-title"><h2>Все режимы</h2><span class="count" id="library-count"></span></div>
         <div class="catalog-controls">
@@ -423,6 +434,7 @@
           </div>
           <div class="hero-action">
             <button class="btn btn-primary btn-block btn-big" id="detail-action">Установить</button>
+            <button class="btn btn-ghost btn-block" id="detail-defer" type="button" hidden>Отложить обновление</button>
             <button class="btn btn-ghost btn-block" id="detail-wishlist" type="button">В список желаемого</button>
             <button class="btn btn-ghost btn-block" id="detail-report" type="button">Пожаловаться</button>
             <div class="status-text" id="detail-status"></div>
