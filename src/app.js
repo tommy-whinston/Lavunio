@@ -1263,6 +1263,7 @@ function cardPlayIcon(kind) {
 function collectionCardHtml(mode) {
   const st = cardStatus(mode);
   const installed = isInstalled(mode);
+  const updated = modeUpdatedAt(mode);
   return `
   <article class="mode-card collection-card ${installed ? 'installed' : ''}" data-id="${escapeHtml(mode.id)}">
     <div class="card-media">
@@ -1272,6 +1273,7 @@ function collectionCardHtml(mode) {
     <div class="card-body">
       <div class="card-title">${escapeHtml(mode.title || 'Без названия')}</div>
       <div class="card-sub">${escapeHtml(cardSub(mode))}</div>
+      ${updated ? `<div class="card-release">Обновлено ${escapeHtml(formatUpdateDate(updated))}</div>` : ''}
       <div class="card-foot">
         <span class="card-installs">${Number(mode.installs) ? `${Number(mode.installs)} установок` : ''}</span>
         ${mode.rating ? `<span class="card-installs">★ ${Number(mode.rating).toFixed(1)}</span>` : ''}
@@ -1283,9 +1285,12 @@ function collectionCardHtml(mode) {
 function modeCardHtml(mode, withMenu = false, playMode = false) {
   const st = cardStatus(mode);
   const installed = isInstalled(mode);
-  const released = modeReleaseDate(mode);
+  const updated = modeUpdatedAt(mode);
   const status = modeStatusMeta(mode);
   const stateMeta = playMode ? libraryStateMeta(mode) : null;
+  const screenshots = (Array.isArray(mode.screenshots) ? mode.screenshots : [])
+    .filter(Boolean)
+    .slice(0, 3);
   const tags = modeTags(mode, 3)
     .map((t) => `<span>${escapeHtml(t)}</span>`)
     .join('');
@@ -1302,8 +1307,12 @@ function modeCardHtml(mode, withMenu = false, playMode = false) {
         <div class="card-title">${escapeHtml(mode.title || 'Без названия')}</div>
         <div class="card-sub">${escapeHtml(cardSub(mode))}</div>
         ${modeAuthors(mode).length ? `<div class="card-author">${escapeHtml(modeAuthors(mode).join(', '))}</div>` : ''}
+        ${screenshots.length ? `
+          <div class="card-shots">
+            ${screenshots.map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy">`).join('')}
+          </div>` : ''}
         ${status ? `<div class="card-status-row"><span class="mode-status ${status.cls}">${status.label}</span></div>` : ''}
-        ${released ? `<div class="card-release">Вышла ${escapeHtml(formatUpdateDate(released))}</div>` : ''}
+        ${updated ? `<div class="card-release">Обновлено ${escapeHtml(formatUpdateDate(updated))}</div>` : ''}
         <div class="card-desc">${escapeHtml(modeShortDescription(mode))}</div>
         ${tags ? `<div class="tags">${tags}</div>` : ''}
         <div class="card-foot">

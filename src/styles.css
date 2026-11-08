@@ -626,6 +626,22 @@ a { color: inherit; }
   text-overflow: ellipsis;
 }
 .card-sub { margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+.card-release { margin-top: 5px; color: var(--muted); font-size: 11px; }
+.card-shots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 9px;
+}
+.card-shots img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel-3);
+}
 .card-desc {
   margin-top: 9px;
   color: #b5b5bf;
