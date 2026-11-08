@@ -91,6 +91,7 @@ const S = {
   moderationModes: [],
   moderationReports: [],
   moderationReviews: [],
+  moderationCollections: [],
   moderationHistory: [],
   moderationLoaded: false,
   moderationLoading: false,
@@ -916,7 +917,7 @@ function renderCollections() {
       modes: collectionModes(section)
     }))
     .filter((section) => section.id && section.title && section.modes.length)
-    .slice(0, 4);
+    .slice(0, 8);
 
   if (!sections.length) {
     container.hidden = true;
@@ -3714,13 +3715,14 @@ function bindModeration() {
     else if (action === 'close-report') closeModerationReport(id);
     else if (action === 'review-approve') approveModerationReview(id);
     else if (action === 'review-reject') rejectModerationReview(id);
+    else if (action === 'collection-delete') deleteModerationCollection(id, title);
   };
 
   updateModerationNav();
 }
 
 function setModerationTab(tab) {
-  S.moderationTab = ['queue', 'modes', 'reviews', 'reports', 'news', 'history'].includes(tab) ? tab : 'queue';
+  S.moderationTab = ['queue', 'modes', 'reviews', 'collections', 'reports', 'news', 'history'].includes(tab) ? tab : 'queue';
   if (S.moderationTab === 'news') loadStoreNews(true);
   renderModeration();
 }
@@ -3739,17 +3741,19 @@ async function loadModeration(force = false) {
   S.moderationLoading = true;
   renderModeration();
   try {
-    const [queue, modes, reports, reviews, history] = await Promise.all([
+    const [queue, modes, reports, reviews, collections, history] = await Promise.all([
       api.adminQueue(),
       api.adminModes(),
       api.adminReports(),
       api.adminReviews(),
+      api.adminCollections(),
       api.adminHistory()
     ]);
     S.moderationQueue = Array.isArray(queue) ? queue : [];
     S.moderationModes = Array.isArray(modes) ? modes : [];
     S.moderationReports = Array.isArray(reports) ? reports : [];
     S.moderationReviews = Array.isArray(reviews) ? reviews : [];
+    S.moderationCollections = Array.isArray(collections) ? collections : [];
     S.moderationHistory = Array.isArray(history) ? history : [];
     S.moderationLoaded = true;
   } catch (err) {
@@ -3785,6 +3789,15 @@ function renderModeration() {
     content.innerHTML = moderationModesHtml();
   } else if (S.moderationTab === 'reviews') {
     content.innerHTML = moderationReviewsHtml();
+  } else if (S.moderationTab === 'collections') {
+    content.innerHTML = moderationCollectionsHtml();
+    const form = content.querySelector('#mod-collection-form');
+    if (form) {
+      form.onsubmit = (event) => {
+        event.preventDefault();
+        submitCollection();
+      };
+    }
   } else if (S.moderationTab === 'reports') {
     content.innerHTML = moderationReportsHtml();
   } else if (S.moderationTab === 'news') {
@@ -3857,6 +3870,116 @@ function moderationModesHtml() {
       </article>
     `;
   }).join('');
+}
+
+function moderationCollectionsHtml() {
+  const items = S.moderationCollections || [];
+  const list = items.length
+    ? items.map((item) => `
+      <article class="pub-card">
+        <div class="pub-card-head">
+          <div>
+            <div class="pub-title">${escapeHtml(item.title)}</div>
+            <div class="pub-sub">${escapeHtml(item.slug)}</div>
+          </div>
+          <span class="pub-status published">Опубликована</span>
+        </div>
+        <div class="pub-meta">
+          <span>Режимы: ${escapeHtml((item.modeSlugs || []).join(', ') || 'пусто')}</span>
+          <span>Порядок: ${Number(item.sortOrder) || 0}</span>
+        </div>
+        ${item.description ? `<div class="mod-changelog">${escapeHtml(item.description)}</div>` : ''}
+        <div class="pub-release-actions">
+          <button class="btn btn-ghost" type="button" data-action="collection-delete" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.title)}">Удалить</button>
+        </div>
+      </article>
+    `).join('')
+    : '<div class="mod-empty">Ручных подборок пока нет.</div>';
+
+  return `
+    <form id="mod-collection-form" class="mod-news-form" autocomplete="off">
+      <div class="field">
+        <label for="mod-collection-slug">Slug</label>
+        <input id="mod-collection-slug" type="text" maxlength="64" placeholder="staff-picks">
+      </div>
+      <div class="field">
+        <label for="mod-collection-title">Название</label>
+        <input id="mod-collection-title" type="text" maxlength="120" placeholder="Выбор редакции">
+      </div>
+      <div class="field">
+        <label for="mod-collection-description">Описание</label>
+        <textarea id="mod-collection-description" rows="2" placeholder="Коротко о подборке"></textarea>
+      </div>
+      <div class="field">
+        <label for="mod-collection-modes">Режимы (slug через запятую)</label>
+        <input id="mod-collection-modes" type="text" placeholder="night-demon, eclipse">
+      </div>
+      <div class="field">
+        <label for="mod-collection-order">Порядок</label>
+        <input id="mod-collection-order" type="number" value="0">
+      </div>
+      <div class="form-error" id="mod-collection-error" hidden></div>
+      <button class="btn btn-primary" id="mod-collection-submit" type="submit">Создать подборку</button>
+    </form>
+    <div class="mod-news-list">${list}</div>
+  `;
+}
+
+async function submitCollection() {
+  const slug = $('mod-collection-slug').value.trim().toLowerCase();
+  const title = $('mod-collection-title').value.trim();
+  const description = $('mod-collection-description').value.trim();
+  const modeSlugs = $('mod-collection-modes').value
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const sortOrder = Number($('mod-collection-order').value) || 0;
+  const error = $('mod-collection-error');
+  const button = $('mod-collection-submit');
+  if (!/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug)) {
+    error.textContent = 'Slug: 3–64 символа, строчные латинские буквы, цифры и дефис';
+    error.hidden = false;
+    return;
+  }
+  if (title.length < 3) {
+    error.textContent = 'Укажи название подборки';
+    error.hidden = false;
+    return;
+  }
+  error.hidden = true;
+  button.disabled = true;
+  button.textContent = 'Создаём…';
+  try {
+    await api.adminCreateCollection({ slug, title, description, modeSlugs, sortOrder });
+    toast('Подборка создана', 'ok');
+    S.moderationLoaded = false;
+    await loadModeration(true);
+    await loadCollections();
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось создать подборку');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Создать подборку';
+  }
+}
+
+async function deleteModerationCollection(collectionId, title) {
+  const ok = await askConfirm(
+    'Удалить подборку?',
+    `Подборка «${title || 'без названия'}» исчезнет из магазина.`,
+    'Удалить'
+  );
+  if (!ok) return;
+  try {
+    await api.adminDeleteCollection(collectionId);
+    toast('Подборка удалена', 'ok');
+    S.moderationLoaded = false;
+    await loadModeration(true);
+    await loadCollections();
+  } catch (err) {
+    toast('Не удалось удалить подборку: ' + err, 'error');
+  }
 }
 
 function moderationReviewsHtml() {

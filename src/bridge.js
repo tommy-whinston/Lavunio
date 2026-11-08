@@ -97,6 +97,9 @@
     adminApproveReview: (reviewId) => invoke("admin_approve_review", { reviewId }),
     adminRejectReview: (reviewId) => invoke("admin_reject_review", { reviewId }),
     reviewReply: (slug, reviewId, text) => invoke("review_reply", { slug, reviewId, text }),
+    adminCollections: () => invoke("admin_collections"),
+    adminCreateCollection: (payload) => invoke("admin_create_collection", { payload }),
+    adminDeleteCollection: (collectionId) => invoke("admin_delete_collection", { collectionId }),
     adminReports: () => invoke("admin_reports"),
     adminCloseReport: (reportId, note) => invoke("admin_close_report", { reportId, note }),
 
