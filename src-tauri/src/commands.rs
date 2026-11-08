@@ -676,6 +676,53 @@ pub async fn admin_unhide_mode(
 }
 
 #[tauri::command]
+pub async fn wishlist_get(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(state.inner(), "GET", "/v1/me/wishlist".to_string(), None).await
+}
+
+#[tauri::command]
+pub async fn wishlist_add(state: State<'_, AppState>, slug: String) -> Result<Value, String> {
+    let path = format!("/v1/me/wishlist/{slug}");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn wishlist_remove(state: State<'_, AppState>, slug: String) -> Result<Value, String> {
+    let path = format!("/v1/me/wishlist/{slug}");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
+pub async fn reviews_get(_state: State<'_, AppState>, slug: String) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let path = format!("/v1/modes/{slug}/reviews");
+    blocking(move || net::api_request_json(&api, "GET", &path, None, None)).await?
+}
+
+#[tauri::command]
+pub async fn review_submit(
+    state: State<'_, AppState>,
+    slug: String,
+    rating: i64,
+    text: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/modes/{slug}/reviews");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "rating": rating, "text": text })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn review_delete(state: State<'_, AppState>, slug: String) -> Result<Value, String> {
+    let path = format!("/v1/me/reviews/{slug}");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
 pub async fn publisher_pick_folder() -> Result<Option<String>, String> {
     let picked = blocking(|| rfd::FileDialog::new().pick_folder()).await?;
     Ok(picked.map(|path| path_string(&path)))

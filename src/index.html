@@ -208,6 +208,7 @@
             <div class="filter-chips" id="store-filters">
               <button type="button" data-store-filter="all" class="active">Все</button>
               <button type="button" data-store-filter="installed">Установленные</button>
+              <button type="button" data-store-filter="wishlist">Желаемое</button>
               <button type="button" data-store-filter="development">В разработке</button>
               <button type="button" data-store-filter="crowdfunding">Сбор на релиз</button>
             </div>
@@ -364,6 +365,7 @@
           </div>
           <div class="hero-action">
             <button class="btn btn-primary btn-block btn-big" id="detail-action">Установить</button>
+            <button class="btn btn-ghost btn-block" id="detail-wishlist" type="button">В список желаемого</button>
             <div class="status-text" id="detail-status"></div>
             <div class="progress" id="detail-progress" hidden><div class="progress-bar" id="detail-progress-bar"></div></div>
           </div>
@@ -411,6 +413,27 @@
         <section class="detail-section about-section">
           <h2>Об игре</h2>
           <div id="detail-desc" class="detail-desc"></div>
+        </section>
+
+        <section class="detail-section reviews-section" id="detail-reviews-section" hidden>
+          <div class="reviews-head">
+            <h2>Отзывы</h2>
+            <span id="reviews-summary"></span>
+          </div>
+          <div id="reviews-list" class="reviews-list"></div>
+          <form id="review-form" hidden>
+            <div class="review-rating" id="review-stars">
+              <button type="button" data-star="1" aria-label="1 звезда">★</button>
+              <button type="button" data-star="2" aria-label="2 звезды">★</button>
+              <button type="button" data-star="3" aria-label="3 звезды">★</button>
+              <button type="button" data-star="4" aria-label="4 звезды">★</button>
+              <button type="button" data-star="5" aria-label="5 звёзд">★</button>
+            </div>
+            <textarea id="review-text" rows="3" placeholder="Поделись впечатлением о режиме"></textarea>
+            <div class="form-error" id="review-error" hidden></div>
+            <button class="btn btn-primary" id="review-submit" type="submit">Отправить отзыв</button>
+          </form>
+          <div class="hint" id="review-login-hint">Войдите в Lavunio ID, чтобы оставить отзыв.</div>
         </section>
 
         <section class="detail-section" id="detail-requirements-section">

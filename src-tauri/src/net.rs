@@ -489,6 +489,8 @@ fn api_mode(item: &Value) -> Option<Mode> {
             })
             .unwrap_or_default(),
         installs: item.get("installs").and_then(Value::as_u64),
+        rating: item.get("rating").and_then(Value::as_f64),
+        reviews_count: item.get("reviewsCount").and_then(Value::as_u64),
         author,
         authors,
         description: item

@@ -76,6 +76,14 @@
     adminHideMode: (modeId, note) => invoke("admin_hide_mode", { modeId, note }),
     adminUnhideMode: (modeId) => invoke("admin_unhide_mode", { modeId }),
 
+    // вишлист и отзывы
+    wishlistGet: () => invoke("wishlist_get"),
+    wishlistAdd: (slug) => invoke("wishlist_add", { slug }),
+    wishlistRemove: (slug) => invoke("wishlist_remove", { slug }),
+    reviewsGet: (slug) => invoke("reviews_get", { slug }),
+    reviewSubmit: (slug, rating, text) => invoke("review_submit", { slug, rating, text }),
+    reviewDelete: (slug) => invoke("review_delete", { slug }),
+
     // игра
     install: (modeId) => invoke("game_install", { modeId }),
     play: (modeId) => invoke("game_play", { modeId }),

@@ -2327,3 +2327,48 @@ body::before {
 .author-name { font-weight: 700; font-size: 14px; }
 .author-sub { color: var(--muted); font-size: 11.5px; margin-top: 3px; }
 .card-installs { color: var(--muted); font-size: 11px; }
+
+/* ---- Отзывы и желаемое ---- */
+#detail-wishlist { margin-top: 8px; }
+#detail-wishlist.active {
+  color: var(--accent-2);
+  border-color: rgba(13, 140, 255, 0.55);
+}
+.reviews-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.reviews-head h2 { margin: 0; }
+#reviews-summary { color: var(--muted); font-size: 12px; }
+.reviews-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.review-item {
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.review-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.review-author { font-weight: 600; font-size: 12.5px; }
+.review-stars { color: var(--warn); letter-spacing: 1px; font-size: 13px; }
+.review-date { color: var(--muted-2); font-size: 11px; margin-left: auto; }
+.review-text { color: var(--muted); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+.review-delete { color: var(--muted); font-size: 11px; margin-top: 6px; }
+.review-delete:hover { color: var(--danger); }
+#review-form { margin-top: 12px; }
+.review-rating { display: flex; gap: 4px; margin-bottom: 10px; }
+.review-rating button {
+  padding: 0 2px;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--border-strong);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.12s, transform 0.12s;
+}
+.review-rating button:hover,
+.review-rating button.active { color: var(--warn); transform: scale(1.06); }
+#review-form textarea { margin-bottom: 10px; }

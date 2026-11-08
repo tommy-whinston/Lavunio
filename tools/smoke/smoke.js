@@ -31,8 +31,15 @@ function assert(condition, message) {
 
 function launcherIsRunning() {
   try {
-    const output = execFileSync('tasklist', ['/FI', 'IMAGENAME eq lavunio.exe'], { encoding: 'utf8' });
-    return /lavunio\.exe/i.test(output);
+    const output = execFileSync(
+      'tasklist',
+      ['/FI', 'IMAGENAME eq Lavunio.exe', '/FO', 'CSV', '/NH'],
+      { encoding: 'utf8' }
+    );
+    return output
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .some((line) => /^"Lavunio\.exe",/i.test(line));
   } catch {
     return false;
   }

@@ -71,6 +71,10 @@ const S = {
   pendingPlay: null,
   lavunio: null,
   lavunioRegisterMode: false,
+  wishlist: [],
+  reviews: {},
+  reviewLoading: {},
+  reviewRating: 5,
   publisherModes: [],
   publisherLoaded: false,
   publisherLoading: false,
@@ -154,6 +158,7 @@ const els = {
   detailTags: $('detail-tags'),
   detailSub: $('detail-sub'),
   detailAction: $('detail-action'),
+  detailWishlist: $('detail-wishlist'),
   detailStatus: $('detail-status'),
   detailProgress: $('detail-progress'),
   detailProgressBar: $('detail-progress-bar'),
@@ -177,6 +182,15 @@ const els = {
   detailAuthorSub: $('detail-author-sub'),
   detailAuthorModes: $('detail-author-modes'),
   galleryImage: $('gallery-image'),
+  detailReviewsSection: $('detail-reviews-section'),
+  reviewsSummary: $('reviews-summary'),
+  reviewsList: $('reviews-list'),
+  reviewForm: $('review-form'),
+  reviewStars: $('review-stars'),
+  reviewText: $('review-text'),
+  reviewError: $('review-error'),
+  reviewSubmit: $('review-submit'),
+  reviewLoginHint: $('review-login-hint'),
   moreSection: $('more-section'),
   moreGrid: $('more-grid'),
   cardContext: $('card-context'),
@@ -246,6 +260,7 @@ async function init() {
     S.loading = false;
     renderAccountChip();
     updatePublisherNav();
+    loadWishlist();
     renderStore();
     renderLibrary();
     updateSidebar();
@@ -345,6 +360,7 @@ function syncFilterButtons(container, attr, active) {
 
 function modePassesFilter(mode, filter) {
   if (filter === 'installed') return isInstalled(mode);
+  if (filter === 'wishlist') return S.wishlist.includes(mode.id);
   if (filter === 'development') return mode.status === 'development';
   if (filter === 'crowdfunding') return mode.status === 'crowdfunding';
   return true;
@@ -705,6 +721,7 @@ function renderStore() {
   const titles = {
     all: 'Все режимы',
     installed: 'Установленные',
+    wishlist: 'Желаемое',
     development: 'В разработке',
     crowdfunding: 'Сбор на релиз'
   };
@@ -981,6 +998,7 @@ function modeCardHtml(mode, withMenu = false, playMode = false) {
         ${tags ? `<div class="tags">${tags}</div>` : ''}
         <div class="card-foot">
           <span class="card-installs">${Number(mode.installs) ? `${Number(mode.installs)} установок` : ''}</span>
+          ${mode.rating ? `<span class="card-installs">★ ${Number(mode.rating).toFixed(1)}</span>` : ''}
           <span class="card-size">${escapeHtml(mode.size || '-')}</span>
           ${playMode
             ? `<span class="card-state state-${stateMeta.cls}" data-card-state>${escapeHtml(stateMeta.label)}</span>`
@@ -1161,6 +1179,22 @@ function bindDetail() {
     els.search.value = name;
     S.search = name.toLowerCase();
     showSection('store');
+  };
+  els.detailWishlist.onclick = () => toggleWishlist(modeById(S.selectedId));
+  els.reviewForm.onsubmit = (event) => {
+    event.preventDefault();
+    submitReview();
+  };
+  els.reviewStars.querySelectorAll('[data-star]').forEach((button) => {
+    button.onclick = () => {
+      S.reviewRating = Number(button.getAttribute('data-star')) || 5;
+      renderReviewStars();
+    };
+  });
+  els.reviewsList.onclick = (event) => {
+    const button = event.target.closest('[data-review-delete]');
+    if (!button) return;
+    deleteReview(button.getAttribute('data-review-delete'));
   };
   els.detailAction.onclick = async () => {
     const mode = modeById(S.selectedId);
@@ -1535,6 +1569,7 @@ function renderDetail() {
     ['Ядро', loaderLabel(mode)],
     ['Размер', mode.size || '—'],
     ['Установки', String(Number(mode.installs) || 0)],
+    ['Рейтинг', mode.rating ? `${Number(mode.rating).toFixed(1)} ★ (${Number(mode.reviewsCount) || 0})` : '—'],
     ['Вышла', released ? formatUpdateDate(released) : '—'],
     ['Обновлено', updated],
     ['Наиграно', formatPlaytime(S.state[mode.id] && S.state[mode.id].playtimeSecs)]
@@ -1562,6 +1597,17 @@ function renderDetail() {
     avatar.style.backgroundImage = author && author.avatar ? `url("${author.avatar}")` : '';
   }
 
+  const wishlisted = S.wishlist.includes(mode.id);
+  els.detailWishlist.textContent = wishlisted ? 'В желаемом' : 'В список желаемого';
+  els.detailWishlist.classList.toggle('active', wishlisted);
+
+  const apiReady = !!(S.lavunio && S.lavunio.configured);
+  els.detailReviewsSection.hidden = !apiReady;
+  if (apiReady) {
+    renderReviews(mode);
+    loadReviews(mode);
+  }
+
   els.detailDesc.innerHTML = renderRichText(modeFullDescription(mode));
   renderChangelog(mode);
   els.reqSize.textContent = mode.size || '—';
@@ -1573,6 +1619,168 @@ function renderDetail() {
   renderModeGrid(els.moreGrid, others);
 
   updateDetailAction();
+}
+
+async function loadWishlist() {
+  if (!lavunioLoggedIn() || !S.lavunio.configured) {
+    S.wishlist = [];
+    renderStore();
+    return;
+  }
+  try {
+    const items = await api.wishlistGet();
+    S.wishlist = Array.isArray(items) ? items : [];
+  } catch (_) {
+    S.wishlist = [];
+  }
+  renderStore();
+  if (S.view === 'detail') renderDetail();
+}
+
+async function toggleWishlist(mode) {
+  if (!mode) return;
+  if (!lavunioLoggedIn()) {
+    openModal('modal-account');
+    toast('Сначала войдите в Lavunio ID', 'warn');
+    return;
+  }
+  const listed = S.wishlist.includes(mode.id);
+  try {
+    if (listed) {
+      await api.wishlistRemove(mode.id);
+      S.wishlist = S.wishlist.filter((id) => id !== mode.id);
+    } else {
+      await api.wishlistAdd(mode.id);
+      S.wishlist = [...S.wishlist, mode.id];
+    }
+    renderStore();
+    if (S.view === 'detail') renderDetail();
+    toast(listed ? 'Убрано из желаемого' : 'Добавлено в желаемое', 'ok');
+  } catch (err) {
+    toast('Не удалось обновить желаемое: ' + err, 'error');
+  }
+}
+
+function reviewStarsText(rating) {
+  const value = Math.max(0, Math.min(5, Number(rating) || 0));
+  return '★'.repeat(value) + '☆'.repeat(5 - value);
+}
+
+function renderReviewStars() {
+  els.reviewStars.querySelectorAll('[data-star]').forEach((button) => {
+    button.classList.toggle('active', Number(button.getAttribute('data-star')) <= S.reviewRating);
+  });
+}
+
+async function loadReviews(mode) {
+  if (!mode || !S.lavunio || !S.lavunio.configured) return;
+  if (S.reviews[mode.id] !== undefined || S.reviewLoading[mode.id]) return;
+  S.reviewLoading[mode.id] = true;
+  try {
+    const data = await api.reviewsGet(mode.id);
+    S.reviews[mode.id] = data;
+    mode.rating = data.averageRating;
+    mode.reviewsCount = data.count;
+  } catch (_) {
+  } finally {
+    S.reviewLoading[mode.id] = false;
+    if (S.selectedId === mode.id && S.view === 'detail') {
+      renderDetail();
+      renderStore();
+    }
+  }
+}
+
+function renderReviews(mode) {
+  if (!mode) return;
+  const data = S.reviews[mode.id];
+  const items = data && Array.isArray(data.items) ? data.items : [];
+  const count = data && Number.isFinite(Number(data.count)) ? Number(data.count) : (mode.reviewsCount || 0);
+  const average = data && data.averageRating !== null && data.averageRating !== undefined
+    ? Number(data.averageRating)
+    : (mode.rating !== null && mode.rating !== undefined ? Number(mode.rating) : null);
+  els.reviewsSummary.textContent = average !== null && count > 0
+    ? `${average.toFixed(1)} ★ · ${count} отзывов`
+    : 'Отзывов пока нет';
+
+  if (!items.length) {
+    els.reviewsList.innerHTML = '<div class="hint">Стань первым, кто оставит отзыв.</div>';
+  } else {
+    els.reviewsList.innerHTML = items.map((item) => {
+      const own = S.lavunio && S.lavunio.user && item.authorUsername === S.lavunio.user.username;
+      return `
+        <article class="review-item">
+          <div class="review-head">
+            <span class="review-author">${escapeHtml(item.authorName || item.authorUsername || 'Игрок')}</span>
+            <span class="review-stars">${reviewStarsText(item.rating)}</span>
+            <span class="review-date">${escapeHtml(publisherDate(item.createdAt))}</span>
+          </div>
+          ${item.text ? `<div class="review-text">${escapeHtml(item.text)}</div>` : ''}
+          ${own ? `<button class="link link-btn review-delete" type="button" data-review-delete="${escapeHtml(mode.id)}">Удалить мой отзыв</button>` : ''}
+        </article>`;
+    }).join('');
+  }
+
+  const loggedIn = lavunioLoggedIn();
+  els.reviewForm.hidden = !loggedIn;
+  els.reviewLoginHint.hidden = loggedIn;
+  if (loggedIn) {
+    renderReviewStars();
+  }
+}
+
+async function submitReview() {
+  const mode = modeById(S.selectedId);
+  if (!mode) return;
+  if (!lavunioLoggedIn()) {
+    openModal('modal-account');
+    toast('Сначала войдите в Lavunio ID', 'warn');
+    return;
+  }
+  const text = els.reviewText.value.trim();
+  const error = els.reviewError;
+  if (text.length > 2000) {
+    error.textContent = 'Отзыв должен быть не длиннее 2000 символов';
+    error.hidden = false;
+    return;
+  }
+  const button = els.reviewSubmit;
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    const data = await api.reviewSubmit(mode.id, S.reviewRating, text);
+    S.reviews[mode.id] = data;
+    mode.rating = data.averageRating;
+    mode.reviewsCount = data.count;
+    els.reviewText.value = '';
+    renderDetail();
+    renderStore();
+    toast('Отзыв сохранён', 'ok');
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось сохранить отзыв');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function deleteReview(modeId) {
+  const mode = modeById(modeId);
+  if (!mode) return;
+  const ok = await askConfirm('Удалить отзыв?', 'Твой отзыв будет удалён.', 'Удалить');
+  if (!ok) return;
+  try {
+    await api.reviewDelete(modeId);
+    delete S.reviews[modeId];
+    mode.rating = null;
+    mode.reviewsCount = 0;
+    await loadReviews(mode);
+    if (S.view === 'detail') renderDetail();
+    renderStore();
+    toast('Отзыв удалён', 'ok');
+  } catch (err) {
+    toast('Не удалось удалить отзыв: ' + err, 'error');
+  }
 }
 
 function updateDetailAction() {
@@ -2071,6 +2279,7 @@ async function submitLavunioForm() {
     $('lavunio-password').value = '';
     renderLavunioPane();
     renderAccountChip();
+    loadWishlist();
     const name = status && status.user ? lavunioName(status.user) : '';
     toast(register ? 'Аккаунт Lavunio создан' : `С возвращением, ${name || 'игрок'}!`, 'ok');
     if (status && status.user && !status.user.emailVerified) {
@@ -2092,8 +2301,11 @@ async function logoutLavunio() {
     await api.lavunioLogout();
   } catch (_) {}
   S.lavunio = { configured: true, hasSession: false, user: null };
+  S.wishlist = [];
+  S.reviews = {};
   renderLavunioPane();
   renderAccountChip();
+  renderStore();
   toast('Вы вышли из Lavunio', 'ok');
 }
 
