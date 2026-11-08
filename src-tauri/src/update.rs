@@ -216,7 +216,10 @@ pub async fn install_update(app: AppHandle, url: String) -> Result<(), String> {
 
         let installer_path = installer.to_string_lossy().replace('\'', "''");
         let pid = std::process::id();
-        let restart = std::env::current_exe()
+        let installed = dirs::data_local_dir()
+            .map(|dir| dir.join("Lavunio").join("Lavunio.exe"))
+            .map(|path| path.to_string_lossy().to_string());
+        let current = std::env::current_exe()
             .ok()
             .filter(|path| {
                 path.file_name()
@@ -228,11 +231,23 @@ pub async fn install_update(app: AppHandle, url: String) -> Result<(), String> {
                     })
                     .unwrap_or(false)
             })
-            .map(|path| {
-                format!(
-                    " Start-Sleep -Milliseconds 150; Start-Process -FilePath '{}';",
-                    path.to_string_lossy().replace('\'', "''")
-                )
+            .map(|path| path.to_string_lossy().to_string());
+        let restart = installed
+            .as_deref()
+            .map(|installed| {
+                let installed = installed.replace('\'', "''");
+                match current.as_deref() {
+                    Some(current) => format!(
+                        " Start-Sleep -Milliseconds 150; if (Test-Path '{}') {{ Start-Process -FilePath '{}' }} else {{ Start-Process -FilePath '{}' }};",
+                        installed,
+                        installed,
+                        current.replace('\'', "''")
+                    ),
+                    None => format!(
+                        " Start-Sleep -Milliseconds 150; Start-Process -FilePath '{}';",
+                        installed
+                    ),
+                }
             })
             .unwrap_or_default();
         let script = format!(
