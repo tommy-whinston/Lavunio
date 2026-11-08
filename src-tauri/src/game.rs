@@ -1,12 +1,13 @@
 use crate::events::GameEvent;
 use crate::models::{GameAccount, Mode, Settings};
 use crate::net::{sync_build, Manifest};
-use crate::util::{format_error, read_json};
+use crate::util::{format_error, read_json, safe_join, sha256_file};
 use mc_launcher_core::prelude::{
     Account as McAccount, CompatibilityPolicy, InstallRequest, JavaInstallPolicy, LaunchOptions,
     Launcher, LoaderSpec, LoaderVersion,
 };
 use mc_launcher_core::progress::{InstallStage, ProgressEvent};
+use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -338,6 +339,75 @@ fn resolve_game_dir(mode: &Mode, settings: &Settings) -> PathBuf {
         }
     }
     new_dir
+}
+
+fn installed_mode_dir(settings: &Settings, mode_id: &str) -> Result<PathBuf, String> {
+    if mode_id.is_empty() || mode_id == ".." || mode_id.contains('/') || mode_id.contains('\\') {
+        return Err("Некорректный режим".to_string());
+    }
+    let base = Path::new(&settings.dir);
+    let new_dir = base.join("games").join(mode_id);
+    let old_dir = base.join(mode_id);
+    if new_dir.exists() {
+        Ok(new_dir)
+    } else if old_dir.exists() {
+        Ok(old_dir)
+    } else {
+        Ok(new_dir)
+    }
+}
+
+pub fn verify_files(settings: &Settings, mode_id: &str) -> Result<Value, String> {
+    let dir = installed_mode_dir(settings, mode_id)?;
+    let manifest_path = dir.join(".manifest.json");
+    let manifest: Manifest = read_json(&manifest_path)
+        .ok_or_else(|| "Манифест установки не найден. Установите режим заново.".to_string())?;
+
+    let mut missing = Vec::new();
+    let mut corrupted = Vec::new();
+    for (relative, meta) in &manifest.files {
+        let Some(path) = safe_join(&dir, relative) else {
+            corrupted.push(relative.clone());
+            continue;
+        };
+        let Ok(file_meta) = fs::metadata(&path) else {
+            missing.push(relative.clone());
+            continue;
+        };
+        if meta.size > 0 && file_meta.len() != meta.size {
+            corrupted.push(relative.clone());
+            continue;
+        }
+        if let Some(expected) = meta.sha256.as_deref().filter(|value| !value.is_empty()) {
+            match sha256_file(&path) {
+                Ok(actual) if actual.eq_ignore_ascii_case(expected) => {}
+                _ => corrupted.push(relative.clone()),
+            }
+        }
+    }
+    missing.sort();
+    corrupted.sort();
+    let checked = manifest.files.len();
+    let ok = missing.is_empty() && corrupted.is_empty();
+
+    Ok(json!({
+        "ok": ok,
+        "checked": checked,
+        "missing": missing.len(),
+        "corrupted": corrupted.len(),
+        "missingFiles": missing.into_iter().take(20).collect::<Vec<_>>(),
+        "corruptedFiles": corrupted.into_iter().take(20).collect::<Vec<_>>()
+    }))
+}
+
+pub fn prepare_repair(settings: &Settings, mode_id: &str) -> Result<(), String> {
+    let dir = installed_mode_dir(settings, mode_id)?;
+    let manifest = dir.join(".manifest.json");
+    if manifest.exists() {
+        fs::remove_file(&manifest)
+            .map_err(|e| format!("Не удалось подготовить исправление: {e}"))?;
+    }
+    Ok(())
 }
 
 fn java_executable(settings: &Settings) -> PathBuf {
@@ -830,4 +900,75 @@ fn launch(
     on_event(GameEvent::Played(play_started.elapsed().as_secs()));
     on_event(GameEvent::Exit(code));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::net::{FileMeta, Manifest};
+    use crate::util::write_json;
+    use std::collections::HashMap;
+
+    fn temp_root(name: &str) -> PathBuf {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "lavunio-test-{name}-{}-{stamp}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    #[test]
+    fn verify_detects_corruption_and_prepare_repair_removes_manifest() {
+        let root = temp_root("verify");
+        let mode_dir = root.join("games").join("verify-mode");
+        fs::create_dir_all(mode_dir.join("mods")).unwrap();
+        let file = mode_dir.join("mods").join("test.jar");
+        fs::write(&file, b"hello world").unwrap();
+        let hash = sha256_file(&file).unwrap();
+
+        let mut files = HashMap::new();
+        files.insert(
+            "mods/test.jar".to_string(),
+            FileMeta {
+                sha256: Some(hash),
+                size: 11,
+            },
+        );
+        let manifest = Manifest {
+            mode: "verify-mode".to_string(),
+            version: "1.0.0".to_string(),
+            files,
+            ..Default::default()
+        };
+        write_json(&mode_dir.join(".manifest.json"), &manifest).unwrap();
+        let settings = Settings {
+            dir: root.to_string_lossy().to_string(),
+            ..Default::default()
+        };
+
+        let report = verify_files(&settings, "verify-mode").unwrap();
+        assert_eq!(report["ok"].as_bool(), Some(true));
+        assert_eq!(report["checked"].as_u64(), Some(1));
+
+        fs::write(&file, b"hello worlx").unwrap();
+        let report = verify_files(&settings, "verify-mode").unwrap();
+        assert_eq!(report["ok"].as_bool(), Some(false));
+        assert_eq!(report["corrupted"].as_u64(), Some(1));
+
+        fs::remove_file(&file).unwrap();
+        let report = verify_files(&settings, "verify-mode").unwrap();
+        assert_eq!(report["ok"].as_bool(), Some(false));
+        assert_eq!(report["missing"].as_u64(), Some(1));
+
+        prepare_repair(&settings, "verify-mode").unwrap();
+        assert!(!mode_dir.join(".manifest.json").exists());
+
+        let _ = fs::remove_dir_all(&root);
+    }
 }

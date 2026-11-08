@@ -268,6 +268,19 @@ pub fn game_uninstall(state: State<'_, AppState>, mode_id: String) -> Value {
 }
 
 #[tauri::command]
+pub async fn game_verify(state: State<'_, AppState>, mode_id: String) -> Result<Value, String> {
+    let settings = state.store.lock().unwrap().settings.clone();
+    blocking(move || game::verify_files(&settings, &mode_id)).await?
+}
+
+#[tauri::command]
+pub fn game_prepare_repair(state: State<'_, AppState>, mode_id: String) -> Result<Value, String> {
+    let settings = state.store.lock().unwrap().settings.clone();
+    game::prepare_repair(&settings, &mode_id)?;
+    Ok(json!({ "ok": true }))
+}
+
+#[tauri::command]
 pub fn game_set_library(state: State<'_, AppState>, mode_id: String, library: bool) -> Value {
     let mut store = state.store.lock().unwrap();
     match store.set_mode_library(&mode_id, library) {

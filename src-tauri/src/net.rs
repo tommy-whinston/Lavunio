@@ -2,11 +2,11 @@ use crate::events::GameEvent;
 use crate::models::{Author, BuildInfo, Mode, Settings};
 use crate::util::{format_error, safe_join, sha256_file, write_json};
 use reqwest::blocking::{Client, Response};
-use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
+use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, RANGE, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -828,6 +828,135 @@ pub fn download_file(
     Ok(())
 }
 
+pub fn download_file_resumable(
+    url: &str,
+    dest: &Path,
+    token: Option<&str>,
+    cancel: &AtomicBool,
+    expected_size: u64,
+    expected_sha: Option<&str>,
+    mut on_progress: impl FnMut(u64, u64),
+) -> Result<(), String> {
+    if cancel.load(Ordering::Relaxed) {
+        return Err("Операция отменена".to_string());
+    }
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Не удалось создать папку: {e}"))?;
+    }
+
+    let mut existing = fs::metadata(dest).map(|meta| meta.len()).unwrap_or(0);
+    if expected_size > 0 && existing > expected_size {
+        let _ = fs::remove_file(dest);
+        existing = 0;
+    }
+    if expected_size > 0 && existing == expected_size {
+        let valid = match expected_sha.filter(|hash| !hash.is_empty()) {
+            Some(hash) => sha256_file(dest)
+                .map(|actual| actual.eq_ignore_ascii_case(hash))
+                .unwrap_or(false),
+            None => true,
+        };
+        if valid {
+            on_progress(expected_size, expected_size);
+            return Ok(());
+        }
+        let _ = fs::remove_file(dest);
+        existing = 0;
+    }
+
+    let mut req = download_client().get(url);
+    for (key, value) in auth_headers(token) {
+        req = req.header(key, value);
+    }
+    if existing > 0 {
+        req = req.header(RANGE, format!("bytes={existing}-"));
+    }
+    let mut res: Response = req
+        .send()
+        .map_err(|e| format!("Ошибка скачивания: {}", format_error(e)))?;
+    let status = res.status();
+
+    if status == reqwest::StatusCode::RANGE_NOT_SATISFIABLE
+        && expected_size > 0
+        && existing == expected_size
+    {
+        let valid = match expected_sha.filter(|hash| !hash.is_empty()) {
+            Some(hash) => sha256_file(dest)
+                .map(|actual| actual.eq_ignore_ascii_case(hash))
+                .unwrap_or(false),
+            None => true,
+        };
+        if valid {
+            on_progress(expected_size, expected_size);
+            return Ok(());
+        }
+        let _ = fs::remove_file(dest);
+        return Err("Не удалось продолжить скачивание файла".to_string());
+    }
+    if !status.is_success() {
+        return Err(format!(
+            "Ошибка скачивания {} ({status})",
+            dest.file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("файла")
+        ));
+    }
+
+    let partial = status == reqwest::StatusCode::PARTIAL_CONTENT && existing > 0;
+    if existing > 0 && !partial {
+        let _ = fs::remove_file(dest);
+        existing = 0;
+    }
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(partial)
+        .truncate(!partial)
+        .open(dest)
+        .map_err(|e| format!("Не удалось открыть {}: {e}", dest.display()))?;
+
+    let total = existing + res.content_length().unwrap_or(0);
+    let mut done = existing;
+    on_progress(done, total.max(done).max(expected_size));
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+        if cancel.load(Ordering::Relaxed) {
+            let _ = file.flush();
+            return Err("Операция отменена".to_string());
+        }
+        let n = res
+            .read(&mut buf)
+            .map_err(|e| format!("Ошибка чтения ответа: {e}"))?;
+        if n == 0 {
+            break;
+        }
+        file.write_all(&buf[..n])
+            .map_err(|e| format!("Ошибка записи файла: {e}"))?;
+        done += n as u64;
+        on_progress(done, total.max(done).max(expected_size));
+    }
+    file.flush()
+        .map_err(|e| format!("Ошибка записи файла: {e}"))?;
+    drop(file);
+
+    if expected_size > 0 {
+        let actual = fs::metadata(dest).map(|meta| meta.len()).unwrap_or(0);
+        if actual != expected_size {
+            return Err(format!(
+                "Размер файла не совпадает: ожидалось {expected_size}, получено {actual}"
+            ));
+        }
+    }
+    if let Some(hash) = expected_sha.filter(|hash| !hash.is_empty()) {
+        let actual = sha256_file(dest)?;
+        if !actual.eq_ignore_ascii_case(hash) {
+            let _ = fs::remove_file(dest);
+            return Err("Файл повреждён: sha256 не совпадает".to_string());
+        }
+    }
+    Ok(())
+}
+
 /// Инкрементальный синк сборки по манифесту: качаем изменённое, удаляем лишнее.
 fn extract_archive(zip_path: &Path, dest: &Path) -> Result<(), String> {
     let file = fs::File::open(zip_path).map_err(|e| format!("Не удалось открыть архив: {e}"))?;
@@ -916,17 +1045,26 @@ fn sync_build_archive(
         .sum::<u64>()
         .max(archive.size)
         .max(1);
-    let temp = std::env::temp_dir().join(format!("lavunio-{}-{}.zip", mode.id, std::process::id()));
+    let cache_key = archive
+        .sha256
+        .as_deref()
+        .filter(|hash| !hash.is_empty())
+        .unwrap_or(&manifest.version);
+    let cache_key: String = cache_key
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+        .collect();
+    let cache_dir = game_dir.join(".lavunio").join("parts").join(cache_key);
+    fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Не удалось создать папку загрузки: {e}"))?;
+
+    let temp = cache_dir.join("build.zip");
+    let _ = fs::remove_file(&temp);
     let mut combined =
         fs::File::create(&temp).map_err(|e| format!("Не удалось создать файл: {e}"))?;
     let mut offset = 0u64;
     for (index, part) in parts.iter().enumerate() {
-        let part_path = std::env::temp_dir().join(format!(
-            "lavunio-{}-{}.part{}",
-            mode.id,
-            std::process::id(),
-            index + 1
-        ));
+        let part_path = cache_dir.join(format!("part-{}", index + 1));
         let url = if let Some(url) = part.url.as_deref().filter(|url| !url.is_empty()) {
             url.to_string()
         } else {
@@ -944,17 +1082,24 @@ fn sync_build_archive(
             None
         };
         let mut last_emit = 0u64;
-        let download = download_file(&url, &part_path, token, cancel, |done, _| {
-            if done == part.size || done.saturating_sub(last_emit) >= 256 * 1024 {
-                last_emit = done;
-                on_event(GameEvent::Progress {
-                    task: offset.saturating_add(done),
-                    total: total_bytes,
-                });
-            }
-        });
+        let download = download_file_resumable(
+            &url,
+            &part_path,
+            token,
+            cancel,
+            part.size,
+            part.sha256.as_deref(),
+            |done, _| {
+                if done == part.size || done.saturating_sub(last_emit) >= 256 * 1024 {
+                    last_emit = done;
+                    on_event(GameEvent::Progress {
+                        task: offset.saturating_add(done),
+                        total: total_bytes,
+                    });
+                }
+            },
+        );
         if let Err(err) = download {
-            let _ = fs::remove_file(&part_path);
             let _ = fs::remove_file(&temp);
             return Err(err);
         }
@@ -967,7 +1112,6 @@ fn sync_build_archive(
                 .map(|meta| meta.len())
                 .unwrap_or(part.size),
         );
-        let _ = fs::remove_file(&part_path);
         on_event(GameEvent::Progress {
             task: offset,
             total: total_bytes,
@@ -979,13 +1123,16 @@ fn sync_build_archive(
         let actual = sha256_file(&temp)?;
         if !actual.eq_ignore_ascii_case(expected) {
             let _ = fs::remove_file(&temp);
+            let _ = fs::remove_dir_all(&cache_dir);
             return Err("Файлы режима повреждены".to_string());
         }
     }
 
     on_event(GameEvent::Status("Распаковка файлов".into()));
     let extracted = extract_archive(&temp, game_dir);
-    let _ = fs::remove_file(&temp);
+    if extracted.is_ok() {
+        let _ = fs::remove_dir_all(&cache_dir);
+    }
     extracted?;
     write_json(local_path, manifest)?;
     Ok(())
@@ -1070,4 +1217,90 @@ pub fn sync_build(
         cancel,
         on_event,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sha2::{Digest, Sha256};
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+    use std::thread;
+
+    #[test]
+    fn resumable_download_continues_from_partial_file() {
+        let payload = b"0123456789abcdef".to_vec();
+        let hash: String = Sha256::digest(&payload)
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (tx, rx) = mpsc::channel();
+        let server_payload = payload.clone();
+        let server = thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let mut buffer = [0u8; 2048];
+            let n = socket.read(&mut buffer).unwrap();
+            let request = String::from_utf8_lossy(&buffer[..n]).to_lowercase();
+            let start = request
+                .lines()
+                .find_map(|line| line.strip_prefix("range: bytes="))
+                .and_then(|value| value.trim_end_matches('-').parse::<usize>().ok())
+                .unwrap_or(0);
+            tx.send(start).unwrap();
+            let body = &server_payload[start..];
+            let status = if start > 0 {
+                "206 Partial Content"
+            } else {
+                "200 OK"
+            };
+            let mut response = format!(
+                "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n",
+                body.len()
+            );
+            if start > 0 {
+                response.push_str(&format!(
+                    "Content-Range: bytes {}-{}/{}\r\n",
+                    start,
+                    server_payload.len() - 1,
+                    server_payload.len()
+                ));
+            }
+            response.push_str("\r\n");
+            socket.write_all(response.as_bytes()).unwrap();
+            socket.write_all(body).unwrap();
+            socket.flush().unwrap();
+        });
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "lavunio-download-test-{}-{stamp}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let dest = root.join("part-1");
+        fs::write(&dest, &payload[..5]).unwrap();
+
+        let cancel = AtomicBool::new(false);
+        download_file_resumable(
+            &format!("http://{addr}/file"),
+            &dest,
+            None,
+            &cancel,
+            payload.len() as u64,
+            Some(&hash),
+            |_, _| {},
+        )
+        .unwrap();
+
+        assert_eq!(fs::read(&dest).unwrap(), payload);
+        assert_eq!(rx.recv().unwrap(), 5);
+        server.join().unwrap();
+        let _ = fs::remove_dir_all(&root);
+    }
 }

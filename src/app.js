@@ -195,6 +195,7 @@ const els = {
   changelogToggle: $('changelog-toggle'),
   reqSize: $('req-size'),
   sideFolder: $('side-folder'),
+  detailVerify: $('detail-verify'),
   detailSpotlight: $('detail-spotlight'),
   spotlightTitle: $('spotlight-title'),
   spotlightTag: $('spotlight-tag'),
@@ -1487,6 +1488,7 @@ function bindDetail() {
       toast('Не удалось открыть папку: ' + err, 'error');
     });
   };
+  els.detailVerify.onclick = () => verifyMode(modeById(S.selectedId));
   els.spotlightLink.onclick = () => {
     const section = els.detailChangelogSection;
     if (!section) return;
@@ -1652,7 +1654,7 @@ function formatDownloadEta(seconds) {
 }
 
 function downloadActionLabel(action) {
-  return { install: 'Установка', update: 'Обновление', play: 'Запуск' }[action] || 'Загрузка';
+  return { install: 'Установка', update: 'Обновление', repair: 'Исправление', play: 'Запуск' }[action] || 'Загрузка';
 }
 
 function activeDownloadTask() {
@@ -1983,6 +1985,44 @@ function downloadCardHtml(task) {
         <div class="download-actions">${actions.join('')}</div>
       </div>
     </article>`;
+}
+
+async function verifyMode(mode) {
+  if (!mode || !els.detailVerify) return;
+  const label = els.detailVerify.textContent;
+  els.detailVerify.disabled = true;
+  els.detailVerify.textContent = 'Проверяем…';
+  try {
+    const report = await api.verify(mode.id);
+    if (!report) throw new Error('Пустой ответ проверки');
+    if (report.ok) {
+      toast(`Файлы в порядке · проверено ${Number(report.checked) || 0}`, 'ok');
+      return;
+    }
+    const message = `Отсутствует файлов: ${Number(report.missing) || 0}, повреждено: ${Number(report.corrupted) || 0}.`;
+    const fix = await askConfirm(
+      'Файлы повреждены',
+      `${message} Исправить установку?`,
+      'Исправить'
+    );
+    if (fix) await repairMode(mode);
+  } catch (err) {
+    toast('Не удалось проверить файлы: ' + err, 'error');
+  } finally {
+    els.detailVerify.disabled = false;
+    els.detailVerify.textContent = label;
+  }
+}
+
+async function repairMode(mode) {
+  if (!mode) return;
+  try {
+    await api.prepareRepair(mode.id);
+    enqueueDownload(mode, 'repair');
+    toast('Исправление добавлено в очередь', 'info');
+  } catch (err) {
+    toast('Не удалось запустить исправление: ' + err, 'error');
+  }
 }
 
 async function startMode(mode, autoPlay = false) {
@@ -2358,6 +2398,7 @@ function renderDetail() {
   els.reqSize.textContent = mode.size || '—';
   renderSpotlight(mode);
   els.sideFolder.hidden = !isInstalled(mode);
+  els.detailVerify.hidden = !isInstalled(mode);
 
   const others = sortByTitle(S.modes.filter((m) => m.id !== mode.id)).slice(0, 3);
   els.moreSection.hidden = others.length === 0;

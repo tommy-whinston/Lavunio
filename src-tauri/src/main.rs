@@ -98,6 +98,8 @@ fn main() {
             commands::game_play,
             commands::game_cancel,
             commands::game_uninstall,
+            commands::game_verify,
+            commands::game_prepare_repair,
             commands::game_set_library,
             commands::game_add_playtime,
             commands::game_open_mode_folder,
