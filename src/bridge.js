@@ -20,6 +20,7 @@
     getModes: () => invoke("modes_get"),
     getCachedModes: () => invoke("modes_cached"),
     refreshModes: () => invoke("modes_refresh"),
+    collectionsGet: () => invoke("collections_get"),
     getState: () => invoke("state_get"),
     getSystemRam: () => invoke("system_ram_gb"),
     getSettings: () => invoke("settings_get"),

@@ -385,6 +385,21 @@ pub fn fetch_api_modes(api_base: &str) -> Result<Vec<Mode>, String> {
     Ok(modes)
 }
 
+pub fn fetch_api_collections(api_base: &str) -> Result<Value, String> {
+    let url = format!("{}/v1/collections", api_base.trim_end_matches('/'));
+    let response = client()
+        .get(&url)
+        .header(ACCEPT, "application/json")
+        .send()
+        .map_err(|error| format!("Не удалось загрузить подборки: {}", format_error(error)))?;
+    if !response.status().is_success() {
+        return Err(format!("Подборки: HTTP {}", response.status()));
+    }
+    response
+        .json()
+        .map_err(|error| format!("Не удалось разобрать подборки: {error}"))
+}
+
 fn api_mode(item: &Value) -> Option<Mode> {
     let id = item.get("slug").and_then(Value::as_str)?.trim().to_string();
     if id.is_empty() {

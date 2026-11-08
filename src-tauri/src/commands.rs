@@ -155,6 +155,24 @@ pub async fn modes_refresh(state: State<'_, AppState>) -> Result<Vec<Mode>, Stri
 }
 
 #[tauri::command]
+pub async fn collections_get() -> Result<Value, String> {
+    let Some(api_base) = net::api_base_url() else {
+        return Ok(json!([]));
+    };
+    match blocking(move || net::fetch_api_collections(&api_base)).await {
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(err)) => {
+            crate::logging::error("collections API", &err);
+            Ok(json!([]))
+        }
+        Err(err) => {
+            crate::logging::error("collections API", &err);
+            Ok(json!([]))
+        }
+    }
+}
+
+#[tauri::command]
 pub fn system_ram_gb() -> u32 {
     let mut system = sysinfo::System::new();
     system.refresh_memory();

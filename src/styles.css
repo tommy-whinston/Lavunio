@@ -400,6 +400,24 @@ a { color: inherit; }
   font-weight: 700;
 }
 
+.collections { display: flex; flex-direction: column; gap: 24px; margin-bottom: 34px; }
+.collection-shelf { margin-bottom: 0; }
+.collection-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(210px, 240px);
+  gap: 16px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+}
+.collection-card { scroll-snap-align: start; }
+.collection-card .card-body { padding: 11px 13px 13px; }
+.collection-card .card-title { font-size: 14px; }
+.collection-card .card-sub { font-size: 11px; }
+.collection-card .card-foot { padding-top: 9px; }
+
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

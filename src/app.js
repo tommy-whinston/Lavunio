@@ -46,6 +46,7 @@ const SPLASH_START = performance.now();
 
 const S = {
   modes: [],
+  collections: [],
   state: {},
   settings: null,
   systemRamGb: 0,
@@ -107,6 +108,7 @@ const els = {
   storeFilters: $('store-filters'),
   storeSort: $('store-sort'),
   storeView: $('store-view'),
+  collections: $('collections'),
   libraryView: $('library-view'),
   publisherView: $('publisher-view'),
   moderationView: $('moderation-view'),
@@ -269,6 +271,7 @@ async function init() {
     renderAccountChip();
     updatePublisherNav();
     loadWishlist();
+    loadCollections();
     renderStore();
     renderLibrary();
     updateSidebar();
@@ -278,6 +281,7 @@ async function init() {
       api.refreshModes().then((fresh) => {
         if (!Array.isArray(fresh) || !fresh.length) return;
         S.modes = fresh;
+        loadCollections();
         renderStore();
         renderLibrary();
         updateSidebar();
@@ -417,6 +421,7 @@ function bindStore() {
       const modes = await api.refreshModes();
       S.modes = Array.isArray(modes) ? modes : [];
       S.state = (await api.getState()) || {};
+      loadCollections();
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId) renderDetail();
@@ -692,6 +697,10 @@ function renderStore() {
 
   if (S.loading) {
     els.featured.hidden = true;
+    if (els.collections) {
+      els.collections.hidden = true;
+      els.collections.innerHTML = '';
+    }
     els.catalogTitle.textContent = 'Загрузка';
     els.modesCount.textContent = '';
     els.modesGrid.innerHTML = '';
@@ -706,6 +715,10 @@ function renderStore() {
 
   if (searchActive) {
     els.featured.hidden = true;
+    if (els.collections) {
+      els.collections.hidden = true;
+      els.collections.innerHTML = '';
+    }
     const result = sortCatalog(filterModes().filter((mode) => modePassesFilter(mode, S.storeFilter)), S.storeSort);
     els.catalogTitle.textContent = 'Результаты поиска';
     els.modesCount.textContent = String(result.length);
@@ -718,9 +731,13 @@ function renderStore() {
     return;
   }
 
-  const featured = S.modes.find((m) => m.imageUrl || m.image) || S.modes[0] || null;
+  const recommended = collectionModes(
+    (S.collections || []).find((section) => section.id === 'featured')
+  ).filter((mode) => mode.imageUrl || mode.image);
+  const featured = recommended[0] || S.modes.find((m) => m.imageUrl || m.image) || S.modes[0] || null;
   S.featuredId = featured ? featured.id : null;
   renderFeatured(featured);
+  renderCollections();
 
   const list = sortCatalog(
     S.modes.filter((mode) => modePassesFilter(mode, S.storeFilter)),
@@ -782,8 +799,103 @@ function renderFeatured(mode) {
   els.featuredStatus.textContent = st.text;
 }
 
-function renderModeGrid(container, list, withMenu = false, playMode = false) {
-  container.innerHTML = list.map((mode) => modeCardHtml(mode, withMenu, playMode)).join('');
+function collectionMode(item) {
+  if (!item) return null;
+  if (typeof item === 'string') return modeById(item);
+  return modeById(item.slug || item.id);
+}
+
+function collectionModes(section) {
+  if (!section || !Array.isArray(section.modes)) return [];
+  const seen = new Set();
+  const modes = [];
+  for (const item of section.modes) {
+    const mode = collectionMode(item);
+    if (mode && !seen.has(mode.id)) {
+      seen.add(mode.id);
+      modes.push(mode);
+    }
+  }
+  return modes;
+}
+
+function localCollections() {
+  if (!S.modes.length) return [];
+  const byInstalls = [...S.modes].sort(
+    (a, b) => (Number(b.installs) || 0) - (Number(a.installs) || 0)
+  );
+  const byDate = [...S.modes].sort((a, b) =>
+    String(modeReleaseDate(b) || '').localeCompare(String(modeReleaseDate(a) || ''))
+  );
+  const rated = S.modes
+    .filter((mode) => Number(mode.rating) > 0)
+    .sort((a, b) => Number(b.rating) - Number(a.rating));
+  return [
+    { id: 'featured', title: 'Рекомендуем', modes: rated.length ? rated : byInstalls },
+    { id: 'popular', title: 'Популярное', modes: byInstalls },
+    { id: 'new', title: 'Новинки', modes: byDate },
+    { id: 'updated', title: 'Обновления', modes: byDate }
+  ];
+}
+
+async function loadCollections() {
+  if (!api.collectionsGet) return;
+  try {
+    const sections = await api.collectionsGet();
+    S.collections = Array.isArray(sections) ? sections : [];
+  } catch (_) {
+    S.collections = [];
+  }
+  if (S.view === 'store' && !S.search) renderStore();
+}
+
+function renderCollections() {
+  const container = els.collections;
+  if (!container) return;
+  if (S.loading || S.search || S.storeFilter !== 'all') {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+  const source = Array.isArray(S.collections) && S.collections.length
+    ? S.collections
+    : localCollections();
+  const sections = source
+    .map((section) => ({
+      id: String((section && section.id) || ''),
+      title: String((section && section.title) || ''),
+      modes: collectionModes(section)
+    }))
+    .filter((section) => section.id && section.title && section.modes.length)
+    .slice(0, 4);
+
+  if (!sections.length) {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+
+  container.hidden = false;
+  container.innerHTML = sections.map((section) => `
+    <section class="shelf collection-shelf">
+      <div class="shelf-head">
+        <div class="shelf-title"><h2>${escapeHtml(section.title)}</h2></div>
+        <span class="count">${section.modes.length}</span>
+      </div>
+      <div class="collection-row" data-collection-row></div>
+    </section>
+  `).join('');
+
+  const rows = container.querySelectorAll('[data-collection-row]');
+  sections.forEach((section, index) => {
+    if (rows[index]) renderModeGrid(rows[index], section.modes.slice(0, 8), false, false, true);
+  });
+}
+
+function renderModeGrid(container, list, withMenu = false, playMode = false, compact = false) {
+  container.innerHTML = list
+    .map((mode) => compact ? collectionCardHtml(mode) : modeCardHtml(mode, withMenu, playMode))
+    .join('');
   container.onclick = (e) => {
     const menuBtn = e.target.closest('.card-menu-btn');
     if (menuBtn) {
@@ -976,6 +1088,26 @@ function cardPlayIcon(kind) {
     return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.8" fill="currentColor"/></svg>';
   }
   return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5a1 1 0 0 0-1.53.85Z"/></svg>';
+}
+
+function collectionCardHtml(mode) {
+  const st = cardStatus(mode);
+  const installed = isInstalled(mode);
+  return `
+  <article class="mode-card collection-card ${installed ? 'installed' : ''}" data-id="${escapeHtml(mode.id)}">
+    <div class="card-media">
+      <img src="${escapeHtml(imageSrc(mode))}" alt="" loading="lazy" data-fallback>
+      <div class="card-badge ${st.cls}">${st.text}</div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">${escapeHtml(mode.title || 'Без названия')}</div>
+      <div class="card-sub">${escapeHtml(cardSub(mode))}</div>
+      <div class="card-foot">
+        <span class="card-installs">${Number(mode.installs) ? `${Number(mode.installs)} установок` : ''}</span>
+        ${mode.rating ? `<span class="card-installs">★ ${Number(mode.rating).toFixed(1)}</span>` : ''}
+      </div>
+    </div>
+  </article>`;
 }
 
 function modeCardHtml(mode, withMenu = false, playMode = false) {
