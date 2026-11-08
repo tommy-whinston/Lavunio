@@ -192,6 +192,9 @@ const els = {
   feed: $('feed'),
   feedList: $('feed-list'),
   galleryImage: $('gallery-image'),
+  detailTrailerSection: $('detail-trailer-section'),
+  detailTrailer: $('detail-trailer'),
+  detailTrailerOpen: $('detail-trailer-open'),
   detailReviewsSection: $('detail-reviews-section'),
   reviewsSummary: $('reviews-summary'),
   reviewsList: $('reviews-list'),
@@ -1767,6 +1770,37 @@ function updateChangelogToggle() {
   els.changelogToggle.setAttribute('aria-expanded', allOpen ? 'true' : 'false');
 }
 
+function trailerEmbed(url) {
+  const youtube = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i);
+  if (youtube) {
+    return { kind: 'iframe', src: `https://www.youtube.com/embed/${youtube[1]}?rel=0` };
+  }
+  const rutube = url.match(/rutube\.ru\/video\/([a-f0-9]{32})/i);
+  if (rutube) {
+    return { kind: 'iframe', src: `https://rutube.ru/play/embed/${rutube[1]}` };
+  }
+  if (/\.(mp4|webm|ogg)(\?|#|$)/i.test(url)) {
+    return { kind: 'video', src: url };
+  }
+  return { kind: 'iframe', src: url };
+}
+
+function renderTrailer(mode) {
+  const raw = String((mode && mode.trailerUrl) || '').trim();
+  els.detailTrailerSection.hidden = !raw;
+  if (!raw) {
+    els.detailTrailer.innerHTML = '';
+    return;
+  }
+  const embed = trailerEmbed(raw);
+  els.detailTrailer.innerHTML = embed.kind === 'video'
+    ? `<video src="${escapeHtml(embed.src)}" controls preload="metadata"></video>`
+    : `<iframe src="${escapeHtml(embed.src)}" title="Трейлер" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  els.detailTrailerOpen.onclick = () => {
+    api.openUrl(raw).catch((err) => toast(String(err), 'error'));
+  };
+}
+
 function renderDetail() {
   const mode = modeById(S.selectedId);
   if (!mode) {
@@ -1813,6 +1847,8 @@ function renderDetail() {
     <button class="gallery-thumb" type="button" data-gallery-src="${escapeHtml(url)}">
       <img src="${escapeHtml(url)}" alt="" loading="lazy">
     </button>`).join('');
+
+  renderTrailer(mode);
 
   const apiReady = !!(S.lavunio && S.lavunio.configured);
   const author = mode.author || (Array.isArray(mode.authors) ? mode.authors[0] : null);
@@ -3235,6 +3271,7 @@ async function submitPublisherMode() {
     loaderVersion: $('pub-mode-loader-version').value.trim() || null,
     size: $('pub-mode-size').value.trim() || null,
     coverUrl: $('pub-mode-cover').value.trim() || null,
+    trailerUrl: $('pub-mode-trailer').value.trim() || null,
     tags: $('pub-mode-tags').value.split(',').map((tag) => tag.trim()).filter(Boolean)
   };
 

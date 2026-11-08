@@ -410,6 +410,12 @@
           <div id="detail-gallery" class="detail-gallery"></div>
         </section>
 
+        <section class="detail-section" id="detail-trailer-section" hidden>
+          <h2>Трейлер</h2>
+          <div id="detail-trailer" class="trailer-frame"></div>
+          <button class="btn btn-ghost trailer-open" id="detail-trailer-open" type="button">Открыть в браузере</button>
+        </section>
+
         <section class="detail-section" id="detail-author-section" hidden>
           <h2>Автор</h2>
           <div class="author-card">
@@ -682,6 +688,10 @@
         <div class="field">
           <label for="pub-mode-cover">Обложка (URL)</label>
           <input id="pub-mode-cover" type="text" placeholder="https://...">
+        </div>
+        <div class="field">
+          <label for="pub-mode-trailer">Трейлер (URL)</label>
+          <input id="pub-mode-trailer" type="text" placeholder="https://www.youtube.com/watch?v=...">
         </div>
         <div class="form-error" id="pub-mode-error" hidden></div>
         <button class="btn btn-primary btn-block" id="pub-mode-submit" type="submit">Создать черновик</button>

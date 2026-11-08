@@ -492,6 +492,10 @@ fn api_mode(item: &Value) -> Option<Mode> {
             .and_then(Value::as_str)
             .map(str::to_string),
         image: None,
+        trailer_url: item
+            .get("trailerUrl")
+            .and_then(Value::as_str)
+            .map(str::to_string),
         screenshots: item
             .get("screenshots")
             .and_then(Value::as_array)

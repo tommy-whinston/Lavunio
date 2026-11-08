@@ -2348,6 +2348,22 @@ body::before {
 }
 .gallery-thumb:hover { border-color: var(--accent); transform: translateY(-1px); }
 .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.trailer-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #000;
+}
+.trailer-frame iframe,
+.trailer-frame video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+.trailer-open { margin-top: 10px; }
 .gallery-overlay {
   background: rgba(0, 0, 0, 0.88);
   align-items: center;
