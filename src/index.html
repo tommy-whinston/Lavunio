@@ -273,6 +273,7 @@
           <div class="dash-stat"><span>В библиотеке</span><b id="library-stat-total">0</b></div>
           <div class="dash-stat"><span>Установлено</span><b id="library-stat-installed">0</b></div>
           <div class="dash-stat"><span>Обновлений</span><b id="library-stat-updates">0</b></div>
+          <div class="dash-stat"><span>Наиграно</span><b id="library-stat-playtime">—</b></div>
         </div>
       </div>
 
@@ -498,6 +499,11 @@
             <button class="btn btn-ghost" id="detail-author-follow" type="button">Подписаться</button>
             <button class="btn btn-ghost" id="detail-author-modes" type="button">Все режимы автора</button>
           </div>
+        </section>
+
+        <section class="detail-section" id="detail-sessions-section" hidden>
+          <h2>История сессий</h2>
+          <div id="detail-sessions" class="session-list"></div>
         </section>
 
         <section class="detail-section about-section">

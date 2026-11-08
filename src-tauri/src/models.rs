@@ -215,6 +215,14 @@ pub struct GameAccount {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
+pub struct PlaySession {
+    pub started_at: u64,
+    pub ended_at: u64,
+    pub seconds: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
 pub struct ModeState {
     pub installed: bool,
     pub version: Option<String>,
@@ -222,6 +230,8 @@ pub struct ModeState {
     pub hidden: bool,
     pub library: Option<bool>,
     pub playtime_secs: u64,
+    pub last_played_at: u64,
+    pub sessions: Vec<PlaySession>,
     pub skipped_version: Option<String>,
     pub install_dir: Option<String>,
 }

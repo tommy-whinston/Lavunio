@@ -82,6 +82,7 @@ const S = {
   downloads: [],
   downloadsActiveId: null,
   downloadsSeq: 0,
+  sessionStartedAt: 0,
   reviews: {},
   reviewLoading: {},
   reviewRating: 5,
@@ -139,6 +140,7 @@ const els = {
   libraryStatTotal: $('library-stat-total'),
   libraryStatInstalled: $('library-stat-installed'),
   libraryStatUpdates: $('library-stat-updates'),
+  libraryStatPlaytime: $('library-stat-playtime'),
   libraryFilters: $('library-filters'),
   librarySort: $('library-sort'),
   libraryEmpty: $('library-empty'),
@@ -209,6 +211,8 @@ const els = {
   spotlightLink: $('spotlight-link'),
   detailGallerySection: $('detail-gallery-section'),
   detailGallery: $('detail-gallery'),
+  detailSessionsSection: $('detail-sessions-section'),
+  detailSessions: $('detail-sessions'),
   detailAuthorSection: $('detail-author-section'),
   detailAuthorAvatar: $('detail-author-avatar'),
   detailAuthorName: $('detail-author-name'),
@@ -496,6 +500,10 @@ function updateDashboardStats() {
   if (els.libraryStatTotal) els.libraryStatTotal.textContent = String(modes.length);
   if (els.libraryStatInstalled) els.libraryStatInstalled.textContent = String(modes.filter((mode) => isInstalled(mode)).length);
   if (els.libraryStatUpdates) els.libraryStatUpdates.textContent = String(modes.filter((mode) => isUpdate(mode)).length);
+  if (els.libraryStatPlaytime) {
+    const total = modes.reduce((sum, mode) => sum + modePlaytime(mode), 0);
+    els.libraryStatPlaytime.textContent = total > 0 ? formatPlaytime(total) : '—';
+  }
 }
 
 function bindStore() {
@@ -1504,6 +1512,27 @@ function formatUpdateDate(value) {
   return String(value || '').replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3.$2.$1');
 }
 
+function formatDateTime(value) {
+  const ms = Number(value) || 0;
+  if (!ms) return '—';
+  return new Date(ms).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function formatDuration(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  if (hours > 0) return `${hours} ч ${minutes} мин`;
+  if (minutes > 0) return `${minutes} мин`;
+  return `${total} сек`;
+}
+
 function modeReleaseDate(mode) {
   const direct = String((mode && mode.releaseDate) || '').trim();
   if (direct) return direct;
@@ -2471,6 +2500,7 @@ function renderDetail() {
   const latest = latestUpdateEntry(mode);
   const updated = latest && latest.date ? formatUpdateDate(latest.date) : '—';
   const released = modeReleaseDate(mode);
+  const stats = S.state[mode.id] || {};
   els.detailMeta.innerHTML = [
     ['Версия', 'v' + (mode.version || '—')],
     ['Minecraft', mode.mcVersion || '—'],
@@ -2481,7 +2511,8 @@ function renderDetail() {
     ['Рейтинг', mode.rating ? `${Number(mode.rating).toFixed(1)} ★ (${Number(mode.reviewsCount) || 0})` : '—'],
     ['Вышла', released ? formatUpdateDate(released) : '—'],
     ['Обновлено', updated],
-    ['Наиграно', formatPlaytime(S.state[mode.id] && S.state[mode.id].playtimeSecs)]
+    ['Наиграно', formatPlaytime(stats.playtimeSecs)],
+    ['Последний запуск', formatDateTime(stats.lastPlayedAt)]
   ].map(([label, value]) => `
     <div class="meta-item">
       <span class="meta-label">${label}</span>
@@ -2494,6 +2525,14 @@ function renderDetail() {
     <button class="gallery-thumb" type="button" data-gallery-src="${escapeHtml(url)}">
       <img src="${escapeHtml(url)}" alt="" loading="lazy">
     </button>`).join('');
+
+  const sessions = Array.isArray(stats.sessions) ? stats.sessions.slice().reverse().slice(0, 5) : [];
+  els.detailSessionsSection.hidden = sessions.length === 0;
+  els.detailSessions.innerHTML = sessions.map((session) => `
+    <div class="session-row">
+      <span>${escapeHtml(formatDateTime(session.startedAt))}</span>
+      <b>${escapeHtml(formatDuration(session.seconds))}</b>
+    </div>`).join('');
 
   renderTrailer(mode);
   renderModeNews(mode);
@@ -2962,6 +3001,12 @@ function onGameEvent(ev) {
       S.running = ev.modeId;
       S.progress = 1;
       S.status = 'Игра запущена';
+      S.sessionStartedAt = Date.now();
+      if (api.markLaunched) api.markLaunched(ev.modeId).catch(() => {});
+      {
+        const st = S.state[ev.modeId] || {};
+        S.state[ev.modeId] = { ...st, lastPlayedAt: S.sessionStartedAt };
+      }
       if (finished) finishDownload(finished.id, 'completed');
       toast('Игра запущена!', 'ok');
       renderStore();
@@ -2973,12 +3018,22 @@ function onGameEvent(ev) {
       const seconds = Math.max(0, Math.floor(Number(ev.payload) || 0));
       if (seconds > 0) {
         const st = S.state[ev.modeId] || { installed: false, version: null, installedAt: 0 };
+        const endedAt = Date.now();
+        const startedAt = S.sessionStartedAt || endedAt - seconds * 1000;
+        const sessions = [
+          ...(Array.isArray(st.sessions) ? st.sessions : []),
+          { startedAt, endedAt, seconds }
+        ].slice(-20);
         S.state[ev.modeId] = {
           ...st,
-          playtimeSecs: (Number(st.playtimeSecs) || 0) + seconds
+          playtimeSecs: (Number(st.playtimeSecs) || 0) + seconds,
+          lastPlayedAt: endedAt,
+          sessions
         };
-        if (api.addPlaytime) api.addPlaytime(ev.modeId, seconds).catch(() => {});
+        if (api.addPlaytime) api.addPlaytime(ev.modeId, seconds, startedAt).catch(() => {});
+        S.sessionStartedAt = 0;
         if (S.view === 'detail' && isCurrent) renderDetail();
+        renderLibrary();
       }
       break;
     }
@@ -2987,6 +3042,7 @@ function onGameEvent(ev) {
       S.busy = null;
       S.stage = '';
       S.progress = 0;
+      S.sessionStartedAt = 0;
       S.status = ev.payload === 0 ? 'Игра закрыта' : `Игра завершилась (код ${ev.payload})`;
       renderStore();
       renderLibrary();

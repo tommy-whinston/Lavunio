@@ -1,5 +1,5 @@
 use crate::game;
-use crate::models::{GameAccount, LavunioSession, LavunioUser, Mode, ModeState, Settings};
+use crate::models::{GameAccount, LavunioSession, LavunioUser, Mode, ModeState, PlaySession, Settings};
 use crate::net;
 use crate::publisher as build_publisher;
 use crate::state::AppState;
@@ -398,13 +398,48 @@ pub fn game_skip_update(
 }
 
 #[tauri::command]
-pub fn game_add_playtime(state: State<'_, AppState>, mode_id: String, seconds: u64) -> Value {
+pub fn game_mark_launched(state: State<'_, AppState>, mode_id: String) -> Value {
+    let mut store = state.store.lock().unwrap();
+    let mode_state = store.state.entry(mode_id).or_insert_with(Default::default);
+    mode_state.last_played_at = now_ms();
+    let last_played_at = mode_state.last_played_at;
+    match store.save_state() {
+        Ok(()) => json!({ "ok": true, "lastPlayedAt": last_played_at }),
+        Err(err) => json!({ "ok": false, "error": err }),
+    }
+}
+
+#[tauri::command]
+pub fn game_add_playtime(
+    state: State<'_, AppState>,
+    mode_id: String,
+    seconds: u64,
+    started_at: Option<u64>,
+) -> Value {
     let mut store = state.store.lock().unwrap();
     let mode_state = store.state.entry(mode_id).or_insert_with(Default::default);
     mode_state.playtime_secs = mode_state.playtime_secs.saturating_add(seconds);
-    let playtime = mode_state.playtime_secs;
+    let ended_at = now_ms();
+    if seconds > 0 {
+        mode_state.sessions.push(PlaySession {
+            started_at: started_at
+                .unwrap_or_else(|| ended_at.saturating_sub(seconds.saturating_mul(1000))),
+            ended_at,
+            seconds,
+        });
+        if mode_state.sessions.len() > 20 {
+            mode_state.sessions.remove(0);
+        }
+    }
+    mode_state.last_played_at = ended_at;
+    let response = json!({
+        "ok": true,
+        "playtimeSecs": mode_state.playtime_secs,
+        "lastPlayedAt": mode_state.last_played_at,
+        "sessions": &mode_state.sessions,
+    });
     match store.save_state() {
-        Ok(()) => json!({ "ok": true, "playtimeSecs": playtime }),
+        Ok(()) => response,
         Err(err) => json!({ "ok": false, "error": err }),
     }
 }

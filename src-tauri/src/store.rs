@@ -138,11 +138,17 @@ impl Store {
         version: &str,
         install_dir: Option<&str>,
     ) -> Result<(), String> {
-        let playtime_secs = self
+        let (playtime_secs, last_played_at, sessions) = self
             .state
             .get(mode_id)
-            .map(|state| state.playtime_secs)
-            .unwrap_or(0);
+            .map(|state| {
+                (
+                    state.playtime_secs,
+                    state.last_played_at,
+                    state.sessions.clone(),
+                )
+            })
+            .unwrap_or_default();
         self.state.insert(
             mode_id.to_string(),
             ModeState {
@@ -152,6 +158,8 @@ impl Store {
                 hidden: false,
                 library: Some(true),
                 playtime_secs,
+                last_played_at,
+                sessions,
                 skipped_version: None,
                 install_dir: install_dir.map(str::to_string),
             },

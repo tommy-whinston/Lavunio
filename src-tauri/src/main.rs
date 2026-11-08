@@ -105,6 +105,7 @@ fn main() {
             commands::game_set_library,
             commands::game_skip_update,
             commands::game_add_playtime,
+            commands::game_mark_launched,
             commands::game_open_mode_folder,
             update::check_update,
             update::download_update,
