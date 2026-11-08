@@ -82,11 +82,13 @@ const S = {
   publisherReleaseMode: null,
   moderationQueue: [],
   moderationModes: [],
+  moderationReports: [],
   moderationHistory: [],
   moderationLoaded: false,
   moderationLoading: false,
   moderationTab: 'queue',
-  moderationNoteAction: null
+  moderationNoteAction: null,
+  reportModeId: null
 };
 
 const els = {
@@ -159,6 +161,7 @@ const els = {
   detailSub: $('detail-sub'),
   detailAction: $('detail-action'),
   detailWishlist: $('detail-wishlist'),
+  detailReport: $('detail-report'),
   detailStatus: $('detail-status'),
   detailProgress: $('detail-progress'),
   detailProgressBar: $('detail-progress-bar'),
@@ -191,6 +194,11 @@ const els = {
   reviewError: $('review-error'),
   reviewSubmit: $('review-submit'),
   reviewLoginHint: $('review-login-hint'),
+  reportForm: $('report-form'),
+  reportTarget: $('report-target'),
+  reportReason: $('report-reason'),
+  reportError: $('report-error'),
+  reportSubmit: $('report-submit'),
   moreSection: $('more-section'),
   moreGrid: $('more-grid'),
   cardContext: $('card-context'),
@@ -1181,6 +1189,11 @@ function bindDetail() {
     showSection('store');
   };
   els.detailWishlist.onclick = () => toggleWishlist(modeById(S.selectedId));
+  els.detailReport.onclick = () => openReportModal(modeById(S.selectedId));
+  els.reportForm.onsubmit = (event) => {
+    event.preventDefault();
+    submitReport();
+  };
   els.reviewForm.onsubmit = (event) => {
     event.preventDefault();
     submitReview();
@@ -1658,6 +1671,45 @@ async function toggleWishlist(mode) {
     toast(listed ? 'Убрано из желаемого' : 'Добавлено в желаемое', 'ok');
   } catch (err) {
     toast('Не удалось обновить желаемое: ' + err, 'error');
+  }
+}
+
+function openReportModal(mode) {
+  if (!mode) return;
+  if (!lavunioLoggedIn()) {
+    openModal('modal-account');
+    toast('Сначала войдите в Lavunio ID', 'warn');
+    return;
+  }
+  S.reportModeId = mode.id;
+  els.reportTarget.textContent = `${mode.title} · ${mode.id}`;
+  els.reportReason.value = '';
+  els.reportError.hidden = true;
+  openModal('modal-report');
+  setTimeout(() => els.reportReason.focus(), 50);
+}
+
+async function submitReport() {
+  const mode = modeById(S.reportModeId);
+  if (!mode) return;
+  const reason = els.reportReason.value.trim();
+  if (reason.length < 3) {
+    els.reportError.textContent = 'Опиши причину жалобы';
+    els.reportError.hidden = false;
+    return;
+  }
+  const button = els.reportSubmit;
+  button.disabled = true;
+  els.reportError.hidden = true;
+  try {
+    await api.reportMode(mode.id, reason);
+    $('modal-report').hidden = true;
+    toast('Жалоба отправлена', 'ok');
+  } catch (err) {
+    els.reportError.textContent = String(err || 'Не удалось отправить жалобу');
+    els.reportError.hidden = false;
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -3131,7 +3183,8 @@ const MODERATION_ACTIONS = {
   approve: 'Одобрил релиз',
   reject: 'Отклонил релиз',
   hide: 'Скрыл режим',
-  unhide: 'Показал режим'
+  unhide: 'Показал режим',
+  report_close: 'Закрыл жалобу'
 };
 
 function bindModeration() {
@@ -3159,13 +3212,14 @@ function bindModeration() {
     else if (action === 'reject') openModerationNote('reject', id, title);
     else if (action === 'hide') openModerationNote('hide', id, title);
     else if (action === 'unhide') unhideModerationMode(id, title);
+    else if (action === 'close-report') closeModerationReport(id);
   };
 
   updateModerationNav();
 }
 
 function setModerationTab(tab) {
-  S.moderationTab = ['queue', 'modes', 'history'].includes(tab) ? tab : 'queue';
+  S.moderationTab = ['queue', 'modes', 'reports', 'history'].includes(tab) ? tab : 'queue';
   renderModeration();
 }
 
@@ -3183,13 +3237,15 @@ async function loadModeration(force = false) {
   S.moderationLoading = true;
   renderModeration();
   try {
-    const [queue, modes, history] = await Promise.all([
+    const [queue, modes, reports, history] = await Promise.all([
       api.adminQueue(),
       api.adminModes(),
+      api.adminReports(),
       api.adminHistory()
     ]);
     S.moderationQueue = Array.isArray(queue) ? queue : [];
     S.moderationModes = Array.isArray(modes) ? modes : [];
+    S.moderationReports = Array.isArray(reports) ? reports : [];
     S.moderationHistory = Array.isArray(history) ? history : [];
     S.moderationLoaded = true;
   } catch (err) {
@@ -3223,6 +3279,8 @@ function renderModeration() {
 
   if (S.moderationTab === 'modes') {
     content.innerHTML = moderationModesHtml();
+  } else if (S.moderationTab === 'reports') {
+    content.innerHTML = moderationReportsHtml();
   } else if (S.moderationTab === 'history') {
     content.innerHTML = moderationHistoryHtml();
   } else {
@@ -3286,9 +3344,51 @@ function moderationModesHtml() {
   }).join('');
 }
 
-function moderationHistoryHtml() {
-  const items = S.moderationHistory || [];
+function moderationReportsHtml() {
+  const items = S.moderationReports || [];
   if (!items.length) {
+    return '<div class="mod-empty">Открытых жалоб нет.</div>';
+  }
+  return items.map((item) => `
+    <article class="pub-card">
+      <div class="pub-card-head">
+        <div>
+          <div class="pub-title">${escapeHtml(item.targetTitle || 'Режим')}</div>
+          <div class="pub-sub">${escapeHtml(item.targetSlug || item.targetId || '')}</div>
+        </div>
+        <span class="pub-status rejected">Жалоба</span>
+      </div>
+      <div class="pub-meta">
+        <span>От: ${escapeHtml(item.reporterName || item.reporterUsername || 'Игрок')}</span>
+        <span>${escapeHtml(publisherDate(item.createdAt))}</span>
+      </div>
+      <div class="mod-changelog">${escapeHtml(item.reason)}</div>
+      <div class="pub-release-actions">
+        <button class="btn btn-primary" type="button" data-action="close-report" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.targetTitle || 'жалобу')}">Закрыть жалобу</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+async function closeModerationReport(reportId) {
+  const ok = await askConfirm(
+    'Закрыть жалобу?',
+    'Жалоба будет убрана из очереди, действие попадёт в журнал.',
+    'Закрыть'
+  );
+  if (!ok) return;
+  try {
+    await api.adminCloseReport(reportId, '');
+    toast('Жалоба закрыта', 'ok');
+    S.moderationLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    toast('Не удалось закрыть жалобу: ' + err, 'error');
+  }
+}
+
+function moderationHistoryHtml() {
+  const items = S.moderationHistory || [];  if (!items.length) {
     return '<div class="mod-empty">Журнал пока пуст.</div>';
   }
   return items.map((item) => {

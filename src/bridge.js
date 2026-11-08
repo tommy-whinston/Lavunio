@@ -83,6 +83,9 @@
     reviewsGet: (slug) => invoke("reviews_get", { slug }),
     reviewSubmit: (slug, rating, text) => invoke("review_submit", { slug, rating, text }),
     reviewDelete: (slug) => invoke("review_delete", { slug }),
+    reportMode: (slug, reason) => invoke("report_mode", { slug, reason }),
+    adminReports: () => invoke("admin_reports"),
+    adminCloseReport: (reportId, note) => invoke("admin_close_report", { reportId, note }),
 
     // игра
     install: (modeId) => invoke("game_install", { modeId }),

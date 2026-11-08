@@ -342,6 +342,7 @@
       <div class="settings-tabs mod-tabs" id="moderation-tabs">
         <button class="settings-tab active" type="button" data-mod-tab="queue">Очередь</button>
         <button class="settings-tab" type="button" data-mod-tab="modes">Режимы</button>
+        <button class="settings-tab" type="button" data-mod-tab="reports">Жалобы</button>
         <button class="settings-tab" type="button" data-mod-tab="history">Журнал</button>
       </div>
 
@@ -366,6 +367,7 @@
           <div class="hero-action">
             <button class="btn btn-primary btn-block btn-big" id="detail-action">Установить</button>
             <button class="btn btn-ghost btn-block" id="detail-wishlist" type="button">В список желаемого</button>
+            <button class="btn btn-ghost btn-block" id="detail-report" type="button">Пожаловаться</button>
             <div class="status-text" id="detail-status"></div>
             <div class="progress" id="detail-progress" hidden><div class="progress-bar" id="detail-progress-bar"></div></div>
           </div>
@@ -708,6 +710,25 @@
     </div>
   </div>
 
+
+  <!-- Жалоба -->
+  <div class="modal-overlay" id="modal-report" hidden role="dialog" aria-modal="true" aria-labelledby="report-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="report-title">Пожаловаться</h2>
+        <button class="modal-close" data-close="modal-report">✕</button>
+      </div>
+      <div class="hint" id="report-target"></div>
+      <form id="report-form" autocomplete="off">
+        <div class="field">
+          <label for="report-reason">Причина</label>
+          <textarea id="report-reason" rows="4" placeholder="Что не так с режимом"></textarea>
+        </div>
+        <div class="form-error" id="report-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="report-submit" type="submit">Отправить жалобу</button>
+      </form>
+    </div>
+  </div>
 
   <!-- Причина модерации -->
   <div class="modal-overlay" id="modal-moderation-note" hidden role="dialog" aria-modal="true" aria-labelledby="moderation-note-title">

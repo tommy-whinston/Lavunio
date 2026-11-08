@@ -723,6 +723,43 @@ pub async fn review_delete(state: State<'_, AppState>, slug: String) -> Result<V
 }
 
 #[tauri::command]
+pub async fn report_mode(
+    state: State<'_, AppState>,
+    slug: String,
+    reason: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/modes/{slug}/reports");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "reason": reason })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_reports(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/admin/reports?status=open".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_close_report(
+    state: State<'_, AppState>,
+    report_id: String,
+    note: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/reports/{report_id}/close");
+    publisher_request(state.inner(), "POST", path, Some(json!({ "note": note }))).await
+}
+
+#[tauri::command]
 pub async fn publisher_pick_folder() -> Result<Option<String>, String> {
     let picked = blocking(|| rfd::FileDialog::new().pick_folder()).await?;
     Ok(picked.map(|path| path_string(&path)))
