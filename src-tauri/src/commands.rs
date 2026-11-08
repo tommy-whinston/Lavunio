@@ -691,6 +691,53 @@ pub async fn publisher_pick_archive() -> Result<Option<String>, String> {
     Ok(picked.map(|path| path_string(&path)))
 }
 
+#[tauri::command]
+pub async fn publisher_pick_cover() -> Result<Option<String>, String> {
+    let picked = blocking(|| {
+        rfd::FileDialog::new()
+            .add_filter("Изображение", &["png", "jpg", "jpeg", "webp"])
+            .pick_file()
+    })
+    .await?;
+    Ok(picked.map(|path| path_string(&path)))
+}
+
+#[tauri::command]
+pub async fn publisher_upload_cover(
+    state: State<'_, AppState>,
+    mode_id: String,
+    path: String,
+) -> Result<Value, String> {
+    let bytes =
+        std::fs::read(&path).map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
+    if bytes.len() > 8 * 1024 * 1024 {
+        return Err("Обложка больше 8 МБ".to_string());
+    }
+    let api = lavunio_api()?;
+    let token = lavunio_access_token(state.inner()).await?;
+    let endpoint = format!("/v1/publisher/modes/{mode_id}/cover");
+    blocking(move || {
+        net::api_request_bytes(
+            &api,
+            "PUT",
+            &endpoint,
+            Some(&token),
+            bytes,
+            "application/octet-stream",
+        )
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn publisher_delete_cover(
+    state: State<'_, AppState>,
+    mode_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/publisher/modes/{mode_id}/cover");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
 async fn upload_package(
     app: &AppHandle,
     state: &AppState,
@@ -847,6 +894,19 @@ pub async fn publisher_upload_build(
 }
 
 // ---------------------------------------------------------------- игра
+
+async fn report_mode_event(state: &AppState, mode_id: &str, event: &str, version: &str) {
+    let Some(api) = net::api_base_url() else {
+        return;
+    };
+    let Ok(token) = lavunio_access_token(state).await else {
+        return;
+    };
+    let path = format!("/v1/modes/{mode_id}/events");
+    let body = json!({ "event": event, "version": version });
+    let _ = blocking(move || net::api_request_json(&api, "POST", &path, Some(&token), Some(body)))
+        .await;
+}
 
 async fn ensure_game_account(state: &AppState) -> Result<GameAccount, String> {
     let mut session = state.store.lock().unwrap().lavunio.clone();
@@ -1033,6 +1093,27 @@ async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_onl
             return json!({ "ok": false, "error": error });
         }
     };
+
+    let (was_installed, installed_version) = {
+        let store = state.store.lock().unwrap();
+        store
+            .state
+            .get(&mode.id)
+            .map(|mode_state| (mode_state.installed, mode_state.version.clone()))
+            .unwrap_or((false, None))
+    };
+    let update = was_installed && installed_version.as_deref() != Some(mode.version.as_str());
+    let install = !was_installed;
+    if install || update {
+        report_mode_event(state, &mode.id, "download", &mode.version).await;
+        report_mode_event(
+            state,
+            &mode.id,
+            if update { "update" } else { "install" },
+            &mode.version,
+        )
+        .await;
+    }
 
     let mode_id_for_store = mode.id.clone();
     let mode_version_for_store = mode.version.clone();

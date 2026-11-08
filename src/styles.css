@@ -2189,6 +2189,23 @@ body::before {
 .pub-release .hint { margin-top: 6px; }
 .pub-uploading { color: var(--accent-2); font-size: 11.5px; }
 .pub-empty-release { color: var(--muted); font-size: 12px; }
+.pub-cover {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+}
+.pub-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 4px 0 12px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.pub-stats b { color: var(--text); }
 .pub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 640px) {
   .pub-grid { grid-template-columns: 1fr; }

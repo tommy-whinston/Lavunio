@@ -1,6 +1,6 @@
 # Lavunio Publisher → встроенный публикатор
 
-> Статус: ядро встроено в лаунчер. Автор с ролью `author`/`admin` и Lavunio ID создаёт режим и релиз, собирает ZIP с манифестом, загружает сборку и отправляет на модерацию прямо из раздела «Публикация». Отдельный `LavunioPublisher.exe`, статистика и загрузка обложки файлом пока остаются на потом.
+> Статус: встроенный публикатор готов. Отдельный `LavunioPublisher.exe` удалён. Автор создаёт режим и релиз, загружает обложку и сборку, видит статистику и отправляет релиз на модерацию прямо из лаунчера.
 
 ## 1. Почему в лаунчер
 
@@ -54,15 +54,22 @@ cargo run --bin role -- author@example.com author
 ```text
 POST /v1/publisher/modes
 GET  /v1/publisher/modes
+PUT  /v1/publisher/modes/{id}/cover
+DELETE /v1/publisher/modes/{id}/cover
+GET  /v1/publisher/modes/{id}/stats
 POST /v1/publisher/modes/{id}/releases
 POST /v1/publisher/releases/{id}/assets/upload-url
 PUT  /v1/publisher/releases/{release_id}/assets/{asset_id}/upload
 POST /v1/publisher/releases/{release_id}/assets/{asset_id}/complete
 POST /v1/publisher/releases/{id}/submit
-GET  /v1/publisher/modes/{id}/stats
+POST /v1/modes/{slug}/events
 ```
 
-`GET /v1/publisher/modes` возвращает режимы автора с релизами и файлами — по нему строится раздел «Публикация».
+`GET /v1/publisher/modes` возвращает режимы автора с релизами, файлами и статистикой.
+
+Обложка загружается файлом через `PUT /v1/publisher/modes/{id}/cover` (PNG/JPEG/WebP до 8 МБ), либо задаётся URL при создании режима.
+
+`POST /v1/modes/{slug}/events` принимает `download`, `install`, `update` и используется лаунчером для статистики.
 
 `upload-url` принимает необязательный `manifest` и сохраняет его у файла сборки. Лаунчер передаёт туда карту файлов, SHA-256 и размеры, поэтому установка идёт по манифесту, без повторного сканирования архива.
 
@@ -131,9 +138,9 @@ GET  /v1/publisher/modes/{id}/stats
 - [x] **PUB-04.** Перенести создание релиза и загрузку файлов.
 - [x] **PUB-05.** Добавить прогресс загрузки и ошибки.
   - Для S3/R2: после PUT вызывать `completeUrl` и проверять ответ.
-- [ ] **PUB-06.** Добавить статистику автора.
-- [ ] **PUB-07.** Удалить отдельный `LavunioPublisher.exe`.
-- [ ] **PUB-08.** Загружать обложку файлом, а не только по URL.
+- [x] **PUB-06.** Добавить статистику автора.
+- [x] **PUB-07.** Удалить отдельный `LavunioPublisher.exe`.
+- [x] **PUB-08.** Загружать обложку файлом, а не только по URL.
 
 ## Связанные документы
 

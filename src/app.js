@@ -2412,6 +2412,8 @@ function bindPublisher() {
     const release = (mode.releases || []).find((item) => item.id === button.dataset.release);
     const action = button.dataset.action;
     if (action === 'new-release') openPublisherReleaseModal(mode);
+    else if (action === 'upload-cover') uploadPublisherCover(mode);
+    else if (action === 'delete-cover') deletePublisherCover(mode);
     else if (action === 'upload-folder') uploadPublisherBuild(mode, release, true);
     else if (action === 'upload-archive') uploadPublisherBuild(mode, release, false);
     else if (action === 'submit-release') submitPublisherReleaseForModeration(mode, release);
@@ -2549,12 +2551,16 @@ function publisherModeCard(mode) {
   const releases = mode.releases || [];
   const status = PUBLISHER_STATUS[mode.status] || mode.status;
   const loader = LOADER_LABELS[mode.loader] || mode.loader || 'Vanilla';
+  const stats = mode.stats || {};
   const meta = [
     mode.mcVersion ? `Minecraft ${escapeHtml(mode.mcVersion)}` : 'Minecraft не указан',
     loader,
     mode.size ? escapeHtml(mode.size) : 'Размер не указан',
     `Обновлён ${escapeHtml(publisherDate(mode.updatedAt))}`
   ].join(' · ');
+  const coverHtml = mode.coverUrl
+    ? `<img class="pub-cover" src="${escapeHtml(mode.coverUrl)}" alt="Обложка ${escapeHtml(mode.title)}">`
+    : '';
 
   const releaseCards = releases.length
     ? releases.map((release) => publisherReleaseCard(mode, release)).join('')
@@ -2569,10 +2575,19 @@ function publisherModeCard(mode) {
         </div>
         <span class="pub-status ${escapeHtml(mode.status)}">${escapeHtml(status)}</span>
       </div>
+      ${coverHtml}
       <div class="pub-meta"><span>${meta}</span></div>
+      <div class="pub-stats">
+        <span>Скачивания <b>${Number(stats.downloads) || 0}</b></span>
+        <span>Установки <b>${Number(stats.installs) || 0}</b></span>
+        <span>Обновления <b>${Number(stats.updates) || 0}</b></span>
+        <span>Игроки <b>${Number(stats.uniqueUsers) || 0}</b></span>
+      </div>
       <div class="pub-releases">${releaseCards}</div>
       <div class="pub-release-actions">
         <button class="btn btn-ghost" type="button" data-action="new-release" data-mode="${escapeHtml(mode.id)}">Новый релиз</button>
+        <button class="btn btn-ghost" type="button" data-action="upload-cover" data-mode="${escapeHtml(mode.id)}">Загрузить обложку</button>
+        ${mode.coverUrl ? `<button class="btn btn-ghost" type="button" data-action="delete-cover" data-mode="${escapeHtml(mode.id)}">Убрать обложку</button>` : ''}
       </div>
     </article>
   `;
@@ -2705,6 +2720,44 @@ async function submitPublisherRelease() {
   } finally {
     button.disabled = false;
     button.textContent = 'Создать релиз';
+  }
+}
+
+async function uploadPublisherCover(mode) {
+  if (!mode) return;
+  let path;
+  try {
+    path = await api.publisherPickCover();
+  } catch (err) {
+    toast('Не удалось выбрать обложку: ' + err, 'error');
+    return;
+  }
+  if (!path) return;
+  try {
+    await api.publisherUploadCover(mode.id, path);
+    toast('Обложка обновлена', 'ok');
+    S.publisherLoaded = false;
+    await loadPublisher(true);
+  } catch (err) {
+    toast('Не удалось загрузить обложку: ' + err, 'error');
+  }
+}
+
+async function deletePublisherCover(mode) {
+  if (!mode) return;
+  const ok = await askConfirm(
+    'Убрать обложку?',
+    `У режима «${mode.title}» не будет обложки.`,
+    'Убрать'
+  );
+  if (!ok) return;
+  try {
+    await api.publisherDeleteCover(mode.id);
+    toast('Обложка удалена', 'ok');
+    S.publisherLoaded = false;
+    await loadPublisher(true);
+  } catch (err) {
+    toast('Не удалось удалить обложку: ' + err, 'error');
   }
 }
 
