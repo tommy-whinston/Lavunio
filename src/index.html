@@ -203,6 +203,13 @@
 
       <div id="collections" class="collections" hidden></div>
 
+      <section id="feed" class="shelf feed-shelf" hidden>
+        <div class="shelf-head">
+          <div class="shelf-title"><h2>Лента подписок</h2></div>
+        </div>
+        <div id="feed-list" class="feed-list"></div>
+      </section>
+
       <section id="catalog-section" class="shelf">
         <div class="shelf-head catalog-head">
           <div class="shelf-title"><h2 id="catalog-title">Все режимы</h2><span class="count" id="modes-count"></span></div>
@@ -211,6 +218,7 @@
               <button type="button" data-store-filter="all" class="active">Все</button>
               <button type="button" data-store-filter="installed">Установленные</button>
               <button type="button" data-store-filter="wishlist">Желаемое</button>
+              <button type="button" data-store-filter="following">Подписки</button>
               <button type="button" data-store-filter="development">В разработке</button>
               <button type="button" data-store-filter="crowdfunding">Сбор на релиз</button>
             </div>
@@ -410,6 +418,7 @@
               <div class="author-name" id="detail-author-name"></div>
               <div class="author-sub" id="detail-author-sub"></div>
             </div>
+            <button class="btn btn-ghost" id="detail-author-follow" type="button">Подписаться</button>
             <button class="btn btn-ghost" id="detail-author-modes" type="button">Все режимы автора</button>
           </div>
         </section>

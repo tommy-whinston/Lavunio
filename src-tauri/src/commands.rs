@@ -778,6 +778,37 @@ pub async fn admin_close_report(
 }
 
 #[tauri::command]
+pub async fn follows_get(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(state.inner(), "GET", "/v1/me/follows".to_string(), None).await
+}
+
+#[tauri::command]
+pub async fn follow_author(state: State<'_, AppState>, username: String) -> Result<Value, String> {
+    let path = format!("/v1/follows/{username}");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn unfollow_author(
+    state: State<'_, AppState>,
+    username: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/follows/{username}");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
+pub async fn feed_get(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/me/feed?limit=20".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn publisher_pick_folder() -> Result<Option<String>, String> {
     let picked = blocking(|| rfd::FileDialog::new().pick_folder()).await?;
     Ok(picked.map(|path| path_string(&path)))

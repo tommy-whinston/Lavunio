@@ -85,6 +85,10 @@
     reviewSubmit: (slug, rating, text) => invoke("review_submit", { slug, rating, text }),
     reviewDelete: (slug) => invoke("review_delete", { slug }),
     reportMode: (slug, reason) => invoke("report_mode", { slug, reason }),
+    followsGet: () => invoke("follows_get"),
+    followAuthor: (username) => invoke("follow_author", { username }),
+    unfollowAuthor: (username) => invoke("unfollow_author", { username }),
+    feedGet: () => invoke("feed_get"),
     adminReports: () => invoke("admin_reports"),
     adminCloseReport: (reportId, note) => invoke("admin_close_report", { reportId, note }),
 

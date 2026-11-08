@@ -73,6 +73,8 @@ const S = {
   lavunio: null,
   lavunioRegisterMode: false,
   wishlist: [],
+  follows: [],
+  feed: [],
   reviews: {},
   reviewLoading: {},
   reviewRating: 5,
@@ -186,6 +188,9 @@ const els = {
   detailAuthorName: $('detail-author-name'),
   detailAuthorSub: $('detail-author-sub'),
   detailAuthorModes: $('detail-author-modes'),
+  detailAuthorFollow: $('detail-author-follow'),
+  feed: $('feed'),
+  feedList: $('feed-list'),
   galleryImage: $('gallery-image'),
   detailReviewsSection: $('detail-reviews-section'),
   reviewsSummary: $('reviews-summary'),
@@ -271,6 +276,7 @@ async function init() {
     renderAccountChip();
     updatePublisherNav();
     loadWishlist();
+    loadFollows();
     loadCollections();
     renderStore();
     renderLibrary();
@@ -373,9 +379,21 @@ function syncFilterButtons(container, attr, active) {
 function modePassesFilter(mode, filter) {
   if (filter === 'installed') return isInstalled(mode);
   if (filter === 'wishlist') return S.wishlist.includes(mode.id);
+  if (filter === 'following') return modeAuthorIds(mode).some((id) => S.follows.includes(id));
   if (filter === 'development') return mode.status === 'development';
   if (filter === 'crowdfunding') return mode.status === 'crowdfunding';
   return true;
+}
+
+function modeAuthorIds(mode) {
+  const ids = [];
+  if (mode && mode.author && mode.author.id) ids.push(mode.author.id);
+  if (mode && Array.isArray(mode.authors)) {
+    mode.authors.forEach((author) => {
+      if (author && author.id) ids.push(author.id);
+    });
+  }
+  return [...new Set(ids)];
 }
 
 function modeUpdatedAt(mode) {
@@ -701,6 +719,10 @@ function renderStore() {
       els.collections.hidden = true;
       els.collections.innerHTML = '';
     }
+    if (els.feed) {
+      els.feed.hidden = true;
+      els.feedList.innerHTML = '';
+    }
     els.catalogTitle.textContent = 'Загрузка';
     els.modesCount.textContent = '';
     els.modesGrid.innerHTML = '';
@@ -718,6 +740,9 @@ function renderStore() {
     if (els.collections) {
       els.collections.hidden = true;
       els.collections.innerHTML = '';
+    }
+    if (els.feed) {
+      els.feed.hidden = true;
     }
     const result = sortCatalog(filterModes().filter((mode) => modePassesFilter(mode, S.storeFilter)), S.storeSort);
     els.catalogTitle.textContent = 'Результаты поиска';
@@ -738,6 +763,7 @@ function renderStore() {
   S.featuredId = featured ? featured.id : null;
   renderFeatured(featured);
   renderCollections();
+  renderFeed();
 
   const list = sortCatalog(
     S.modes.filter((mode) => modePassesFilter(mode, S.storeFilter)),
@@ -747,6 +773,7 @@ function renderStore() {
     all: 'Все режимы',
     installed: 'Установленные',
     wishlist: 'Желаемое',
+    following: 'Подписки',
     development: 'В разработке',
     crowdfunding: 'Сбор на релиз'
   };
@@ -890,6 +917,61 @@ function renderCollections() {
   sections.forEach((section, index) => {
     if (rows[index]) renderModeGrid(rows[index], section.modes.slice(0, 8), false, false, true);
   });
+}
+
+let followsRequestSeq = 0;
+
+async function loadFollows() {
+  const seq = ++followsRequestSeq;
+  if (!lavunioLoggedIn() || !api.followsGet || !api.feedGet) {
+    S.follows = [];
+    S.feed = [];
+    renderFeed();
+    return;
+  }
+  let follows = [];
+  let feed = [];
+  try {
+    [follows, feed] = await Promise.all([api.followsGet(), api.feedGet()]);
+  } catch (_) {}
+  if (seq !== followsRequestSeq) return;
+  S.follows = Array.isArray(follows)
+    ? follows.map((item) => item && item.username).filter(Boolean)
+    : [];
+  S.feed = Array.isArray(feed) ? feed : [];
+  renderFeed();
+  renderStore();
+  if (S.view === 'detail') renderDetail();
+}
+
+function renderFeed() {
+  if (!els.feed || !els.feedList) return;
+  if (S.loading || S.view !== 'store' || S.search || S.storeFilter !== 'all' || !S.feed.length) {
+    els.feed.hidden = true;
+    els.feedList.innerHTML = '';
+    return;
+  }
+  els.feed.hidden = false;
+  els.feedList.innerHTML = S.feed.map((item) => {
+    const date = item.publishedAt ? publisherDate(item.publishedAt) : '';
+    const changelog = String(item.changelog || '').split('\n')[0].slice(0, 180);
+    return `
+      <button class="feed-item" type="button" data-feed-slug="${escapeHtml(item.modeSlug)}">
+        ${item.coverUrl
+          ? `<img src="${escapeHtml(item.coverUrl)}" alt="" loading="lazy">`
+          : '<span class="feed-cover"></span>'}
+        <span class="feed-body">
+          <span class="feed-title">${escapeHtml(item.modeTitle || item.modeSlug)} <span class="feed-version">v${escapeHtml(item.version || '')}</span></span>
+          <span class="feed-sub">${escapeHtml(item.authorName || item.authorUsername || '')}${date ? ' · ' + escapeHtml(date) : ''}</span>
+          ${changelog ? `<span class="feed-text">${escapeHtml(changelog)}</span>` : ''}
+        </span>
+        <span class="feed-arrow">›</span>
+      </button>`;
+  }).join('');
+  els.feedList.onclick = (event) => {
+    const item = event.target.closest('[data-feed-slug]');
+    if (item) openDetail(item.dataset.feedSlug);
+  };
 }
 
 function renderModeGrid(container, list, withMenu = false, playMode = false, compact = false) {
@@ -1321,6 +1403,7 @@ function bindDetail() {
     showSection('store');
   };
   els.detailWishlist.onclick = () => toggleWishlist(modeById(S.selectedId));
+  els.detailAuthorFollow.onclick = () => toggleFollowAuthor();
   els.detailReport.onclick = () => openReportModal(modeById(S.selectedId));
   els.reportForm.onsubmit = (event) => {
     event.preventDefault();
@@ -1731,6 +1814,7 @@ function renderDetail() {
       <img src="${escapeHtml(url)}" alt="" loading="lazy">
     </button>`).join('');
 
+  const apiReady = !!(S.lavunio && S.lavunio.configured);
   const author = mode.author || (Array.isArray(mode.authors) ? mode.authors[0] : null);
   const authorName = (author && (author.name || author.displayName)) || modeAuthors(mode)[0] || '';
   els.detailAuthorSection.hidden = !authorName;
@@ -1741,12 +1825,18 @@ function renderDetail() {
     avatar.textContent = authorName[0].toUpperCase();
     avatar.style.backgroundImage = author && author.avatar ? `url("${author.avatar}")` : '';
   }
+  const canFollow = !!(apiReady && author && author.id && S.lavunio.user && S.lavunio.user.username !== author.id);
+  els.detailAuthorFollow.hidden = !canFollow;
+  if (canFollow) {
+    const following = S.follows.includes(author.id);
+    els.detailAuthorFollow.textContent = following ? 'Вы подписаны' : 'Подписаться';
+    els.detailAuthorFollow.classList.toggle('active', following);
+  }
 
   const wishlisted = S.wishlist.includes(mode.id);
   els.detailWishlist.textContent = wishlisted ? 'В желаемом' : 'В список желаемого';
   els.detailWishlist.classList.toggle('active', wishlisted);
 
-  const apiReady = !!(S.lavunio && S.lavunio.configured);
   els.detailReviewsSection.hidden = !apiReady;
   if (apiReady) {
     renderReviews(mode);
@@ -1803,6 +1893,34 @@ async function toggleWishlist(mode) {
     toast(listed ? 'Убрано из желаемого' : 'Добавлено в желаемое', 'ok');
   } catch (err) {
     toast('Не удалось обновить желаемое: ' + err, 'error');
+  }
+}
+
+async function toggleFollowAuthor() {
+  const mode = modeById(S.selectedId);
+  if (!mode) return;
+  const author = mode.author || (Array.isArray(mode.authors) ? mode.authors[0] : null);
+  if (!author || !author.id) return;
+  if (!lavunioLoggedIn()) {
+    openModal('modal-account');
+    toast('Сначала войдите в Lavunio ID', 'warn');
+    return;
+  }
+  if (S.lavunio.user && S.lavunio.user.username === author.id) {
+    toast('Нельзя подписаться на себя', 'warn');
+    return;
+  }
+  const following = S.follows.includes(author.id);
+  try {
+    if (following) await api.unfollowAuthor(author.id);
+    else await api.followAuthor(author.id);
+    S.follows = following
+      ? S.follows.filter((id) => id !== author.id)
+      : [...S.follows, author.id];
+    await loadFollows();
+    toast(following ? 'Вы отписались от автора' : 'Вы подписались на автора', 'ok');
+  } catch (err) {
+    toast('Не удалось обновить подписку: ' + err, 'error');
   }
 }
 
@@ -2351,6 +2469,7 @@ async function refreshLavunioStatus() {
     S.lavunio = await api.lavunioStatus();
     renderLavunioPane();
     renderAccountChip();
+    loadFollows();
   } catch (_) {}
 }
 
@@ -2464,6 +2583,7 @@ async function submitLavunioForm() {
     renderLavunioPane();
     renderAccountChip();
     loadWishlist();
+    loadFollows();
     const name = status && status.user ? lavunioName(status.user) : '';
     toast(register ? 'Аккаунт Lavunio создан' : `С возвращением, ${name || 'игрок'}!`, 'ok');
     if (status && status.user && !status.user.emailVerified) {
@@ -2487,6 +2607,8 @@ async function logoutLavunio() {
   S.lavunio = { configured: true, hasSession: false, user: null };
   S.wishlist = [];
   S.reviews = {};
+  S.follows = [];
+  S.feed = [];
   renderLavunioPane();
   renderAccountChip();
   renderStore();
