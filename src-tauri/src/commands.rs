@@ -820,6 +820,50 @@ pub async fn admin_queue(state: State<'_, AppState>) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub async fn publisher_appeal_release(
+    state: State<'_, AppState>,
+    release_id: String,
+    message: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/publisher/releases/{release_id}/appeal");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "message": message })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_appeals(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/admin/appeals".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_resolve_appeal(
+    state: State<'_, AppState>,
+    appeal_id: String,
+    action: String,
+    note: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/appeals/{appeal_id}/resolve");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "action": action, "note": note })),
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn admin_modes(state: State<'_, AppState>) -> Result<Value, String> {
     publisher_request(state.inner(), "GET", "/v1/admin/modes".to_string(), None).await
 }

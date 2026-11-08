@@ -417,6 +417,7 @@
         <button class="settings-tab" type="button" data-mod-tab="reviews">Отзывы</button>
         <button class="settings-tab" type="button" data-mod-tab="collections">Подборки</button>
         <button class="settings-tab" type="button" data-mod-tab="reports">Жалобы</button>
+        <button class="settings-tab" type="button" data-mod-tab="appeals">Апелляции</button>
         <button class="settings-tab" type="button" data-mod-tab="news">Новости</button>
         <button class="settings-tab" type="button" data-mod-tab="history">Журнал</button>
       </div>
@@ -775,6 +776,25 @@
         </div>
         <div class="form-error" id="pub-mode-error" hidden></div>
         <button class="btn btn-primary btn-block" id="pub-mode-submit" type="submit">Создать черновик</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Апелляция -->
+  <div class="modal-overlay" id="modal-publisher-appeal" hidden role="dialog" aria-modal="true" aria-labelledby="pub-appeal-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="pub-appeal-title">Оспорить отклонение</h2>
+        <button class="modal-close" data-close="modal-publisher-appeal">✕</button>
+      </div>
+      <div class="hint" id="pub-appeal-info"></div>
+      <form id="publisher-appeal-form" autocomplete="off">
+        <div class="field">
+          <label for="pub-appeal-message">Почему релиз стоит пересмотреть</label>
+          <textarea id="pub-appeal-message" rows="5" maxlength="2000" placeholder="Опиши, что было исправлено или почему отклонение ошибочно"></textarea>
+        </div>
+        <div class="form-error" id="pub-appeal-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="pub-appeal-submit" type="submit">Отправить апелляцию</button>
       </form>
     </div>
   </div>

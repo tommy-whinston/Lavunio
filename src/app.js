@@ -91,10 +91,12 @@ const S = {
   publisherLoading: false,
   publisherUpload: null,
   publisherReleaseMode: null,
+  publisherAppealRelease: null,
   publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
   moderationReports: [],
+  moderationAppeals: [],
   moderationReviews: [],
   moderationCollections: [],
   moderationHistory: [],
@@ -3922,6 +3924,13 @@ function bindPublisher() {
     else if (action === 'upload-archive') uploadPublisherBuild(mode, release, false);
     else if (action === 'upload-screenshot') uploadPublisherScreenshot(mode, release);
     else if (action === 'submit-release') submitPublisherReleaseForModeration(mode, release);
+    else if (action === 'appeal') openPublisherAppealModal(mode, release);
+  };
+
+  const appealForm = $('publisher-appeal-form');
+  if (appealForm) appealForm.onsubmit = (event) => {
+    event.preventDefault();
+    submitPublisherAppeal();
   };
 
   if (api.onPublisherProgress) api.onPublisherProgress(onPublisherProgress);
@@ -4146,7 +4155,13 @@ function publisherReleaseCard(mode, release) {
   } else if (release.status === 'pending') {
     actions = '<span class="hint">Ожидает проверки модератором</span>';
   } else if (release.status === 'rejected') {
-    actions = '<span class="hint">Релиз отклонён. Исправь сборку и создай новый релиз.</span>';
+    if (release.appealStatus === 'open') {
+      actions = '<span class="hint">Апелляция на рассмотрении</span>';
+    } else if (release.appealStatus === 'rejected') {
+      actions = '<span class="hint">Апелляция отклонена. Исправь сборку и создай новый релиз.</span>';
+    } else {
+      actions = `<button class="btn btn-ghost" type="button" data-action="appeal" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" data-title="${escapeHtml(mode.title)}">Оспорить</button>`;
+    }
   }
 
   return `
@@ -4394,6 +4409,42 @@ async function submitPublisherReleaseForModeration(mode, release) {
   }
 }
 
+function openPublisherAppealModal(mode, release) {
+  if (!mode || !release) return;
+  S.publisherAppealRelease = { mode, release };
+  $('pub-appeal-info').textContent = `${mode.title} · релиз ${release.version}`;
+  $('pub-appeal-message').value = '';
+  hidePublisherError('pub-appeal-error');
+  $('modal-publisher-appeal').hidden = false;
+  setTimeout(() => $('pub-appeal-message').focus(), 50);
+}
+
+async function submitPublisherAppeal() {
+  const context = S.publisherAppealRelease;
+  if (!context) return;
+  const message = $('pub-appeal-message').value.trim();
+  if (message.length < 10) {
+    showPublisherError('pub-appeal-error', 'Опиши причину — минимум 10 символов');
+    return;
+  }
+  const button = $('pub-appeal-submit');
+  button.disabled = true;
+  button.textContent = 'Отправляем…';
+  try {
+    await api.publisherAppealRelease(context.release.id, message);
+    $('modal-publisher-appeal').hidden = true;
+    S.publisherAppealRelease = null;
+    toast('Апелляция отправлена', 'ok');
+    S.publisherLoaded = false;
+    await loadPublisher(true);
+  } catch (err) {
+    showPublisherError('pub-appeal-error', String(err || 'Не удалось отправить апелляцию'));
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Отправить апелляцию';
+  }
+}
+
 function onPublisherProgress(payload) {
   if (!S.publisherUpload) return;
   const percent = Math.max(0, Math.min(100, Number(payload && payload.percent) || 0));
@@ -4459,6 +4510,8 @@ function bindModeration() {
     else if (action === 'hide') openModerationNote('hide', id, title);
     else if (action === 'unhide') unhideModerationMode(id, title);
     else if (action === 'close-report') closeModerationReport(id);
+    else if (action === 'appeal-accept') resolveModerationAppeal(id, 'accept', '');
+    else if (action === 'appeal-reject') openModerationNote('appeal-reject', id, title);
     else if (action === 'review-approve') approveModerationReview(id);
     else if (action === 'review-reject') rejectModerationReview(id);
     else if (action === 'collection-delete') deleteModerationCollection(id, title);
@@ -4468,7 +4521,7 @@ function bindModeration() {
 }
 
 function setModerationTab(tab) {
-  S.moderationTab = ['queue', 'modes', 'reviews', 'collections', 'reports', 'news', 'history'].includes(tab) ? tab : 'queue';
+  S.moderationTab = ['queue', 'modes', 'reviews', 'collections', 'reports', 'appeals', 'news', 'history'].includes(tab) ? tab : 'queue';
   if (S.moderationTab === 'news') loadStoreNews(true);
   renderModeration();
 }
@@ -4487,13 +4540,14 @@ async function loadModeration(force = false) {
   S.moderationLoading = true;
   renderModeration();
   try {
-    const [queue, modes, reports, reviews, collections, history] = await Promise.all([
+    const [queue, modes, reports, reviews, collections, history, appeals] = await Promise.all([
       api.adminQueue(),
       api.adminModes(),
       api.adminReports(),
       api.adminReviews(),
       api.adminCollections(),
-      api.adminHistory()
+      api.adminHistory(),
+      api.adminAppeals()
     ]);
     S.moderationQueue = Array.isArray(queue) ? queue : [];
     S.moderationModes = Array.isArray(modes) ? modes : [];
@@ -4501,6 +4555,7 @@ async function loadModeration(force = false) {
     S.moderationReviews = Array.isArray(reviews) ? reviews : [];
     S.moderationCollections = Array.isArray(collections) ? collections : [];
     S.moderationHistory = Array.isArray(history) ? history : [];
+    S.moderationAppeals = Array.isArray(appeals) ? appeals : [];
     S.moderationLoaded = true;
   } catch (err) {
     toast('Не удалось загрузить модерацию: ' + err, 'error');
@@ -4546,6 +4601,8 @@ function renderModeration() {
     }
   } else if (S.moderationTab === 'reports') {
     content.innerHTML = moderationReportsHtml();
+  } else if (S.moderationTab === 'appeals') {
+    content.innerHTML = moderationAppealsHtml();
   } else if (S.moderationTab === 'news') {
     content.innerHTML = moderationNewsHtml();
     const form = content.querySelector('#mod-news-form');
@@ -4799,6 +4856,54 @@ async function rejectModerationReview(reviewId) {
   }
 }
 
+function moderationAppealsHtml() {
+  const items = S.moderationAppeals || [];
+  if (!items.length) {
+    return '<div class="mod-empty">Апелляций нет.</div>';
+  }
+  return items.map((item) => `
+    <article class="pub-card">
+      <div class="pub-card-head">
+        <div>
+          <div class="pub-title">${escapeHtml(item.modeTitle)}</div>
+          <div class="pub-sub">${escapeHtml(item.modeSlug)} · релиз ${escapeHtml(item.version)}</div>
+        </div>
+        <span class="pub-status pending">Апелляция</span>
+      </div>
+      <div class="pub-meta">
+        <span>Автор: ${escapeHtml(item.authorName)} (@${escapeHtml(item.authorUsername)})</span>
+        <span>Отправлена ${escapeHtml(publisherDate(item.createdAt))}</span>
+      </div>
+      <div class="mod-reject-note">Причина отклонения: ${escapeHtml(item.rejectionNote || '—')}</div>
+      <div class="mod-changelog">${escapeHtml(item.message)}</div>
+      <div class="pub-release-actions">
+        <button class="btn btn-primary" type="button" data-action="appeal-accept" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.modeTitle)}">Принять и опубликовать</button>
+        <button class="btn btn-ghost" type="button" data-action="appeal-reject" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.modeTitle)}">Отклонить</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+async function resolveModerationAppeal(id, action, note) {
+  if (action === 'accept') {
+    const confirmed = await askConfirm(
+      'Принять апелляцию?',
+      'Релиз будет опубликован и появится в каталоге.',
+      'Опубликовать'
+    );
+    if (!confirmed) return;
+  }
+  try {
+    await api.adminResolveAppeal(id, action, note);
+    toast(action === 'accept' ? 'Релиз опубликован' : 'Апелляция отклонена', 'ok');
+    S.moderationLoaded = false;
+    S.publisherLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    toast('Не удалось рассмотреть апелляцию: ' + err, 'error');
+  }
+}
+
 function moderationReportsHtml() {  const items = S.moderationReports || [];
   if (!items.length) {
     return '<div class="mod-empty">Открытых жалоб нет.</div>';
@@ -4919,13 +5024,20 @@ function moderationHistoryHtml() {
 function openModerationNote(kind, id, title) {
   S.moderationNoteAction = { kind, id };
   const reject = kind === 'reject';
-  $('moderation-note-title').textContent = reject ? 'Отклонить релиз' : 'Скрыть режим';
-  $('moderation-note-hint').textContent = reject
-    ? `Релиз «${title}» будет отклонён. Автор увидит причину.`
-    : `Режим «${title}» исчезнет из каталога.`;
+  const appeal = kind === 'appeal-reject';
+  $('moderation-note-title').textContent = appeal
+    ? 'Отклонить апелляцию'
+    : reject
+      ? 'Отклонить релиз'
+      : 'Скрыть режим';
+  $('moderation-note-hint').textContent = appeal
+    ? `Апелляция по режиму «${title}» будет отклонена. Автор увидит причину.`
+    : reject
+      ? `Релиз «${title}» будет отклонён. Автор увидит причину.`
+      : `Режим «${title}» исчезнет из каталога.`;
   $('moderation-note-text').value = '';
   $('moderation-note-error').hidden = true;
-  $('moderation-note-submit').textContent = reject ? 'Отклонить' : 'Скрыть';
+  $('moderation-note-submit').textContent = appeal || reject ? 'Отклонить' : 'Скрыть';
   openModal('modal-moderation-note');
   setTimeout(() => $('moderation-note-text').focus(), 50);
 }
@@ -4948,6 +5060,9 @@ async function submitModerationNote() {
     if (action.kind === 'reject') {
       await api.adminReject(action.id, note);
       toast('Релиз отклонён', 'ok');
+    } else if (action.kind === 'appeal-reject') {
+      await api.adminResolveAppeal(action.id, 'reject', note);
+      toast('Апелляция отклонена', 'ok');
     } else {
       await api.adminHideMode(action.id, note);
       toast('Режим скрыт', 'ok');
