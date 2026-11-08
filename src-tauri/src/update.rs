@@ -54,7 +54,8 @@ fn is_newer(latest: &str, current: &str) -> bool {
 #[tauri::command]
 pub async fn check_update() -> Result<UpdateInfo, String> {
     tauri::async_runtime::spawn_blocking(|| {
-        let url = format!("https://api.github.com/repos/{REPO}/releases/latest");
+        let current = env!("CARGO_PKG_VERSION").to_string();
+        let url = format!("https://api.github.com/repos/{REPO}/releases?per_page=20");
         let response = client()
             .get(&url)
             .send()
@@ -65,52 +66,96 @@ pub async fn check_update() -> Result<UpdateInfo, String> {
         let data: Value = response
             .json()
             .map_err(|e| format!("Некорректный ответ GitHub: {e}"))?;
+        let releases = data
+            .as_array()
+            .ok_or_else(|| "GitHub вернул не список релизов".to_string())?;
 
-        let latest = data
+        let mut best: Option<(Vec<u64>, usize)> = None;
+        for (index, release) in releases.iter().enumerate() {
+            if release
+                .get("draft")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            let tag = release
+                .get("tag_name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .trim_start_matches(['v', 'V']);
+            if tag.is_empty() || installer_url(release).is_none() {
+                continue;
+            }
+            let parts = version_parts(tag);
+            if best
+                .as_ref()
+                .map(|(best_parts, _)| parts.as_slice() > best_parts.as_slice())
+                .unwrap_or(true)
+            {
+                best = Some((parts, index));
+            }
+        }
+
+        let Some((_, index)) = best else {
+            return Ok(UpdateInfo {
+                available: false,
+                current,
+                latest: String::new(),
+                url: String::new(),
+                notes: String::new(),
+                installer_url: None,
+            });
+        };
+        let release = &releases[index];
+        let latest = release
             .get("tag_name")
             .and_then(Value::as_str)
             .unwrap_or("")
             .trim()
             .trim_start_matches(['v', 'V'])
             .to_string();
-        let current = env!("CARGO_PKG_VERSION").to_string();
-        let html_url = data
+        let html_url = release
             .get("html_url")
             .and_then(Value::as_str)
             .unwrap_or("")
             .to_string();
-        let notes = data
+        let notes = release
             .get("body")
             .and_then(Value::as_str)
             .unwrap_or("")
             .to_string();
-        let installer_url = data
-            .get("assets")
-            .and_then(Value::as_array)
-            .and_then(|assets| {
-                assets.iter().find_map(|asset| {
-                    let name = asset.get("name").and_then(Value::as_str)?.to_lowercase();
-                    if !name.contains("setup") || !name.ends_with(".exe") {
-                        return None;
-                    }
-                    asset
-                        .get("browser_download_url")
-                        .and_then(Value::as_str)
-                        .map(str::to_string)
-                })
-            });
 
         Ok(UpdateInfo {
-            available: !latest.is_empty() && is_newer(&latest, &current),
+            available: is_newer(&latest, &current),
             current,
             latest,
             url: html_url,
             notes,
-            installer_url,
+            installer_url: installer_url(release),
         })
     })
     .await
     .map_err(|e| format!("Не удалось проверить обновление: {e}"))?
+}
+
+fn installer_url(release: &Value) -> Option<String> {
+    release
+        .get("assets")
+        .and_then(Value::as_array)
+        .and_then(|assets| {
+            assets.iter().find_map(|asset| {
+                let name = asset.get("name").and_then(Value::as_str)?.to_lowercase();
+                if !name.contains("setup") || !name.ends_with(".exe") {
+                    return None;
+                }
+                asset
+                    .get("browser_download_url")
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            })
+        })
 }
 
 fn download_installer(url: &str, mut on_progress: impl FnMut(u64, u64)) -> Result<PathBuf, String> {
