@@ -62,6 +62,8 @@
     publisherPickCover: () => invoke("publisher_pick_cover"),
     publisherUploadCover: (modeId, path) => invoke("publisher_upload_cover", { modeId, path }),
     publisherDeleteCover: (modeId) => invoke("publisher_delete_cover", { modeId }),
+    publisherPickScreenshot: () => invoke("publisher_pick_screenshot"),
+    publisherUploadScreenshot: (releaseId, path) => invoke("publisher_upload_screenshot", { releaseId, path }),
     publisherUploadBuild: (modeId, releaseId, version, source) => invoke("publisher_upload_build", { modeId, releaseId, version, source }),
     onPublisherProgress: (cb) => listen("publisher:progress", (e) => cb(e.payload)),
 

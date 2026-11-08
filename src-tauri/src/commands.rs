@@ -5,6 +5,7 @@ use crate::publisher as build_publisher;
 use crate::state::AppState;
 use crate::util::{now_ms, open_path, open_url, path_string};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -703,6 +704,17 @@ pub async fn publisher_pick_cover() -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+pub async fn publisher_pick_screenshot() -> Result<Option<String>, String> {
+    let picked = blocking(|| {
+        rfd::FileDialog::new()
+            .add_filter("Изображение", &["png", "jpg", "jpeg", "webp"])
+            .pick_file()
+    })
+    .await?;
+    Ok(picked.map(|path| path_string(&path)))
+}
+
+#[tauri::command]
 pub async fn publisher_upload_cover(
     state: State<'_, AppState>,
     mode_id: String,
@@ -727,6 +739,94 @@ pub async fn publisher_upload_cover(
         )
     })
     .await?
+}
+
+#[tauri::command]
+pub async fn publisher_upload_screenshot(
+    state: State<'_, AppState>,
+    release_id: String,
+    path: String,
+) -> Result<Value, String> {
+    let bytes =
+        std::fs::read(&path).map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
+    if bytes.len() > 20 * 1024 * 1024 {
+        return Err("Скриншот больше 20 МБ".to_string());
+    }
+    let file_name = Path::new(&path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("screenshot.png")
+        .to_string();
+    let sha256 = Sha256::digest(&bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    let size = bytes.len() as i64;
+
+    let api = lavunio_api()?;
+    let token = lavunio_access_token(state.inner()).await?;
+    let endpoint = format!("/v1/publisher/releases/{release_id}/assets/upload-url");
+    let request_token = token.clone();
+    let payload = json!({
+        "kind": "screenshot",
+        "fileName": file_name,
+        "size": size,
+        "sha256": sha256.clone(),
+    });
+    let data = blocking(move || {
+        net::api_request_json(&api, "POST", &endpoint, Some(&request_token), Some(payload))
+    })
+    .await??;
+
+    let upload_url = data
+        .get("uploadUrl")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "API не вернул URL загрузки".to_string())?
+        .to_string();
+    let storage = data
+        .get("storage")
+        .and_then(Value::as_str)
+        .unwrap_or("local")
+        .to_string();
+    let complete_url = data
+        .get("completeUrl")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let asset_id = data
+        .get("assetId")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let upload_token = if storage == "s3" {
+        None
+    } else {
+        Some(token.clone())
+    };
+    let upload_path = Path::new(&path).to_path_buf();
+    blocking(move || {
+        net::upload_file(
+            &upload_url,
+            &upload_path,
+            upload_token.as_deref(),
+            size as u64,
+            |_, _| {},
+        )
+    })
+    .await??;
+
+    if let Some(complete_url) = complete_url.filter(|value| !value.is_empty()) {
+        let api = lavunio_api()?;
+        let access = lavunio_access_token(state.inner()).await?;
+        let body = json!({ "size": size, "sha256": sha256 });
+        let data = blocking(move || {
+            net::api_request_json(&api, "POST", &complete_url, Some(&access), Some(body))
+        })
+        .await??;
+        return Ok(json!({ "ok": true, "asset": data }));
+    }
+
+    Ok(json!({ "ok": true, "assetId": asset_id }))
 }
 
 #[tauri::command]

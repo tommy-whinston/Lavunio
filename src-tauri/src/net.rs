@@ -477,6 +477,18 @@ fn api_mode(item: &Value) -> Option<Mode> {
             .and_then(Value::as_str)
             .map(str::to_string),
         image: None,
+        screenshots: item
+            .get("screenshots")
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default(),
+        installs: item.get("installs").and_then(Value::as_u64),
         author,
         authors,
         description: item

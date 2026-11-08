@@ -391,6 +391,23 @@
           </div>
         </section>
 
+        <section class="detail-section" id="detail-gallery-section" hidden>
+          <h2>Скриншоты</h2>
+          <div id="detail-gallery" class="detail-gallery"></div>
+        </section>
+
+        <section class="detail-section" id="detail-author-section" hidden>
+          <h2>Автор</h2>
+          <div class="author-card">
+            <span class="avatar" id="detail-author-avatar"></span>
+            <div class="author-info">
+              <div class="author-name" id="detail-author-name"></div>
+              <div class="author-sub" id="detail-author-sub"></div>
+            </div>
+            <button class="btn btn-ghost" id="detail-author-modes" type="button">Все режимы автора</button>
+          </div>
+        </section>
+
         <section class="detail-section about-section">
           <h2>Об игре</h2>
           <div id="detail-desc" class="detail-desc"></div>
@@ -686,6 +703,12 @@
         <button class="btn btn-primary btn-block" id="moderation-note-submit" type="submit">Отклонить</button>
       </form>
     </div>
+  </div>
+
+  <!-- Просмотр скриншота -->
+  <div class="modal-overlay gallery-overlay" id="modal-gallery" hidden role="dialog" aria-modal="true" aria-label="Скриншот">
+    <button class="gallery-close" data-close="modal-gallery" type="button">✕</button>
+    <img id="gallery-image" alt="Скриншот режима">
   </div>
 
   <div class="modal-overlay" id="modal-update" hidden role="dialog" aria-modal="true" aria-labelledby="update-title">

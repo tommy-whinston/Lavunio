@@ -59,6 +59,8 @@ fn main() {
             commands::publisher_pick_cover,
             commands::publisher_upload_cover,
             commands::publisher_delete_cover,
+            commands::publisher_pick_screenshot,
+            commands::publisher_upload_screenshot,
             commands::publisher_upload_build,
             commands::admin_queue,
             commands::admin_modes,

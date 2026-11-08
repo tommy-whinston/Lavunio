@@ -169,6 +169,14 @@ const els = {
   spotlightTag: $('spotlight-tag'),
   spotlightDate: $('spotlight-date'),
   spotlightLink: $('spotlight-link'),
+  detailGallerySection: $('detail-gallery-section'),
+  detailGallery: $('detail-gallery'),
+  detailAuthorSection: $('detail-author-section'),
+  detailAuthorAvatar: $('detail-author-avatar'),
+  detailAuthorName: $('detail-author-name'),
+  detailAuthorSub: $('detail-author-sub'),
+  detailAuthorModes: $('detail-author-modes'),
+  galleryImage: $('gallery-image'),
   moreSection: $('more-section'),
   moreGrid: $('more-grid'),
   cardContext: $('card-context'),
@@ -972,7 +980,8 @@ function modeCardHtml(mode, withMenu = false, playMode = false) {
         <div class="card-desc">${escapeHtml(modeShortDescription(mode))}</div>
         ${tags ? `<div class="tags">${tags}</div>` : ''}
         <div class="card-foot">
-          <span class="card-size">${escapeHtml(mode.size || '—')}</span>
+          <span class="card-installs">${Number(mode.installs) ? `${Number(mode.installs)} установок` : ''}</span>
+          <span class="card-size">${escapeHtml(mode.size || '-')}</span>
           ${playMode
             ? `<span class="card-state state-${stateMeta.cls}" data-card-state>${escapeHtml(stateMeta.label)}</span>`
             : `<button class="btn btn-small btn-ghost" type="button" aria-label="Подробнее: ${escapeHtml(mode.title || 'режим')}">Подробнее</button>`}
@@ -1138,6 +1147,21 @@ function bindDetail() {
     updateChangelogToggle();
   };
   els.detailChangelog.addEventListener('toggle', updateChangelogToggle, true);
+  els.detailGallery.onclick = (event) => {
+    const thumb = event.target.closest('[data-gallery-src]');
+    if (!thumb) return;
+    els.galleryImage.src = thumb.getAttribute('data-gallery-src');
+    openModal('modal-gallery');
+  };
+  els.detailAuthorModes.onclick = () => {
+    const name = els.detailAuthorName.textContent.trim();
+    if (!name) return;
+    S.selectedId = null;
+    S.detailFrom = null;
+    els.search.value = name;
+    S.search = name.toLowerCase();
+    showSection('store');
+  };
   els.detailAction.onclick = async () => {
     const mode = modeById(S.selectedId);
     if (!mode) return;
@@ -1510,6 +1534,7 @@ function renderDetail() {
     ['Автор', modeAuthors(mode).join(', ') || '—'],
     ['Ядро', loaderLabel(mode)],
     ['Размер', mode.size || '—'],
+    ['Установки', String(Number(mode.installs) || 0)],
     ['Вышла', released ? formatUpdateDate(released) : '—'],
     ['Обновлено', updated],
     ['Наиграно', formatPlaytime(S.state[mode.id] && S.state[mode.id].playtimeSecs)]
@@ -1518,6 +1543,24 @@ function renderDetail() {
       <span class="meta-label">${label}</span>
       <span class="meta-value">${escapeHtml(value)}</span>
     </div>`).join('');
+
+  const screenshots = Array.isArray(mode.screenshots) ? mode.screenshots.filter(Boolean) : [];
+  els.detailGallerySection.hidden = screenshots.length === 0;
+  els.detailGallery.innerHTML = screenshots.map((url) => `
+    <button class="gallery-thumb" type="button" data-gallery-src="${escapeHtml(url)}">
+      <img src="${escapeHtml(url)}" alt="" loading="lazy">
+    </button>`).join('');
+
+  const author = mode.author || (Array.isArray(mode.authors) ? mode.authors[0] : null);
+  const authorName = (author && (author.name || author.displayName)) || modeAuthors(mode)[0] || '';
+  els.detailAuthorSection.hidden = !authorName;
+  if (authorName) {
+    els.detailAuthorName.textContent = authorName;
+    els.detailAuthorSub.textContent = author && author.verified ? 'Проверенный автор' : 'Автор режима';
+    const avatar = els.detailAuthorAvatar;
+    avatar.textContent = authorName[0].toUpperCase();
+    avatar.style.backgroundImage = author && author.avatar ? `url("${author.avatar}")` : '';
+  }
 
   els.detailDesc.innerHTML = renderRichText(modeFullDescription(mode));
   renderChangelog(mode);
@@ -2416,6 +2459,7 @@ function bindPublisher() {
     else if (action === 'delete-cover') deletePublisherCover(mode);
     else if (action === 'upload-folder') uploadPublisherBuild(mode, release, true);
     else if (action === 'upload-archive') uploadPublisherBuild(mode, release, false);
+    else if (action === 'upload-screenshot') uploadPublisherScreenshot(mode, release);
     else if (action === 'submit-release') submitPublisherReleaseForModeration(mode, release);
   };
 
@@ -2610,12 +2654,15 @@ function publisherReleaseCard(mode, release) {
   const rejectionHtml = release.rejectionNote
     ? `<div class="mod-reject-note">Причина отклонения: ${escapeHtml(release.rejectionNote)}</div>`
     : '';
+  const screenshots = (release.assets || []).filter((asset) => asset.kind === 'screenshot' && asset.url).length;
+  const screenshotHtml = screenshots ? `Скриншотов: ${screenshots}` : '';
 
   let actions = '';
   if (release.status === 'draft') {
     actions = `
       <button class="btn btn-ghost" type="button" data-action="upload-folder" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>Папка</button>
       <button class="btn btn-ghost" type="button" data-action="upload-archive" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>ZIP</button>
+      <button class="btn btn-ghost" type="button" data-action="upload-screenshot" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>Скриншот</button>
       <button class="btn btn-primary" type="button" data-action="submit-release" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${(!archive || uploading) ? 'disabled' : ''}>На модерацию</button>
       ${uploadedAction}
     `;
@@ -2634,7 +2681,7 @@ function publisherReleaseCard(mode, release) {
         <span class="pub-release-channel">${escapeHtml(release.channel || 'stable')}</span>
         <span class="pub-status ${escapeHtml(release.status)}">${escapeHtml(status)}</span>
       </div>
-      <div class="hint">${archiveHtml}</div>
+      <div class="hint">${archiveHtml}${screenshotHtml ? ` · ${screenshotHtml}` : ''}</div>
       ${changelogHtml}
       ${rejectionHtml}
       <div class="pub-release-actions">${actions}</div>
@@ -2758,6 +2805,26 @@ async function deletePublisherCover(mode) {
     await loadPublisher(true);
   } catch (err) {
     toast('Не удалось удалить обложку: ' + err, 'error');
+  }
+}
+
+async function uploadPublisherScreenshot(mode, release) {
+  if (!mode || !release) return;
+  let path;
+  try {
+    path = await api.publisherPickScreenshot();
+  } catch (err) {
+    toast('Не удалось выбрать скриншот: ' + err, 'error');
+    return;
+  }
+  if (!path) return;
+  try {
+    await api.publisherUploadScreenshot(release.id, path);
+    toast('Скриншот загружен', 'ok');
+    S.publisherLoaded = false;
+    await loadPublisher(true);
+  } catch (err) {
+    toast('Не удалось загрузить скриншот: ' + err, 'error');
   }
 }
 
