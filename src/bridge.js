@@ -89,6 +89,10 @@
     followAuthor: (username) => invoke("follow_author", { username }),
     unfollowAuthor: (username) => invoke("unfollow_author", { username }),
     feedGet: () => invoke("feed_get"),
+    newsStore: () => invoke("news_store"),
+    newsMode: (slug) => invoke("news_mode", { slug }),
+    newsCreateStore: (title, body) => invoke("news_create_store", { title, body }),
+    newsCreateMode: (modeId, title, body) => invoke("news_create_mode", { modeId, title, body }),
     adminReports: () => invoke("admin_reports"),
     adminCloseReport: (reportId, note) => invoke("admin_close_report", { reportId, note }),
 

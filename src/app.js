@@ -75,6 +75,9 @@ const S = {
   wishlist: [],
   follows: [],
   feed: [],
+  storeNews: [],
+  modeNews: {},
+  modeNewsLoading: {},
   reviews: {},
   reviewLoading: {},
   reviewRating: 5,
@@ -83,6 +86,7 @@ const S = {
   publisherLoading: false,
   publisherUpload: null,
   publisherReleaseMode: null,
+  publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
   moderationReports: [],
@@ -191,10 +195,14 @@ const els = {
   detailAuthorFollow: $('detail-author-follow'),
   feed: $('feed'),
   feedList: $('feed-list'),
+  storeNews: $('store-news'),
+  storeNewsList: $('store-news-list'),
   galleryImage: $('gallery-image'),
   detailTrailerSection: $('detail-trailer-section'),
   detailTrailer: $('detail-trailer'),
   detailTrailerOpen: $('detail-trailer-open'),
+  detailNewsSection: $('detail-news-section'),
+  detailNewsList: $('detail-news-list'),
   detailReviewsSection: $('detail-reviews-section'),
   reviewsSummary: $('reviews-summary'),
   reviewsList: $('reviews-list'),
@@ -281,6 +289,7 @@ async function init() {
     loadWishlist();
     loadFollows();
     loadCollections();
+    loadStoreNews();
     renderStore();
     renderLibrary();
     updateSidebar();
@@ -726,6 +735,10 @@ function renderStore() {
       els.feed.hidden = true;
       els.feedList.innerHTML = '';
     }
+    if (els.storeNews) {
+      els.storeNews.hidden = true;
+      els.storeNewsList.innerHTML = '';
+    }
     els.catalogTitle.textContent = 'Загрузка';
     els.modesCount.textContent = '';
     els.modesGrid.innerHTML = '';
@@ -747,6 +760,9 @@ function renderStore() {
     if (els.feed) {
       els.feed.hidden = true;
     }
+    if (els.storeNews) {
+      els.storeNews.hidden = true;
+    }
     const result = sortCatalog(filterModes().filter((mode) => modePassesFilter(mode, S.storeFilter)), S.storeSort);
     els.catalogTitle.textContent = 'Результаты поиска';
     els.modesCount.textContent = String(result.length);
@@ -767,6 +783,7 @@ function renderStore() {
   renderFeatured(featured);
   renderCollections();
   renderFeed();
+  renderStoreNews();
 
   const list = sortCatalog(
     S.modes.filter((mode) => modePassesFilter(mode, S.storeFilter)),
@@ -975,6 +992,71 @@ function renderFeed() {
     const item = event.target.closest('[data-feed-slug]');
     if (item) openDetail(item.dataset.feedSlug);
   };
+}
+
+let storeNewsLoaded = false;
+
+async function loadStoreNews(force = false) {
+  if (!api.newsStore) return;
+  if (storeNewsLoaded && !force) return;
+  try {
+    const items = await api.newsStore();
+    S.storeNews = Array.isArray(items) ? items : [];
+    storeNewsLoaded = true;
+  } catch (_) {
+    S.storeNews = [];
+  }
+  renderStoreNews();
+  if (S.moderationTab === 'news' && moderatorAllowed()) renderModeration();
+}
+
+function newsCardHtml(item) {
+  return `
+    <article class="news-card">
+      <div class="news-head">
+        <div class="news-title">${escapeHtml(item.title || 'Новость')}</div>
+        <span class="news-date">${escapeHtml(publisherDate(item.createdAt))}</span>
+      </div>
+      <div class="news-body">${escapeHtml(item.body || '')}</div>
+      <div class="news-author">${escapeHtml(item.authorName || item.authorUsername || 'Lavunio')}</div>
+    </article>`;
+}
+
+function renderStoreNews() {
+  if (!els.storeNews || !els.storeNewsList) return;
+  if (S.loading || S.search || !S.storeNews.length) {
+    els.storeNews.hidden = true;
+    els.storeNewsList.innerHTML = '';
+    return;
+  }
+  els.storeNews.hidden = false;
+  els.storeNewsList.innerHTML = S.storeNews.slice(0, 5).map(newsCardHtml).join('');
+}
+
+async function loadModeNews(mode) {
+  if (!mode || !api.newsMode) return;
+  const key = mode.id;
+  if (S.modeNews[key] || S.modeNewsLoading[key]) {
+    renderModeNews(mode);
+    return;
+  }
+  S.modeNewsLoading[key] = true;
+  try {
+    const items = await api.newsMode(key);
+    S.modeNews[key] = Array.isArray(items) ? items : [];
+  } catch (_) {
+    S.modeNews[key] = [];
+  } finally {
+    delete S.modeNewsLoading[key];
+    if (S.selectedId === key) renderModeNews(mode);
+  }
+}
+
+function renderModeNews(mode) {
+  if (!els.detailNewsSection || !els.detailNewsList) return;
+  const items = (S.modeNews[mode.id] || []).slice(0, 6);
+  els.detailNewsSection.hidden = items.length === 0;
+  els.detailNewsList.innerHTML = items.map(newsCardHtml).join('');
 }
 
 function renderModeGrid(container, list, withMenu = false, playMode = false, compact = false) {
@@ -1849,6 +1931,8 @@ function renderDetail() {
     </button>`).join('');
 
   renderTrailer(mode);
+  renderModeNews(mode);
+  loadModeNews(mode);
 
   const apiReady = !!(S.lavunio && S.lavunio.configured);
   const author = mode.author || (Array.isArray(mode.authors) ? mode.authors[0] : null);
@@ -2990,6 +3074,11 @@ function bindPublisher() {
     event.preventDefault();
     submitPublisherRelease();
   };
+  const newsForm = $('publisher-news-form');
+  if (newsForm) newsForm.onsubmit = (event) => {
+    event.preventDefault();
+    submitPublisherNews();
+  };
 
   const title = $('pub-mode-title-input');
   const slug = $('pub-mode-slug-input');
@@ -3009,6 +3098,7 @@ function bindPublisher() {
     const release = (mode.releases || []).find((item) => item.id === button.dataset.release);
     const action = button.dataset.action;
     if (action === 'new-release') openPublisherReleaseModal(mode);
+    else if (action === 'news') openPublisherNewsModal(mode);
     else if (action === 'upload-cover') uploadPublisherCover(mode);
     else if (action === 'delete-cover') deletePublisherCover(mode);
     else if (action === 'upload-folder') uploadPublisherBuild(mode, release, true);
@@ -3040,6 +3130,19 @@ function openPublisherModeModal() {
   hidePublisherError('pub-mode-error');
   openModal('modal-publisher-mode');
   const title = $('pub-mode-title-input');
+  if (title) setTimeout(() => title.focus(), 50);
+}
+
+function openPublisherNewsModal(mode) {
+  if (!mode) return;
+  S.publisherNewsMode = mode;
+  const form = $('publisher-news-form');
+  if (form) form.reset();
+  const label = $('pub-news-mode');
+  if (label) label.textContent = `${mode.title} · ${mode.slug}`;
+  hidePublisherError('pub-news-error');
+  openModal('modal-publisher-news');
+  const title = $('pub-news-title');
   if (title) setTimeout(() => title.focus(), 50);
 }
 
@@ -3183,6 +3286,7 @@ function publisherModeCard(mode) {
       </div>
       <div class="pub-releases">${releaseCards}</div>
       <div class="pub-release-actions">
+        <button class="btn btn-ghost" type="button" data-action="news" data-mode="${escapeHtml(mode.id)}">Новость</button>
         <button class="btn btn-ghost" type="button" data-action="new-release" data-mode="${escapeHtml(mode.id)}">Новый релиз</button>
         <button class="btn btn-ghost" type="button" data-action="upload-cover" data-mode="${escapeHtml(mode.id)}">Загрузить обложку</button>
         ${mode.coverUrl ? `<button class="btn btn-ghost" type="button" data-action="delete-cover" data-mode="${escapeHtml(mode.id)}">Убрать обложку</button>` : ''}
@@ -3290,6 +3394,38 @@ async function submitPublisherMode() {
   } finally {
     button.disabled = false;
     button.textContent = 'Создать черновик';
+  }
+}
+
+async function submitPublisherNews() {
+  const mode = S.publisherNewsMode;
+  if (!mode) return;
+  const title = $('pub-news-title').value.trim();
+  const body = $('pub-news-body').value.trim();
+  if (title.length < 3) {
+    showPublisherError('pub-news-error', 'Укажи заголовок новости');
+    return;
+  }
+  if (body.length < 3) {
+    showPublisherError('pub-news-error', 'Напиши текст новости');
+    return;
+  }
+
+  const button = $('pub-news-submit');
+  button.disabled = true;
+  button.textContent = 'Публикуем…';
+  hidePublisherError('pub-news-error');
+  try {
+    await api.newsCreateMode(mode.id, title, body);
+    $('modal-publisher-news').hidden = true;
+    delete S.modeNews[mode.slug];
+    toast('Новость опубликована', 'ok');
+    if (S.selectedId === mode.slug) loadModeNews(modeById(mode.slug));
+  } catch (err) {
+    showPublisherError('pub-news-error', String(err || 'Не удалось опубликовать новость'));
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Опубликовать';
   }
 }
 
@@ -3510,7 +3646,8 @@ function bindModeration() {
 }
 
 function setModerationTab(tab) {
-  S.moderationTab = ['queue', 'modes', 'reports', 'history'].includes(tab) ? tab : 'queue';
+  S.moderationTab = ['queue', 'modes', 'reports', 'news', 'history'].includes(tab) ? tab : 'queue';
+  if (S.moderationTab === 'news') loadStoreNews(true);
   renderModeration();
 }
 
@@ -3572,6 +3709,15 @@ function renderModeration() {
     content.innerHTML = moderationModesHtml();
   } else if (S.moderationTab === 'reports') {
     content.innerHTML = moderationReportsHtml();
+  } else if (S.moderationTab === 'news') {
+    content.innerHTML = moderationNewsHtml();
+    const form = content.querySelector('#mod-news-form');
+    if (form) {
+      form.onsubmit = (event) => {
+        event.preventDefault();
+        submitStoreNews();
+      };
+    }
   } else if (S.moderationTab === 'history') {
     content.innerHTML = moderationHistoryHtml();
   } else {
@@ -3635,8 +3781,7 @@ function moderationModesHtml() {
   }).join('');
 }
 
-function moderationReportsHtml() {
-  const items = S.moderationReports || [];
+function moderationReportsHtml() {  const items = S.moderationReports || [];
   if (!items.length) {
     return '<div class="mod-empty">Открытых жалоб нет.</div>';
   }
@@ -3675,6 +3820,61 @@ async function closeModerationReport(reportId) {
     await loadModeration(true);
   } catch (err) {
     toast('Не удалось закрыть жалобу: ' + err, 'error');
+  }
+}
+
+function moderationNewsHtml() {
+  const items = S.storeNews || [];
+  return `
+    <form id="mod-news-form" class="mod-news-form" autocomplete="off">
+      <div class="field">
+        <label for="mod-news-title">Заголовок</label>
+        <input id="mod-news-title" type="text" maxlength="120" placeholder="Что нового в Lavunio">
+      </div>
+      <div class="field">
+        <label for="mod-news-body">Текст</label>
+        <textarea id="mod-news-body" rows="4" placeholder="Коротко о новости"></textarea>
+      </div>
+      <div class="form-error" id="mod-news-error" hidden></div>
+      <button class="btn btn-primary" id="mod-news-submit" type="submit">Опубликовать</button>
+    </form>
+    <div class="mod-news-list">
+      ${items.length ? items.map(newsCardHtml).join('') : '<div class="mod-empty">Новостей магазина пока нет.</div>'}
+    </div>
+  `;
+}
+
+async function submitStoreNews() {
+  const title = $('mod-news-title').value.trim();
+  const body = $('mod-news-body').value.trim();
+  const error = $('mod-news-error');
+  const button = $('mod-news-submit');
+  if (title.length < 3) {
+    error.textContent = 'Укажи заголовок новости';
+    error.hidden = false;
+    return;
+  }
+  if (body.length < 3) {
+    error.textContent = 'Напиши текст новости';
+    error.hidden = false;
+    return;
+  }
+  error.hidden = true;
+  button.disabled = true;
+  button.textContent = 'Публикуем…';
+  try {
+    await api.newsCreateStore(title, body);
+    $('mod-news-title').value = '';
+    $('mod-news-body').value = '';
+    toast('Новость магазина опубликована', 'ok');
+    await loadStoreNews(true);
+    renderModeration();
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось опубликовать новость');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Опубликовать';
   }
 }
 

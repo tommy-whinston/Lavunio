@@ -809,6 +809,49 @@ pub async fn feed_get(state: State<'_, AppState>) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub async fn news_store(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(state.inner(), "GET", "/v1/news?limit=20".to_string(), None).await
+}
+
+#[tauri::command]
+pub async fn news_mode(state: State<'_, AppState>, slug: String) -> Result<Value, String> {
+    let path = format!("/v1/modes/{slug}/news?limit=20");
+    publisher_request(state.inner(), "GET", path, None).await
+}
+
+#[tauri::command]
+pub async fn news_create_store(
+    state: State<'_, AppState>,
+    title: String,
+    body: String,
+) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "POST",
+        "/v1/news".to_string(),
+        Some(json!({ "title": title, "body": body })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn news_create_mode(
+    state: State<'_, AppState>,
+    mode_id: String,
+    title: String,
+    body: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/publisher/modes/{mode_id}/news");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "title": title, "body": body })),
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn publisher_pick_folder() -> Result<Option<String>, String> {
     let picked = blocking(|| rfd::FileDialog::new().pick_folder()).await?;
     Ok(picked.map(|path| path_string(&path)))

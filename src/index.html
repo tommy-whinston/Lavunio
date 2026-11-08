@@ -210,6 +210,13 @@
         <div id="feed-list" class="feed-list"></div>
       </section>
 
+      <section id="store-news" class="shelf news-shelf" hidden>
+        <div class="shelf-head">
+          <div class="shelf-title"><h2>Новости магазина</h2></div>
+        </div>
+        <div id="store-news-list" class="news-list"></div>
+      </section>
+
       <section id="catalog-section" class="shelf">
         <div class="shelf-head catalog-head">
           <div class="shelf-title"><h2 id="catalog-title">Все режимы</h2><span class="count" id="modes-count"></span></div>
@@ -353,6 +360,7 @@
         <button class="settings-tab active" type="button" data-mod-tab="queue">Очередь</button>
         <button class="settings-tab" type="button" data-mod-tab="modes">Режимы</button>
         <button class="settings-tab" type="button" data-mod-tab="reports">Жалобы</button>
+        <button class="settings-tab" type="button" data-mod-tab="news">Новости</button>
         <button class="settings-tab" type="button" data-mod-tab="history">Журнал</button>
       </div>
 
@@ -414,6 +422,11 @@
           <h2>Трейлер</h2>
           <div id="detail-trailer" class="trailer-frame"></div>
           <button class="btn btn-ghost trailer-open" id="detail-trailer-open" type="button">Открыть в браузере</button>
+        </section>
+
+        <section class="detail-section" id="detail-news-section" hidden>
+          <h2>Новости режима</h2>
+          <div id="detail-news-list" class="news-list"></div>
         </section>
 
         <section class="detail-section" id="detail-author-section" hidden>
@@ -695,6 +708,29 @@
         </div>
         <div class="form-error" id="pub-mode-error" hidden></div>
         <button class="btn btn-primary btn-block" id="pub-mode-submit" type="submit">Создать черновик</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Новость режима -->
+  <div class="modal-overlay" id="modal-publisher-news" hidden role="dialog" aria-modal="true" aria-labelledby="pub-news-title-label">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="pub-news-title-label">Новость режима</h2>
+        <button class="modal-close" data-close="modal-publisher-news">✕</button>
+      </div>
+      <div class="hint" id="pub-news-mode"></div>
+      <form id="publisher-news-form" autocomplete="off">
+        <div class="field">
+          <label for="pub-news-title">Заголовок</label>
+          <input id="pub-news-title" type="text" maxlength="120" placeholder="Что нового">
+        </div>
+        <div class="field">
+          <label for="pub-news-body">Текст</label>
+          <textarea id="pub-news-body" rows="5" placeholder="Расскажи игрокам о новости"></textarea>
+        </div>
+        <div class="form-error" id="pub-news-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="pub-news-submit" type="submit">Опубликовать</button>
       </form>
     </div>
   </div>
