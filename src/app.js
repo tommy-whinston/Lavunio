@@ -78,6 +78,9 @@ const S = {
   storeNews: [],
   modeNews: {},
   modeNewsLoading: {},
+  downloads: [],
+  downloadsActiveId: null,
+  downloadsSeq: 0,
   reviews: {},
   reviewLoading: {},
   reviewRating: 5,
@@ -119,6 +122,15 @@ const els = {
   storeView: $('store-view'),
   collections: $('collections'),
   libraryView: $('library-view'),
+  downloadsView: $('downloads-view'),
+  downloadsList: $('downloads-list'),
+  downloadsEmpty: $('downloads-empty'),
+  downloadsCount: $('downloads-count'),
+  downloadsStatQueued: $('downloads-stat-queued'),
+  downloadsStatActive: $('downloads-stat-active'),
+  downloadsStatDone: $('downloads-stat-done'),
+  downloadsClear: $('downloads-clear'),
+  sideDownloadsCount: $('side-downloads-count'),
   publisherView: $('publisher-view'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
@@ -244,6 +256,7 @@ async function init() {
   bindModals();
   bindSidebar();
   bindStore();
+  bindDownloads();
   bindCatalogControls();
   bindDetail();
   bindSettings();
@@ -262,6 +275,7 @@ async function init() {
 
   renderStore();
   renderLibrary();
+  renderDownloads();
   updateSidebar();
   if (els.splashSub) els.splashSub.textContent = 'Загружаем режимы и аккаунт…';
 
@@ -511,15 +525,17 @@ function bindSidebar() {
 function showSection(section) {
   if (section === 'publisher' && !publisherAllowed()) section = 'store';
   if (section === 'moderation' && !moderatorAllowed()) section = 'store';
-  S.section = section === 'library' || section === 'publisher' || section === 'moderation' ? section : 'store';
+  S.section = ['library', 'publisher', 'moderation', 'downloads'].includes(section) ? section : 'store';
   S.view = S.section;
   els.storeView.hidden = S.section !== 'store';
   els.libraryView.hidden = S.section !== 'library';
+  if (els.downloadsView) els.downloadsView.hidden = S.section !== 'downloads';
   if (els.publisherView) els.publisherView.hidden = S.section !== 'publisher';
   if (els.moderationView) els.moderationView.hidden = S.section !== 'moderation';
   els.detailView.hidden = true;
   updateSidebar();
   if (S.section === 'library') renderLibrary();
+  else if (S.section === 'downloads') renderDownloads();
   else if (S.section === 'publisher') {
     renderPublisher();
     loadPublisher();
@@ -542,6 +558,7 @@ function updateSidebar() {
 
 function renderCurrentSection() {
   if (S.section === 'library') renderLibrary();
+  else if (S.section === 'downloads') renderDownloads();
   else if (S.section === 'publisher') renderPublisher();
   else if (S.section === 'moderation') renderModeration();
   else renderStore();
@@ -1533,14 +1550,18 @@ function bindDetail() {
   els.detailAction.onclick = async () => {
     const mode = modeById(S.selectedId);
     if (!mode) return;
-    if (S.busy && S.busy.modeId === mode.id) {
-      await api.cancel();
-      S.status = 'Отмена…';
-      updateDetailAction();
+    const task = downloadTaskForMode(mode.id);
+    if (task && task.status === 'paused') {
+      resumeDownload(task.id);
       return;
     }
-    if (S.busy) {
-      toast('Дождитесь завершения текущей операции', 'warn');
+    if (task && task.status === 'queued') {
+      cancelDownload(task.id);
+      return;
+    }
+    if (S.busy && S.busy.modeId === mode.id) {
+      const active = activeDownloadTask();
+      if (active) cancelDownload(active.id);
       return;
     }
     if (S.running === mode.id) {
@@ -1572,34 +1593,400 @@ function bindDetail() {
       return;
     }
 
-    S.busy = { modeId: mode.id, action };
-    S.progress = 0;
-    S.stage = '';
-    updateCardProgress();
-    S.status = action === 'play' ? 'Подготовка к запуску…' : 'Загрузка файлов…';
-    updateDetailAction();
-
-    let res;
-    try {
-      res = action === 'play' ? await api.play(mode.id) : await api.install(mode.id);
-    } catch (err) {
-      res = { ok: false, error: String(err) };
-    }
-    if (!res || !res.ok) {
-      S.busy = null;
-      S.status = 'Ошибка';
-      updateDetailAction();
-      toast((res && res.error) || 'Не удалось запустить операцию', 'error');
-    }
+    if (action === 'play') enqueueDownload(mode, 'play');
+    else enqueueDownload(mode, action);
   };
+}
+
+// ---------------------------------------------------------------- загрузки
+
+const DOWNLOAD_STATUS = {
+  queued: 'В очереди',
+  downloading: 'Загрузка',
+  paused: 'Пауза',
+  completed: 'Готово',
+  error: 'Ошибка',
+  cancelled: 'Отменено'
+};
+
+function bindDownloads() {
+  if (els.downloadsList) {
+    els.downloadsList.onclick = (event) => {
+      const button = event.target.closest('[data-download-action]');
+      if (!button) return;
+      const id = button.getAttribute('data-download-id');
+      const action = button.getAttribute('data-download-action');
+      if (action === 'pause') pauseDownload(id);
+      else if (action === 'resume') resumeDownload(id);
+      else if (action === 'cancel') cancelDownload(id);
+      else if (action === 'retry') retryDownload(id);
+      else if (action === 'remove') removeDownload(id);
+    };
+  }
+  if (els.downloadsClear) {
+    els.downloadsClear.onclick = () => clearDownloads();
+  }
+}
+
+function parseDownloadSize(label) {
+  const match = String(label || '').replace(',', '.').match(/([\d.]+)\s*(ГБ|МБ|КБ|GB|MB|KB|Б|B)/i);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value)) return 0;
+  const unit = match[2].toUpperCase();
+  const multiplier = unit === 'ГБ' || unit === 'GB'
+    ? 1024 ** 3
+    : unit === 'МБ' || unit === 'MB'
+      ? 1024 ** 2
+      : unit === 'КБ' || unit === 'KB'
+        ? 1024
+        : 1;
+  return value * multiplier;
+}
+
+function formatDownloadEta(seconds) {
+  const value = Math.max(0, Math.round(Number(seconds) || 0));
+  if (value < 60) return `${Math.max(1, value)} с`;
+  if (value < 3600) return `${Math.floor(value / 60)} мин`;
+  return `${Math.floor(value / 3600)} ч ${Math.floor((value % 3600) / 60)} мин`;
+}
+
+function downloadActionLabel(action) {
+  return { install: 'Установка', update: 'Обновление', play: 'Запуск' }[action] || 'Загрузка';
+}
+
+function activeDownloadTask() {
+  return S.downloads.find((task) => task.id === S.downloadsActiveId) || null;
+}
+
+function downloadTaskForMode(modeId) {
+  return S.downloads.find(
+    (task) => task.modeId === modeId && ['queued', 'downloading', 'paused'].includes(task.status)
+  ) || null;
+}
+
+function enqueueDownload(mode, action, autoPlay = false) {
+  if (!mode) return;
+  const existing = downloadTaskForMode(mode.id);
+  if (existing) {
+    toast(existing.status === 'downloading' ? 'Этот режим уже скачивается' : 'Этот режим уже в очереди', 'warn');
+    return;
+  }
+  const task = {
+    id: `dl-${++S.downloadsSeq}`,
+    modeId: mode.id,
+    modeTitle: mode.title || mode.id,
+    cover: imageSrc(mode),
+    sizeLabel: mode.size || '',
+    sizeBytes: parseDownloadSize(mode.size),
+    action,
+    autoPlay: !!autoPlay,
+    status: 'queued',
+    progress: 0,
+    stage: 'В очереди',
+    speed: 0,
+    eta: 0,
+    error: '',
+    createdAt: Date.now(),
+    startedAt: 0,
+    lastTick: 0,
+    lastProgress: 0
+  };
+  S.downloads.push(task);
+  renderDownloads();
+  pumpDownloads();
+  toast(action === 'update' ? 'Обновление добавлено в очередь' : 'Загрузка добавлена в очередь', 'info');
+}
+
+function pumpDownloads() {
+  if (S.downloadsActiveId || S.running) return;
+  const task = S.downloads.find((item) => item.status === 'queued');
+  if (!task) return;
+  const mode = modeById(task.modeId);
+  if (!mode) {
+    task.status = 'error';
+    task.stage = 'Ошибка';
+    task.error = 'Режим не найден';
+    renderDownloads();
+    return pumpDownloads();
+  }
+
+  task.status = 'downloading';
+  task.progress = 0;
+  task.stage = 'Подготовка';
+  task.speed = 0;
+  task.eta = 0;
+  task.error = '';
+  task.startedAt = Date.now();
+  task.lastTick = 0;
+  task.lastProgress = 0;
+  S.downloadsActiveId = task.id;
+  S.busy = { modeId: mode.id, action: task.action };
+  S.progress = 0;
+  S.stage = task.stage;
+  S.status = task.action === 'play' ? 'Запускаю Minecraft…' : 'Загружаю файлы…';
+  S.pendingPlay = task.autoPlay ? mode.id : null;
+  updateCardProgress();
+  renderDownloads();
+  if (S.view === 'detail' && S.selectedId === mode.id) updateDetailAction();
+
+  const request = task.action === 'play' ? api.play(mode.id) : api.install(mode.id);
+  Promise.resolve(request)
+    .then((res) => {
+      if (!res || !res.ok) {
+        const error = String((res && res.error) || 'Не удалось начать операцию');
+        if (error.includes('Дождитесь завершения текущей операции')) {
+          task.status = 'queued';
+          task.stage = 'В очереди';
+          task.speed = 0;
+          task.eta = 0;
+          S.downloadsActiveId = null;
+          if (S.busy && S.busy.modeId === task.modeId) S.busy = null;
+          S.pendingPlay = null;
+          renderDownloads();
+          setTimeout(() => pumpDownloads(), 700);
+          return;
+        }
+        failDownload(task.id, error);
+      }
+    })
+    .catch((err) => failDownload(task.id, String(err)));
+}
+
+function finishDownload(taskId, status = 'completed') {
+  const task = S.downloads.find((item) => item.id === taskId);
+  if (!task) return;
+  task.status = status;
+  task.progress = 1;
+  task.stage = status === 'completed' ? 'Готово' : task.stage;
+  task.speed = 0;
+  task.eta = 0;
+  task.finishedAt = Date.now();
+  if (S.downloadsActiveId === task.id) S.downloadsActiveId = null;
+  if (S.busy && S.busy.modeId === task.modeId) S.busy = null;
+  updateCardProgress();
+  renderDownloads();
+  renderStore();
+  renderLibrary();
+  if (S.view === 'detail') renderDetail();
+  pumpDownloads();
+}
+
+function failDownload(taskId, error) {
+  const task = S.downloads.find((item) => item.id === taskId);
+  if (!task) return;
+  task.status = 'error';
+  task.stage = 'Ошибка';
+  task.error = String(error || 'Не удалось выполнить загрузку');
+  task.speed = 0;
+  task.eta = 0;
+  if (S.downloadsActiveId === task.id) S.downloadsActiveId = null;
+  if (S.busy && S.busy.modeId === task.modeId) S.busy = null;
+  S.pendingPlay = null;
+  updateCardProgress();
+  renderDownloads();
+  renderStore();
+  renderLibrary();
+  if (S.view === 'detail') renderDetail();
+  toast(task.error, 'error');
+  pumpDownloads();
+}
+
+function pauseDownload(id) {
+  const task = S.downloads.find((item) => item.id === id);
+  if (!task) return;
+  if (task.status === 'queued') {
+    task.status = 'paused';
+    task.stage = 'Пауза';
+    renderDownloads();
+    return;
+  }
+  if (task.status !== 'downloading') return;
+  task.pauseRequested = true;
+  task.status = 'paused';
+  task.stage = 'Пауза';
+  task.speed = 0;
+  task.eta = 0;
+  renderDownloads();
+  if (S.downloadsActiveId === task.id) api.cancel().catch(() => {});
+}
+
+function resumeDownload(id) {
+  const task = S.downloads.find((item) => item.id === id);
+  if (!task) return;
+  if (S.downloadsActiveId === task.id) {
+    toast('Дождитесь остановки загрузки', 'warn');
+    return;
+  }
+  if (!['paused', 'error', 'cancelled'].includes(task.status)) return;
+  task.status = 'queued';
+  task.progress = 0;
+  task.stage = 'В очереди';
+  task.speed = 0;
+  task.eta = 0;
+  task.error = '';
+  task.pauseRequested = false;
+  task.cancelRequested = false;
+  task.lastTick = 0;
+  task.lastProgress = 0;
+  renderDownloads();
+  pumpDownloads();
+}
+
+function retryDownload(id) {
+  resumeDownload(id);
+}
+
+function cancelDownload(id) {
+  const task = S.downloads.find((item) => item.id === id);
+  if (!task) return;
+  if (['completed', 'cancelled'].includes(task.status)) return;
+  task.status = 'cancelled';
+  task.stage = 'Отменено';
+  task.speed = 0;
+  task.eta = 0;
+  if (S.downloadsActiveId === task.id) {
+    task.cancelRequested = true;
+    renderDownloads();
+    api.cancel().catch(() => {});
+    return;
+  }
+  renderDownloads();
+  pumpDownloads();
+}
+
+function removeDownload(id) {
+  if (S.downloadsActiveId === id) {
+    toast('Сначала отмените загрузку', 'warn');
+    return;
+  }
+  S.downloads = S.downloads.filter((task) => task.id !== id);
+  renderDownloads();
+}
+
+function clearDownloads() {
+  S.downloads = S.downloads.filter(
+    (task) => !['completed', 'cancelled', 'error'].includes(task.status)
+  );
+  renderDownloads();
+}
+
+function updateDownloadProgress(task, progress) {
+  const clamped = Math.max(0, Math.min(1, Number(progress) || 0));
+  const now = Date.now();
+  if (!task.lastTick) {
+    task.lastTick = now;
+    task.lastProgress = clamped;
+  } else {
+    const dt = (now - task.lastTick) / 1000;
+    const delta = clamped - task.lastProgress;
+    if (dt >= 0.25 && delta > 0) {
+      if (task.sizeBytes > 0) {
+        const instant = (delta * task.sizeBytes) / dt;
+        task.speed = task.speed > 0 ? task.speed * 0.65 + instant * 0.35 : instant;
+      }
+      task.lastTick = now;
+      task.lastProgress = clamped;
+    }
+  }
+  task.progress = clamped;
+  if (task.sizeBytes > 0 && task.speed > 0) {
+    task.eta = ((1 - clamped) * task.sizeBytes) / task.speed;
+  } else if (task.startedAt && clamped > 0.01) {
+    const elapsed = (now - task.startedAt) / 1000;
+    task.eta = (elapsed * (1 - clamped)) / clamped;
+  }
+}
+
+function updateDownloadsBadge() {
+  if (!els.sideDownloadsCount) return;
+  const count = S.downloads.filter((task) => ['queued', 'downloading'].includes(task.status)).length;
+  els.sideDownloadsCount.textContent = String(count);
+  els.sideDownloadsCount.hidden = count === 0;
+}
+
+function renderDownloads() {
+  if (!els.downloadsView) return;
+  const tasks = S.downloads || [];
+  const queued = tasks.filter((task) => ['queued', 'paused'].includes(task.status)).length;
+  const active = tasks.filter((task) => task.status === 'downloading').length;
+  const done = tasks.filter((task) => task.status === 'completed').length;
+  if (els.downloadsStatQueued) els.downloadsStatQueued.textContent = String(queued);
+  if (els.downloadsStatActive) els.downloadsStatActive.textContent = String(active);
+  if (els.downloadsStatDone) els.downloadsStatDone.textContent = String(done);
+  updateDownloadsBadge();
+
+  if (els.downloadsClear) {
+    els.downloadsClear.hidden = !tasks.some((task) =>
+      ['completed', 'cancelled', 'error'].includes(task.status)
+    );
+  }
+
+  const order = { downloading: 0, queued: 1, paused: 2, error: 3, cancelled: 4, completed: 5 };
+  const list = [...tasks].sort(
+    (a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.createdAt - b.createdAt
+  );
+  if (els.downloadsList) {
+    els.downloadsList.innerHTML = list.map(downloadCardHtml).join('');
+  }
+  if (els.downloadsEmpty) els.downloadsEmpty.hidden = list.length > 0;
+  if (els.downloadsCount) els.downloadsCount.textContent = String(list.length);
+}
+
+function downloadCardHtml(task) {
+  const mode = modeById(task.modeId);
+  const title = (mode && mode.title) || task.modeTitle || task.modeId;
+  const cover = (mode && imageSrc(mode)) || task.cover || '';
+  const status = DOWNLOAD_STATUS[task.status] || task.status;
+  const percent = Math.round(Math.max(0, Math.min(1, task.progress)) * 100);
+  const stage = task.stage || DOWNLOAD_STATUS[task.status] || '';
+  const size = task.sizeLabel || (mode && mode.size) || '';
+  const speed = task.speed > 0 ? `${formatBytes(task.speed)}/с` : '—';
+  const eta = task.eta > 0 && task.status !== 'completed' ? `~${formatDownloadEta(task.eta)}` : '—';
+  const actions = [];
+  if (task.status === 'downloading') {
+    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="pause" data-download-id="${escapeHtml(task.id)}">Пауза</button>`);
+    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="cancel" data-download-id="${escapeHtml(task.id)}">Отмена</button>`);
+  } else if (task.status === 'queued') {
+    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="cancel" data-download-id="${escapeHtml(task.id)}">Отмена</button>`);
+  } else if (task.status === 'paused') {
+    actions.push(`<button class="btn btn-primary btn-small" type="button" data-download-action="resume" data-download-id="${escapeHtml(task.id)}">Продолжить</button>`);
+    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="cancel" data-download-id="${escapeHtml(task.id)}">Отмена</button>`);
+  } else if (task.status === 'error' || task.status === 'cancelled') {
+    actions.push(`<button class="btn btn-primary btn-small" type="button" data-download-action="retry" data-download-id="${escapeHtml(task.id)}">Повторить</button>`);
+    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="remove" data-download-id="${escapeHtml(task.id)}">Убрать</button>`);
+  } else {
+    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="remove" data-download-id="${escapeHtml(task.id)}">Убрать</button>`);
+  }
+
+  return `
+    <article class="download-card ${task.status}">
+      <div class="download-cover">
+        ${cover ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy">` : ''}
+      </div>
+      <div class="download-body">
+        <div class="download-head">
+          <div>
+            <div class="download-title">${escapeHtml(title)}</div>
+            <div class="download-sub">${escapeHtml(downloadActionLabel(task.action))}${size ? ` · ${escapeHtml(size)}` : ''}</div>
+          </div>
+          <span class="download-status ${task.status}">${escapeHtml(status)}</span>
+        </div>
+        <div class="download-progress"><span style="width:${percent}%"></span></div>
+        <div class="download-meta">
+          <span>${escapeHtml(stage)}</span>
+          <span>${percent}%</span>
+          <span>Скорость: ${speed}</span>
+          <span>Осталось: ${eta}</span>
+        </div>
+        ${task.error ? `<div class="form-error">${escapeHtml(task.error)}</div>` : ''}
+        <div class="download-actions">${actions.join('')}</div>
+      </div>
+    </article>`;
 }
 
 async function startMode(mode, autoPlay = false) {
   if (!mode) return;
-  if (S.busy) {
-    toast('Дождись завершения текущей операции', 'warn');
-    return;
-  }
   if (S.running === mode.id) return;
   let action = computeAction(mode);
   if (action === 'running') return;
@@ -1629,29 +2016,11 @@ async function startMode(mode, autoPlay = false) {
     return;
   }
 
-  S.busy = { modeId: mode.id, action };
-  S.progress = 0;
-  S.stage = '';
-  S.status = action === 'play' ? 'Запускаю Minecraft…' : 'Устанавливаю режим…';
-  if (S.view === 'detail') updateDetailAction();
-  S.pendingPlay = action !== 'play' && autoPlay ? mode.id : null;
-  updateCardProgress();
-  toast(action === 'play' ? 'Запускаю режим…' : 'Устанавливаю режим…', 'info');
-
-  let res;
-  try {
-    res = action === 'play' ? await api.play(mode.id) : await api.install(mode.id);
-  } catch (err) {
-    res = { ok: false, error: String(err) };
+  if (action === 'play') {
+    enqueueDownload(mode, 'play');
+    return;
   }
-  if (!res || !res.ok) {
-    S.busy = null;
-    S.pendingPlay = null;
-    updateCardProgress();
-    S.status = 'Ошибка';
-    if (S.view === 'detail') updateDetailAction();
-    toast((res && res.error) || 'Не удалось выполнить действие', 'error');
-  }
+  enqueueDownload(mode, action, autoPlay);
 }
 
 function closeCardContext() {
@@ -2290,6 +2659,25 @@ function updateDetailAction() {
   const mode = modeById(S.selectedId);
   if (!mode) return;
 
+  const task = downloadTaskForMode(mode.id);
+  if (task && task.status === 'queued') {
+    els.detailAction.textContent = 'Отменить';
+    els.detailAction.className = 'btn btn-danger btn-big btn-block';
+    els.detailAction.disabled = false;
+    els.detailStatus.textContent = 'В очереди';
+    els.detailProgress.hidden = true;
+    return;
+  }
+  if (task && task.status === 'paused') {
+    els.detailAction.textContent = 'Продолжить';
+    els.detailAction.className = 'btn btn-primary btn-big btn-block';
+    els.detailAction.disabled = false;
+    els.detailStatus.textContent = 'Загрузка на паузе';
+    els.detailProgress.hidden = false;
+    els.detailProgressBar.style.width = Math.max(0, Math.min(100, task.progress * 100)) + '%';
+    return;
+  }
+
   const busyHere = !!(S.busy && S.busy.modeId === mode.id);
   if (busyHere) {
     els.detailAction.textContent = 'Отмена';
@@ -2323,6 +2711,7 @@ function onGameEvent(ev) {
   if (!ev || !ev.modeId) return;
   const mode = modeById(ev.modeId);
   const isCurrent = S.selectedId === ev.modeId;
+  const active = activeDownloadTask();
 
   switch (ev.type) {
     case 'progress': {
@@ -2330,6 +2719,10 @@ function onGameEvent(ev) {
         ? ev.payload.task / ev.payload.total
         : 0;
       S.progress = Math.max(0, Math.min(1, p));
+      if (active && active.modeId === ev.modeId) {
+        updateDownloadProgress(active, S.progress);
+        renderDownloads();
+      }
       updateCardProgress();
       if (isCurrent) updateDetailAction();
       break;
@@ -2337,12 +2730,17 @@ function onGameEvent(ev) {
     case 'status': {
       S.status = String(ev.payload || '');
       S.stage = S.status;
+      if (active && active.modeId === ev.modeId) {
+        active.stage = S.status;
+        renderDownloads();
+      }
       updateCardProgress();
       if (isCurrent) updateDetailAction();
       break;
     }
     case 'installed': {
-      const shouldPlay = !!(mode && S.pendingPlay === mode.id);
+      const finished = active && active.modeId === ev.modeId ? active : null;
+      const shouldPlay = !!(mode && (S.pendingPlay === mode.id || (finished && finished.autoPlay)));
       S.pendingPlay = null;
       S.busy = null;
       S.stage = '';
@@ -2352,6 +2750,7 @@ function onGameEvent(ev) {
         const st = S.state[mode.id] || {};
         S.state[mode.id] = { ...st, installed: true, version: mode.version, installedAt: Date.now(), library: true, hidden: false };
       }
+      if (finished) finishDownload(finished.id, 'completed');
       toast('Режим установлен', 'ok');
       renderStore();
       renderLibrary();
@@ -2360,11 +2759,13 @@ function onGameEvent(ev) {
       break;
     }
     case 'launched': {
+      const finished = active && active.modeId === ev.modeId ? active : null;
       S.busy = null;
       S.stage = '';
       S.running = ev.modeId;
       S.progress = 1;
       S.status = 'Игра запущена';
+      if (finished) finishDownload(finished.id, 'completed');
       toast('Игра запущена!', 'ok');
       renderStore();
       renderLibrary();
@@ -2393,31 +2794,57 @@ function onGameEvent(ev) {
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && isCurrent) renderDetail();
+      pumpDownloads();
       break;
     }
     case 'cancelled': {
+      const finished = active && active.modeId === ev.modeId ? active : null;
+      const wasPaused = !!(finished && finished.pauseRequested);
       S.pendingPlay = null;
       S.busy = null;
       S.stage = '';
       S.progress = 0;
-      S.status = 'Отменено';
-      toast('Операция отменена', 'warn');
+      S.status = wasPaused ? 'Пауза' : 'Отменено';
+      if (finished) {
+        finished.status = wasPaused ? 'paused' : 'cancelled';
+        finished.stage = wasPaused ? 'Пауза' : 'Отменено';
+        finished.speed = 0;
+        finished.eta = 0;
+        finished.pauseRequested = false;
+        finished.cancelRequested = false;
+        S.downloadsActiveId = null;
+        renderDownloads();
+        pumpDownloads();
+      }
+      toast(wasPaused ? 'Загрузка приостановлена' : 'Операция отменена', 'warn');
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && isCurrent) renderDetail();
       break;
     }
     case 'error': {
+      const finished = active && active.modeId === ev.modeId ? active : null;
+      const message = String(ev.payload || 'Ошибка');
       S.pendingPlay = null;
       S.busy = null;
       S.stage = '';
       S.progress = 0;
       if (S.running === ev.modeId) S.running = null;
       S.status = 'Ошибка';
-      toast(String(ev.payload || 'Ошибка'), 'error');
+      if (finished) {
+        finished.status = 'error';
+        finished.stage = 'Ошибка';
+        finished.error = message;
+        finished.speed = 0;
+        finished.eta = 0;
+        S.downloadsActiveId = null;
+        renderDownloads();
+      }
+      toast(message, 'error');
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && isCurrent) renderDetail();
+      pumpDownloads();
       break;
     }
     default:
