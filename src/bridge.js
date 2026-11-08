@@ -93,6 +93,10 @@
     newsMode: (slug) => invoke("news_mode", { slug }),
     newsCreateStore: (title, body) => invoke("news_create_store", { title, body }),
     newsCreateMode: (modeId, title, body) => invoke("news_create_mode", { modeId, title, body }),
+    adminReviews: () => invoke("admin_reviews"),
+    adminApproveReview: (reviewId) => invoke("admin_approve_review", { reviewId }),
+    adminRejectReview: (reviewId) => invoke("admin_reject_review", { reviewId }),
+    reviewReply: (slug, reviewId, text) => invoke("review_reply", { slug, reviewId, text }),
     adminReports: () => invoke("admin_reports"),
     adminCloseReport: (reportId, note) => invoke("admin_close_report", { reportId, note }),
 

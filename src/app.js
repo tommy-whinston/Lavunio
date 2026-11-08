@@ -90,12 +90,14 @@ const S = {
   moderationQueue: [],
   moderationModes: [],
   moderationReports: [],
+  moderationReviews: [],
   moderationHistory: [],
   moderationLoaded: false,
   moderationLoading: false,
   moderationTab: 'queue',
   moderationNoteAction: null,
-  reportModeId: null
+  reportModeId: null,
+  reviewReplyTarget: null
 };
 
 const els = {
@@ -1498,6 +1500,10 @@ function bindDetail() {
     event.preventDefault();
     submitReview();
   };
+  $('review-reply-form').onsubmit = (event) => {
+    event.preventDefault();
+    submitReviewReply();
+  };
   els.reviewStars.querySelectorAll('[data-star]').forEach((button) => {
     button.onclick = () => {
       S.reviewRating = Number(button.getAttribute('data-star')) || 5;
@@ -1505,6 +1511,11 @@ function bindDetail() {
     };
   });
   els.reviewsList.onclick = (event) => {
+    const reply = event.target.closest('[data-review-reply]');
+    if (reply) {
+      openReviewReplyModal(reply.getAttribute('data-review-reply'));
+      return;
+    }
     const button = event.target.closest('[data-review-delete]');
     if (!button) return;
     deleteReview(button.getAttribute('data-review-delete'));
@@ -2128,6 +2139,10 @@ function renderReviews(mode) {
   if (!items.length) {
     els.reviewsList.innerHTML = '<div class="hint">Стань первым, кто оставит отзыв.</div>';
   } else {
+    const canReply = !!(
+      S.lavunio && S.lavunio.user &&
+      ((mode.author && mode.author.id === S.lavunio.user.username) || S.lavunio.user.role === 'admin')
+    );
     els.reviewsList.innerHTML = items.map((item) => {
       const own = S.lavunio && S.lavunio.user && item.authorUsername === S.lavunio.user.username;
       return `
@@ -2138,7 +2153,15 @@ function renderReviews(mode) {
             <span class="review-date">${escapeHtml(publisherDate(item.createdAt))}</span>
           </div>
           ${item.text ? `<div class="review-text">${escapeHtml(item.text)}</div>` : ''}
-          ${own ? `<button class="link link-btn review-delete" type="button" data-review-delete="${escapeHtml(mode.id)}">Удалить мой отзыв</button>` : ''}
+          ${item.authorReply ? `
+            <div class="review-reply">
+              <div class="review-reply-label">Ответ автора</div>
+              <div class="review-reply-text">${escapeHtml(item.authorReply)}</div>
+            </div>` : ''}
+          <div class="review-actions">
+            ${canReply ? `<button class="link link-btn" type="button" data-review-reply="${escapeHtml(item.id)}">${item.authorReply ? 'Изменить ответ' : 'Ответить'}</button>` : ''}
+            ${own ? `<button class="link link-btn review-delete" type="button" data-review-delete="${escapeHtml(mode.id)}">Удалить мой отзыв</button>` : ''}
+          </div>
         </article>`;
     }).join('');
   }
@@ -2177,12 +2200,59 @@ async function submitReview() {
     els.reviewText.value = '';
     renderDetail();
     renderStore();
-    toast('Отзыв сохранён', 'ok');
+    toast(data && data.pending ? 'Отзыв отправлен на модерацию' : 'Отзыв сохранён', 'ok');
   } catch (err) {
     error.textContent = String(err || 'Не удалось сохранить отзыв');
     error.hidden = false;
   } finally {
     button.disabled = false;
+  }
+}
+
+function openReviewReplyModal(reviewId) {
+  const mode = modeById(S.selectedId);
+  if (!mode) return;
+  const data = S.reviews[mode.id];
+  const item = data && Array.isArray(data.items)
+    ? data.items.find((review) => review.id === reviewId)
+    : null;
+  if (!item) return;
+  S.reviewReplyTarget = { modeId: mode.id, reviewId };
+  $('review-reply-target').textContent = `${mode.title} · ${item.authorName || item.authorUsername || 'игрок'}`;
+  $('review-reply-text').value = item.authorReply || '';
+  $('review-reply-error').hidden = true;
+  openModal('modal-review-reply');
+  setTimeout(() => $('review-reply-text').focus(), 50);
+}
+
+async function submitReviewReply() {
+  const target = S.reviewReplyTarget;
+  if (!target) return;
+  const mode = modeById(target.modeId);
+  if (!mode) return;
+  const text = $('review-reply-text').value.trim();
+  const error = $('review-reply-error');
+  if (!text) {
+    error.textContent = 'Напиши текст ответа';
+    error.hidden = false;
+    return;
+  }
+  const button = $('review-reply-submit');
+  button.disabled = true;
+  button.textContent = 'Отправляем…';
+  error.hidden = true;
+  try {
+    await api.reviewReply(mode.id, target.reviewId, text);
+    $('modal-review-reply').hidden = true;
+    delete S.reviews[mode.id];
+    await loadReviews(mode);
+    toast('Ответ опубликован', 'ok');
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось отправить ответ');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Отправить ответ';
   }
 }
 
@@ -3611,7 +3681,9 @@ const MODERATION_ACTIONS = {
   reject: 'Отклонил релиз',
   hide: 'Скрыл режим',
   unhide: 'Показал режим',
-  report_close: 'Закрыл жалобу'
+  report_close: 'Закрыл жалобу',
+  review_approve: 'Одобрил отзыв',
+  review_reject: 'Отклонил отзыв'
 };
 
 function bindModeration() {
@@ -3640,13 +3712,15 @@ function bindModeration() {
     else if (action === 'hide') openModerationNote('hide', id, title);
     else if (action === 'unhide') unhideModerationMode(id, title);
     else if (action === 'close-report') closeModerationReport(id);
+    else if (action === 'review-approve') approveModerationReview(id);
+    else if (action === 'review-reject') rejectModerationReview(id);
   };
 
   updateModerationNav();
 }
 
 function setModerationTab(tab) {
-  S.moderationTab = ['queue', 'modes', 'reports', 'news', 'history'].includes(tab) ? tab : 'queue';
+  S.moderationTab = ['queue', 'modes', 'reviews', 'reports', 'news', 'history'].includes(tab) ? tab : 'queue';
   if (S.moderationTab === 'news') loadStoreNews(true);
   renderModeration();
 }
@@ -3665,15 +3739,17 @@ async function loadModeration(force = false) {
   S.moderationLoading = true;
   renderModeration();
   try {
-    const [queue, modes, reports, history] = await Promise.all([
+    const [queue, modes, reports, reviews, history] = await Promise.all([
       api.adminQueue(),
       api.adminModes(),
       api.adminReports(),
+      api.adminReviews(),
       api.adminHistory()
     ]);
     S.moderationQueue = Array.isArray(queue) ? queue : [];
     S.moderationModes = Array.isArray(modes) ? modes : [];
     S.moderationReports = Array.isArray(reports) ? reports : [];
+    S.moderationReviews = Array.isArray(reviews) ? reviews : [];
     S.moderationHistory = Array.isArray(history) ? history : [];
     S.moderationLoaded = true;
   } catch (err) {
@@ -3707,6 +3783,8 @@ function renderModeration() {
 
   if (S.moderationTab === 'modes') {
     content.innerHTML = moderationModesHtml();
+  } else if (S.moderationTab === 'reviews') {
+    content.innerHTML = moderationReviewsHtml();
   } else if (S.moderationTab === 'reports') {
     content.innerHTML = moderationReportsHtml();
   } else if (S.moderationTab === 'news') {
@@ -3779,6 +3857,65 @@ function moderationModesHtml() {
       </article>
     `;
   }).join('');
+}
+
+function moderationReviewsHtml() {
+  const items = S.moderationReviews || [];
+  if (!items.length) {
+    return '<div class="mod-empty">Отзывов на модерации нет.</div>';
+  }
+  return items.map((item) => `
+    <article class="pub-card">
+      <div class="pub-card-head">
+        <div>
+          <div class="pub-title">${escapeHtml(item.modeTitle || 'Режим')}</div>
+          <div class="pub-sub">${escapeHtml(item.modeSlug || '')} · ${Number(item.rating) || 0} ★</div>
+        </div>
+        <span class="pub-status pending">На проверке</span>
+      </div>
+      <div class="pub-meta">
+        <span>От: ${escapeHtml(item.authorName || item.authorUsername || 'Игрок')}</span>
+        <span>${escapeHtml(publisherDate(item.createdAt))}</span>
+      </div>
+      <div class="mod-changelog">${escapeHtml(item.text || 'Без текста')}</div>
+      <div class="pub-release-actions">
+        <button class="btn btn-primary" type="button" data-action="review-approve" data-id="${escapeHtml(item.id)}">Одобрить</button>
+        <button class="btn btn-ghost" type="button" data-action="review-reject" data-id="${escapeHtml(item.id)}">Отклонить</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+async function approveModerationReview(reviewId) {
+  const item = (S.moderationReviews || []).find((review) => review.id === reviewId);
+  try {
+    await api.adminApproveReview(reviewId);
+    if (item && item.modeSlug) delete S.reviews[item.modeSlug];
+    toast('Отзыв опубликован', 'ok');
+    S.moderationLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    toast('Не удалось одобрить отзыв: ' + err, 'error');
+  }
+}
+
+async function rejectModerationReview(reviewId) {
+  const item = (S.moderationReviews || []).find((review) => review.id === reviewId);
+  const ok = await askConfirm(
+    'Отклонить отзыв?',
+    'Отзыв не будет опубликован. Действие попадёт в журнал.',
+    'Отклонить'
+  );
+  if (!ok) return;
+  try {
+    await api.adminRejectReview(reviewId);
+    if (item && item.modeSlug) delete S.reviews[item.modeSlug];
+    toast('Отзыв отклонён', 'ok');
+    S.moderationLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    toast('Не удалось отклонить отзыв: ' + err, 'error');
+  }
 }
 
 function moderationReportsHtml() {  const items = S.moderationReports || [];

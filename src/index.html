@@ -359,6 +359,7 @@
       <div class="settings-tabs mod-tabs" id="moderation-tabs">
         <button class="settings-tab active" type="button" data-mod-tab="queue">Очередь</button>
         <button class="settings-tab" type="button" data-mod-tab="modes">Режимы</button>
+        <button class="settings-tab" type="button" data-mod-tab="reviews">Отзывы</button>
         <button class="settings-tab" type="button" data-mod-tab="reports">Жалобы</button>
         <button class="settings-tab" type="button" data-mod-tab="news">Новости</button>
         <button class="settings-tab" type="button" data-mod-tab="history">Журнал</button>
@@ -465,6 +466,7 @@
             <div class="form-error" id="review-error" hidden></div>
             <button class="btn btn-primary" id="review-submit" type="submit">Отправить отзыв</button>
           </form>
+          <div class="hint">Отзывы публикуются после проверки модератором.</div>
           <div class="hint" id="review-login-hint">Войдите в Lavunio ID, чтобы оставить отзыв.</div>
         </section>
 
@@ -783,6 +785,25 @@
         </div>
         <div class="form-error" id="report-error" hidden></div>
         <button class="btn btn-primary btn-block" id="report-submit" type="submit">Отправить жалобу</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Ответ на отзыв -->
+  <div class="modal-overlay" id="modal-review-reply" hidden role="dialog" aria-modal="true" aria-labelledby="review-reply-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="review-reply-title">Ответ на отзыв</h2>
+        <button class="modal-close" data-close="modal-review-reply">✕</button>
+      </div>
+      <div class="hint" id="review-reply-target"></div>
+      <form id="review-reply-form" autocomplete="off">
+        <div class="field">
+          <label for="review-reply-text">Ответ</label>
+          <textarea id="review-reply-text" rows="4" placeholder="Ответь игроку"></textarea>
+        </div>
+        <div class="form-error" id="review-reply-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="review-reply-submit" type="submit">Отправить ответ</button>
       </form>
     </div>
   </div>

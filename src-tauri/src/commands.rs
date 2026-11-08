@@ -852,6 +852,46 @@ pub async fn news_create_mode(
 }
 
 #[tauri::command]
+pub async fn admin_reviews(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/admin/reviews?status=pending".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_approve_review(
+    state: State<'_, AppState>,
+    review_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/reviews/{review_id}/approve");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn admin_reject_review(
+    state: State<'_, AppState>,
+    review_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/reviews/{review_id}/reject");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn review_reply(
+    state: State<'_, AppState>,
+    slug: String,
+    review_id: String,
+    text: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/modes/{slug}/reviews/{review_id}/reply");
+    publisher_request(state.inner(), "POST", path, Some(json!({ "text": text }))).await
+}
+
+#[tauri::command]
 pub async fn publisher_pick_folder() -> Result<Option<String>, String> {
     let picked = blocking(|| rfd::FileDialog::new().pick_folder()).await?;
     Ok(picked.map(|path| path_string(&path)))

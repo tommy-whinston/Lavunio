@@ -2467,6 +2467,29 @@ body::before {
 .review-stars { color: var(--warn); letter-spacing: 1px; font-size: 13px; }
 .review-date { color: var(--muted-2); font-size: 11px; margin-left: auto; }
 .review-text { color: var(--muted); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+.review-actions { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+.review-actions .link-btn { margin-top: 0; color: var(--accent-2); font-size: 11px; }
+.review-reply {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-left: 2px solid var(--accent);
+  background: rgba(13, 140, 255, 0.06);
+  border-radius: 0 6px 6px 0;
+}
+.review-reply-label {
+  color: var(--accent-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.review-reply-text {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
 .review-delete { color: var(--muted); font-size: 11px; margin-top: 6px; }
 .review-delete:hover { color: var(--danger); }
 #review-form { margin-top: 12px; }
