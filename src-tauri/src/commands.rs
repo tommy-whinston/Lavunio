@@ -561,12 +561,14 @@ pub async fn lavunio_register(
     email: String,
     password: String,
     username: Option<String>,
+    accept_terms: Option<bool>,
 ) -> Result<Value, String> {
     let api = lavunio_api()?;
     let payload = json!({
         "email": email,
         "password": password,
         "username": username,
+        "acceptTerms": accept_terms.unwrap_or(true),
     });
     let data = blocking(move || {
         net::api_request_json(&api, "POST", "/v1/auth/register", None, Some(payload))

@@ -314,6 +314,9 @@ const els = {
   setFullscreen: $('set-fullscreen'),
   setJvmFlags: $('set-jvm-flags'),
   setLogsPath: $('set-logs-path'),
+  setLang: $('set-lang'),
+  consentRow: $('lavunio-consent-row'),
+  consent: $('lavunio-consent'),
 };
 
 // ---------------------------------------------------------------- init
@@ -336,6 +339,16 @@ async function init() {
   bindSocial();
   bindModeration();
   bindUpdateModal();
+  document.addEventListener('lavunio:lang', () => {
+    renderAccountChip();
+    renderStore();
+    renderLibrary();
+    renderDownloads();
+    if (S.section === 'detail' && S.selectedId) renderDetail();
+    else renderCurrentSection();
+    if (!$('modal-account').hidden) renderLavunioPane();
+    if (!$('modal-settings').hidden) fillSettingsForm();
+  });
 
   if (api && api.onGameEvent) api.onGameEvent(onGameEvent);
   if (api && api.getSystemRam) {
@@ -372,6 +385,9 @@ async function init() {
     S.state = state || {};
     S.settings = settings || null;
     S.lavunio = lavunio || null;
+    if (settings && settings.lang && window.I18n) {
+      window.I18n.setLang(settings.lang, { announce: false });
+    }
     S.loading = false;
     renderAccountChip();
     updatePublisherNav();
@@ -691,7 +707,10 @@ function showSection(section) {
 
 function updateSidebar() {
   document.querySelectorAll('.side-link').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.section === S.section);
+    const active = btn.dataset.section === S.section;
+    btn.classList.toggle('active', active);
+    if (active) btn.setAttribute('aria-current', 'page');
+    else btn.removeAttribute('aria-current');
   });
   updatePublisherNav();
   updateModerationNav();
@@ -1573,10 +1592,12 @@ function accentColor(mode) {
 
 function formatBytes(bytes) {
   const value = Number(bytes || 0);
-  if (value >= 1024 * 1024 * 1024) return `${(value / 1024 / 1024 / 1024).toFixed(1)} ГБ`;
-  if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} МБ`;
-  if (value >= 1024) return `${(value / 1024).toFixed(0)} КБ`;
-  return `${value} Б`;
+  const en = window.I18n && window.I18n.lang() === 'en';
+  const units = en ? ['GB', 'MB', 'KB', 'B'] : ['ГБ', 'МБ', 'КБ', 'Б'];
+  if (value >= 1024 * 1024 * 1024) return `${(value / 1024 / 1024 / 1024).toFixed(1)} ${units[0]}`;
+  if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} ${units[1]}`;
+  if (value >= 1024) return `${(value / 1024).toFixed(0)} ${units[2]}`;
+  return `${value} ${units[3]}`;
 }
 
 function tagPill(tag) {
@@ -1587,17 +1608,22 @@ function tagPill(tag) {
 function formatPlaytime(seconds) {
   const total = Math.max(0, Math.floor(Number(seconds) || 0));
   if (total <= 0) return '—';
-  return `${(total / 3600).toFixed(1)} ч`;
+  const unit = window.I18n && window.I18n.lang() === 'en' ? 'h' : 'ч';
+  return `${(total / 3600).toFixed(1)} ${unit}`;
 }
 
 function formatUpdateDate(value) {
-  return String(value || '').replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3.$2.$1');
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+  if (!match) return String(value || '');
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(date.getTime())) return String(value || '');
+  return date.toLocaleDateString(window.I18n ? window.I18n.locale() : 'ru-RU');
 }
 
 function formatDateTime(value) {
   const ms = Number(value) || 0;
   if (!ms) return '—';
-  return new Date(ms).toLocaleString('ru-RU', {
+  return new Date(ms).toLocaleString(window.I18n ? window.I18n.locale() : 'ru-RU', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -1610,9 +1636,13 @@ function formatDuration(seconds) {
   const total = Math.max(0, Math.floor(Number(seconds) || 0));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
-  if (hours > 0) return `${hours} ч ${minutes} мин`;
-  if (minutes > 0) return `${minutes} мин`;
-  return `${total} сек`;
+  const en = window.I18n && window.I18n.lang() === 'en';
+  const h = en ? 'h' : 'ч';
+  const m = en ? 'min' : 'мин';
+  const s = en ? 's' : 'сек';
+  if (hours > 0) return `${hours} ${h} ${minutes} ${m}`;
+  if (minutes > 0) return `${minutes} ${m}`;
+  return `${total} ${s}`;
 }
 
 function modeReleaseDate(mode) {
@@ -3552,6 +3582,7 @@ function renderLavunioPane() {
   } else {
     const register = !!S.lavunioRegisterMode;
     $('lavunio-username-field').hidden = !register;
+    if (els.consentRow) els.consentRow.hidden = !register;
     $('lavunio-password').autocomplete = register ? 'new-password' : 'current-password';
     $('lavunio-submit').textContent = register ? 'Создать аккаунт' : 'Войти';
     $('lavunio-switch-text').textContent = register ? 'Уже есть аккаунт?' : 'Нет аккаунта?';
@@ -3580,6 +3611,12 @@ async function submitLavunioForm() {
     error.hidden = false;
     return;
   }
+  if (register && els.consent && !els.consent.checked) {
+    error.textContent = 'Подтвердите согласие с условиями и политикой конфиденциальности';
+    error.hidden = false;
+    els.consent.focus();
+    return;
+  }
   if (!S.lavunio || !S.lavunio.configured) {
     error.textContent = 'Lavunio API не настроен';
     error.hidden = false;
@@ -3591,7 +3628,7 @@ async function submitLavunioForm() {
   button.textContent = register ? 'Создаём…' : 'Входим…';
   try {
     const status = register
-      ? await api.lavunioRegister(email, password, username || null)
+      ? await api.lavunioRegister(email, password, username || null, !!(els.consent && els.consent.checked))
       : await api.lavunioLogin(email, password);
     S.lavunio = status;
     $('lavunio-password').value = '';
@@ -3931,8 +3968,20 @@ function applyRamLimit() {
 }
 
 function bindSettings() {
+  if (els.setLang) {
+    els.setLang.onchange = async () => {
+      const lang = els.setLang.value === 'en' ? 'en' : 'ru';
+      if (window.I18n) window.I18n.setLang(lang);
+      try {
+        const saved = await api.saveSettings({ lang });
+        S.settings = saved;
+      } catch (_) {}
+      toast(window.I18n ? window.I18n.t('Язык изменён') : 'Язык изменён', 'ok');
+    };
+  }
   els.ram.addEventListener('input', () => {
-    els.ramOut.textContent = `${els.ram.value} ГБ`;
+    const unit = window.I18n && window.I18n.lang() === 'en' ? 'GB' : 'ГБ';
+    els.ramOut.textContent = `${els.ram.value} ${unit}`;
   });
   $('btn-choose-dir').onclick = async () => {
     try {
@@ -3975,7 +4024,8 @@ function bindSettings() {
         width: Number(els.setWidth.value) || 925,
         height: Number(els.setHeight.value) || 530,
         fullscreen: els.setFullscreen.checked,
-        jvmFlags: els.setJvmFlags.checked
+        jvmFlags: els.setJvmFlags.checked,
+        lang: els.setLang ? els.setLang.value : undefined
       });
       S.settings = s;
       closeModals();
@@ -3992,7 +4042,12 @@ function fillSettingsForm() {
   if (total >= 2) els.ram.max = String(total);
   const ram = Math.min(Number(s.ramGb) || 4, Number(els.ram.max) || 32);
   els.ram.value = String(ram);
-  els.ramOut.textContent = `${ram} ГБ`;
+  const unit = window.I18n && window.I18n.lang() === 'en' ? 'GB' : 'ГБ';
+  els.ramOut.textContent = `${ram} ${unit}`;
+  if (els.setLang) {
+    const lang = (s.lang === 'en' || (window.I18n && window.I18n.lang() === 'en')) ? 'en' : 'ru';
+    els.setLang.value = lang;
+  }
   els.setDir.value = s.dir || '';
   fillDirOptions(s.dir || '', s.installDirs);
   els.setJava.value = s.javaPath || '';
@@ -4033,7 +4088,10 @@ async function refreshDiskInfo() {
     const free = formatBytes(info.availableBytes || 0);
     const total = formatBytes(info.totalBytes || 0);
     const library = formatBytes(info.libraryBytes || 0);
-    els.settingsDiskInfo.textContent = `Свободно: ${free} из ${total} · Библиотека: ${library}`;
+    const en = window.I18n && window.I18n.lang() === 'en';
+    els.settingsDiskInfo.textContent = en
+      ? `Free: ${free} of ${total} · Library: ${library}`
+      : `Свободно: ${free} из ${total} · Библиотека: ${library}`;
     els.settingsDiskInfo.classList.toggle(
       'warn',
       Number(info.availableBytes) > 0 && Number(info.availableBytes) < 2 * 1024 * 1024 * 1024
@@ -4043,7 +4101,39 @@ async function refreshDiskInfo() {
 
 // ---------------------------------------------------------------- модалки
 
+let lastFocusedElement = null;
+
+function openModals() {
+  return [...document.querySelectorAll('.modal-overlay:not([hidden])')];
+}
+
+function focusableIn(root) {
+  if (!root) return [];
+  return [...root.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter((element) => element.offsetParent !== null && !element.closest('[hidden]'));
+}
+
+function focusFirstIn(modal) {
+  const items = focusableIn(modal).filter((element) => !element.classList.contains('modal-close'));
+  const target = items[0] || focusableIn(modal)[0];
+  if (target) target.focus();
+}
+
+function rememberFocus() {
+  if (!openModals().length) lastFocusedElement = document.activeElement;
+}
+
+function restoreFocus() {
+  if (openModals().length) return;
+  if (lastFocusedElement && document.contains(lastFocusedElement)) {
+    try { lastFocusedElement.focus(); } catch (_) {}
+  }
+  lastFocusedElement = null;
+}
+
 function openModal(id) {
+  if (document.getElementById(id).hidden) rememberFocus();
   if (id === 'modal-settings') {
     fillSettingsForm();
   }
@@ -4052,10 +4142,17 @@ function openModal(id) {
     refreshLavunioStatus();
   }
   $(id).hidden = false;
+  setTimeout(() => focusFirstIn($(id)), 30);
 }
 
 function closeModals() {
   document.querySelectorAll('.modal-overlay').forEach((m) => (m.hidden = true));
+  if (confirmResolve) {
+    const resolve = confirmResolve;
+    confirmResolve = null;
+    resolve(false);
+  }
+  restoreFocus();
 }
 
 let confirmResolve = null;
@@ -4063,6 +4160,7 @@ let confirmResolve = null;
 function askConfirm(title, text, okLabel = 'Удалить') {
   return new Promise((resolve) => {
     confirmResolve = resolve;
+    if (!openModals().length) lastFocusedElement = document.activeElement;
     els.confirmTitle.textContent = title;
     els.confirmText.textContent = text;
     els.btnConfirmOk.textContent = okLabel;
@@ -4078,16 +4176,18 @@ function closeConfirm(value) {
     confirmResolve = null;
     resolve(value);
   }
+  restoreFocus();
 }
 
 function closeTopModal() {
-  const openModals = [...document.querySelectorAll('.modal-overlay:not([hidden])')];
-  if (!openModals.length) return false;
-  const top = openModals[openModals.length - 1];
+  const opened = openModals();
+  if (!opened.length) return false;
+  const top = opened[opened.length - 1];
   if (top.id === 'modal-confirm') {
     closeConfirm(false);
   } else {
     top.hidden = true;
+    restoreFocus();
   }
   return true;
 }
@@ -4103,6 +4203,7 @@ function bindModals() {
       } else {
         const target = $(btn.dataset.close);
         if (target) target.hidden = true;
+        restoreFocus();
       }
     };
   });
@@ -4110,14 +4211,30 @@ function bindModals() {
     ov.addEventListener('mousedown', (e) => {
       if (e.target !== ov) return;
       if (ov.id === 'modal-confirm') closeConfirm(false);
-      else ov.hidden = true;
+      else { ov.hidden = true; restoreFocus(); }
     });
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (closeTopModal()) {
+    if (e.key === 'Escape') {
+      if (closeTopModal()) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const opened = openModals();
+    if (!opened.length) return;
+    const items = focusableIn(opened[opened.length - 1]);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
       e.preventDefault();
-      e.stopImmediatePropagation();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
     }
   });
 }
@@ -4132,7 +4249,7 @@ function escapeHtml(s) {
 
 let toastTimer = null;
 function toast(msg, type = 'info') {
-  els.toast.textContent = msg;
+  els.toast.textContent = window.I18n ? window.I18n.t(msg) : msg;
   els.toast.className = 'show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (els.toast.className = ''), 3200);
@@ -5639,7 +5756,7 @@ function publisherReleaseCard(mode, release) {
 function publisherDate(value) {
   if (!value) return '—';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('ru-RU');
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(window.I18n ? window.I18n.locale() : 'ru-RU');
 }
 
 async function submitPublisherMode() {

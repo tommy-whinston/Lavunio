@@ -152,6 +152,7 @@ pub struct Settings {
     pub github_token: String,
     pub jvm_flags: bool,
     pub minimize_on_launch: bool,
+    pub lang: String,
 }
 
 impl Default for Settings {
@@ -171,6 +172,7 @@ impl Default for Settings {
             github_token: String::new(),
             jvm_flags: true,
             minimize_on_launch: true,
+            lang: "ru".to_string(),
         }
     }
 }
