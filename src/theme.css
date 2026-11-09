@@ -1186,19 +1186,6 @@ body::before {
 .chat-msg .meta { margin-bottom: 3px; color: #83776f; font-size: 10px; }
 .chat-form { display: flex; gap: 8px; }
 .chat-form input { flex: 1; }
-.comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-.comment {
-  padding: 10px 12px;
-  border: 1px solid #2b2220;
-  border-radius: 8px;
-  background: rgba(8, 8, 8, 0.7);
-}
-.comment.reply { margin-left: 24px; }
-.comment-meta { color: #83776f; font-size: 10.5px; }
-.comment-body { margin-top: 4px; color: #e6edf3; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
-.comment-actions { margin-top: 6px; }
-.comment-form { display: flex; align-items: flex-end; gap: 8px; }
-.comment-form textarea { flex: 1; }
 
 .catalog-head { flex-wrap: wrap; }
 .shelf-title { display: flex; align-items: center; gap: 8px; min-width: 0; }

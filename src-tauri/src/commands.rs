@@ -1069,39 +1069,6 @@ pub async fn activity_feed() -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn comments_list(slug: String) -> Result<Value, String> {
-    let api = lavunio_api()?;
-    let path = format!("/v1/modes/{slug}/comments");
-    blocking(move || net::api_request_json(&api, "GET", &path, None, None)).await?
-}
-
-#[tauri::command]
-pub async fn comment_create(
-    state: State<'_, AppState>,
-    slug: String,
-    body: String,
-    parent_id: Option<String>,
-) -> Result<Value, String> {
-    let path = format!("/v1/modes/{slug}/comments");
-    publisher_request(
-        state.inner(),
-        "POST",
-        path,
-        Some(json!({ "body": body, "parentId": parent_id })),
-    )
-    .await
-}
-
-#[tauri::command]
-pub async fn comment_delete(
-    state: State<'_, AppState>,
-    comment_id: String,
-) -> Result<Value, String> {
-    let path = format!("/v1/comments/{comment_id}");
-    publisher_request(state.inner(), "DELETE", path, None).await
-}
-
-#[tauri::command]
 pub async fn chat_direct(
     state: State<'_, AppState>,
     username: String,

@@ -117,7 +117,6 @@ const S = {
   chatTitle: '',
   chatMessages: [],
   chatTimer: null,
-  comments: {},
   publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
@@ -186,9 +185,6 @@ const els = {
   chatMessages: $('chat-messages'),
   notificationsList: $('notifications-list'),
   notifBadge: $('notif-badge'),
-  detailCommentsSection: $('detail-comments-section'),
-  detailComments: $('detail-comments'),
-  commentText: $('comment-text'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
@@ -2700,9 +2696,6 @@ function renderDetail() {
   if (apiReady) {
     renderReviews(mode);
     loadReviews(mode);
-    loadComments(mode);
-  } else if (els.detailCommentsSection) {
-    els.detailCommentsSection.hidden = true;
   }
 
   els.detailDesc.innerHTML = renderRichText(modeFullDescription(mode));
@@ -5106,16 +5099,6 @@ function bindSocial() {
     if (!button) return;
     openNotification(button);
   };
-  const comments = $('detail-comments');
-  if (comments) comments.onclick = (event) => {
-    const button = event.target.closest('button[data-comment-delete]');
-    if (button) deleteComment(button.dataset.commentDelete);
-  };
-  const commentForm = $('comment-form');
-  if (commentForm) commentForm.onsubmit = (event) => {
-    event.preventDefault();
-    submitComment();
-  };
   window.addEventListener('focus', () => {
     heartbeatPresence();
     loadNotifications();
@@ -5439,72 +5422,6 @@ function startChatPolling() {
     }
     loadChatMessages();
   }, 4000);
-}
-
-async function loadComments(mode, force = false) {
-  if (!mode || !api.commentsList) return;
-  if (!force && S.comments[mode.id]) {
-    renderComments(mode);
-    return;
-  }
-  try {
-    const items = await api.commentsList(mode.id);
-    S.comments[mode.id] = Array.isArray(items) ? items : [];
-  } catch (_) {
-    S.comments[mode.id] = [];
-  }
-  renderComments(mode);
-}
-
-function renderComments(mode) {
-  if (!els.detailComments || !els.detailCommentsSection) return;
-  const items = S.comments[mode.id] || [];
-  const roots = items.filter((item) => !item.parentId);
-  const children = new Map();
-  items.filter((item) => item.parentId).forEach((item) => {
-    if (!children.has(item.parentId)) children.set(item.parentId, []);
-    children.get(item.parentId).push(item);
-  });
-  const me = S.lavunio && S.lavunio.user ? S.lavunio.user.id : '';
-  const canDelete = (item) => me && (String(item.userId) === String(me) || (S.lavunio.user.role === 'admin' || S.lavunio.user.role === 'moderator'));
-  const renderOne = (item, reply = false) => `
-    <div class="comment ${reply ? 'reply' : ''}">
-      <div class="comment-meta">@${escapeHtml(item.username)} · ${escapeHtml(formatDateTime(item.createdAt))}</div>
-      <div class="comment-body">${escapeHtml(item.body)}</div>
-      ${canDelete(item) ? `<div class="comment-actions"><button class="link link-btn" type="button" data-comment-delete="${escapeHtml(item.id)}">Удалить</button></div>` : ''}
-    </div>
-    ${(children.get(item.id) || []).map((child) => renderOne(child, true)).join('')}
-  `;
-  els.detailComments.innerHTML = roots.map((item) => renderOne(item)).join('') || '<div class="hint">Комментариев пока нет.</div>';
-  els.detailCommentsSection.hidden = false;
-  const form = $('comment-form');
-  if (form) form.hidden = !lavunioLoggedIn();
-}
-
-async function submitComment() {
-  const mode = modeById(S.selectedId);
-  if (!mode) return;
-  const text = els.commentText.value.trim();
-  if (!text) return;
-  try {
-    await api.commentCreate(mode.id, text, null);
-    els.commentText.value = '';
-    await loadComments(mode, true);
-  } catch (err) {
-    toast('Не удалось отправить комментарий: ' + err, 'error');
-  }
-}
-
-async function deleteComment(commentId) {
-  const mode = modeById(S.selectedId);
-  if (!mode) return;
-  try {
-    await api.commentDelete(commentId);
-    toast('Комментарий удалён', 'ok');
-    await loadComments(mode, true);
-  } catch (err) {
-    toast('Не удалось удалить комментарий: ' + err, 'error');
-  }
 }
 
 function publisherSlug(value) {
