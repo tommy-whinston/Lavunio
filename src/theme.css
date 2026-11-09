@@ -1134,6 +1134,71 @@ body::before {
 }
 .player-name { color: #f7f1eb; font-size: 18px; font-weight: 700; }
 .player-sub { margin-top: 3px; color: #a69d95; font-size: 11.5px; }
+.notif-btn { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #e5322b;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.friend-add-form { display: flex; gap: 8px; }
+.friend-add-form input { width: 190px; }
+.friend-request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid #3a2a12;
+  border-radius: 8px;
+  background: rgba(240, 179, 90, 0.06);
+}
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  margin: 12px 0;
+  overflow-y: auto;
+}
+.chat-msg {
+  max-width: 82%;
+  padding: 8px 10px;
+  border: 1px solid #2b2220;
+  border-radius: 8px;
+  background: #0f0f0f;
+  color: #e6edf3;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.chat-msg.own { align-self: flex-end; border-color: #2ea04366; background: rgba(46, 160, 67, 0.12); }
+.chat-msg .meta { margin-bottom: 3px; color: #83776f; font-size: 10px; }
+.chat-form { display: flex; gap: 8px; }
+.chat-form input { flex: 1; }
+.comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.comment {
+  padding: 10px 12px;
+  border: 1px solid #2b2220;
+  border-radius: 8px;
+  background: rgba(8, 8, 8, 0.7);
+}
+.comment.reply { margin-left: 24px; }
+.comment-meta { color: #83776f; font-size: 10.5px; }
+.comment-body { margin-top: 4px; color: #e6edf3; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+.comment-actions { margin-top: 6px; }
+.comment-form { display: flex; align-items: flex-end; gap: 8px; }
+.comment-form textarea { flex: 1; }
 
 .catalog-head { flex-wrap: wrap; }
 .shelf-title { display: flex; align-items: center; gap: 8px; min-width: 0; }

@@ -106,6 +106,18 @@ const S = {
   teamNewsTeam: null,
   teamTransferTeam: null,
   playerProfile: null,
+  feedItems: [],
+  feedLoaded: false,
+  friends: [],
+  friendRequests: { incoming: [], outgoing: [] },
+  notifications: [],
+  notificationsUnread: 0,
+  chatKind: null,
+  chatTarget: null,
+  chatTitle: '',
+  chatMessages: [],
+  chatTimer: null,
+  comments: {},
   publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
@@ -162,6 +174,21 @@ const els = {
   teamPageContent: $('team-page-content'),
   playerContent: $('player-content'),
   playerForm: $('player-form'),
+  feedView: $('feed-view'),
+  feedList: $('feed-list'),
+  friendsView: $('friends-view'),
+  friendsList: $('friends-list'),
+  friendRequestsList: $('friend-requests-list'),
+  friendsEmpty: $('friends-empty'),
+  chatView: $('chat-view'),
+  chatList: $('chat-list'),
+  chatEmpty: $('chat-empty'),
+  chatMessages: $('chat-messages'),
+  notificationsList: $('notifications-list'),
+  notifBadge: $('notif-badge'),
+  detailCommentsSection: $('detail-comments-section'),
+  detailComments: $('detail-comments'),
+  commentText: $('comment-text'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
@@ -306,6 +333,7 @@ async function init() {
   bindAccountModal();
   bindPublisher();
   bindTeams();
+  bindSocial();
   bindModeration();
   bindUpdateModal();
 
@@ -354,6 +382,8 @@ async function init() {
     renderStore();
     renderLibrary();
     updateSidebar();
+    heartbeatPresence();
+    loadNotifications();
     requestAnimationFrame(() => { $('app').scrollTop = 0; });
 
     if (S.modes.length) {
@@ -621,7 +651,8 @@ function showSection(section) {
   if (section === 'publisher' && !publisherAllowed()) section = 'store';
   if (section === 'team' && !publisherAllowed()) section = 'store';
   if (section === 'moderation' && !moderatorAllowed()) section = 'store';
-  S.section = ['library', 'publisher', 'team', 'moderation', 'downloads'].includes(section) ? section : 'store';
+  if ((section === 'friends' || section === 'chat') && !lavunioLoggedIn()) section = 'store';
+  S.section = ['library', 'publisher', 'team', 'moderation', 'downloads', 'feed', 'friends', 'chat'].includes(section) ? section : 'store';
   S.view = S.section;
   els.storeView.hidden = S.section !== 'store';
   els.libraryView.hidden = S.section !== 'library';
@@ -629,6 +660,9 @@ function showSection(section) {
   if (els.publisherView) els.publisherView.hidden = S.section !== 'publisher';
   if (els.teamView) els.teamView.hidden = S.section !== 'team';
   if (els.moderationView) els.moderationView.hidden = S.section !== 'moderation';
+  if (els.feedView) els.feedView.hidden = S.section !== 'feed';
+  if (els.friendsView) els.friendsView.hidden = S.section !== 'friends';
+  if (els.chatView) els.chatView.hidden = S.section !== 'chat';
   els.detailView.hidden = true;
   updateSidebar();
   if (S.section === 'library') renderLibrary();
@@ -643,6 +677,12 @@ function showSection(section) {
   } else if (S.section === 'moderation') {
     renderModeration();
     loadModeration();
+  } else if (S.section === 'feed') {
+    loadFeed();
+  } else if (S.section === 'friends') {
+    loadFriends();
+  } else if (S.section === 'chat') {
+    loadChatList();
   } else renderStore();
   requestAnimationFrame(() => {
     $('app').scrollTop = 0;
@@ -655,6 +695,7 @@ function updateSidebar() {
   });
   updatePublisherNav();
   updateModerationNav();
+  updateSocialNav();
 }
 
 function renderCurrentSection() {
@@ -663,6 +704,9 @@ function renderCurrentSection() {
   else if (S.section === 'publisher') renderPublisher();
   else if (S.section === 'team') renderTeams();
   else if (S.section === 'moderation') renderModeration();
+  else if (S.section === 'feed') renderFeed();
+  else if (S.section === 'friends') renderFriends();
+  else if (S.section === 'chat') renderChatList();
   else renderStore();
 }
 
@@ -2617,6 +2661,9 @@ function renderDetail() {
   if (apiReady) {
     renderReviews(mode);
     loadReviews(mode);
+    loadComments(mode);
+  } else if (els.detailCommentsSection) {
+    els.detailCommentsSection.hidden = true;
   }
 
   els.detailDesc.innerHTML = renderRichText(modeFullDescription(mode));
@@ -3434,6 +3481,9 @@ async function refreshLavunioStatus() {
     renderAccountChip();
     loadFollows();
     loadAuthorApplication();
+    heartbeatPresence();
+    loadNotifications();
+    updateSocialNav();
   } catch (_) {}
 }
 
@@ -3549,6 +3599,10 @@ async function submitLavunioForm() {
     renderAccountChip();
     loadWishlist();
     loadFollows();
+    heartbeatPresence();
+    loadNotifications();
+    loadFriends(true);
+    updateSocialNav();
     const name = status && status.user ? lavunioName(status.user) : '';
     toast(register ? 'Аккаунт Lavunio создан' : `С возвращением, ${name || 'игрок'}!`, 'ok');
     if (status && status.user && !status.user.emailVerified) {
@@ -3574,6 +3628,12 @@ async function logoutLavunio() {
   S.reviews = {};
   S.follows = [];
   S.feed = [];
+  S.friends = [];
+  S.notifications = [];
+  S.notificationsUnread = 0;
+  updateNotificationsBadge();
+  updateSocialNav();
+  if (S.section === 'friends' || S.section === 'chat') showSection('store');
   renderLavunioPane();
   renderAccountChip();
   renderStore();
@@ -4098,6 +4158,14 @@ const PUBLISHER_TRANSLIT = {
 function publisherAllowed() {
   const user = S.lavunio && S.lavunio.user;
   return !!(S.lavunio && S.lavunio.configured && user && (user.role === 'author' || user.role === 'admin'));
+}
+
+function updateSocialNav() {
+  const logged = lavunioLoggedIn();
+  const friends = $('side-friends');
+  const chat = $('side-chat');
+  if (friends) friends.hidden = !logged;
+  if (chat) chat.hidden = !logged;
 }
 
 function updatePublisherNav() {
@@ -4853,6 +4921,460 @@ async function toggleTeamVerified(team) {
     await openTeamPage(S.teams.find((item) => item.id === team.id) || team);
   } catch (err) {
     toast('Не удалось изменить статус: ' + err, 'error');
+  }
+}
+
+function bindSocial() {
+  const bell = $('btn-notifications');
+  if (bell) bell.onclick = () => openNotifications();
+  const readAll = $('notifications-read-all');
+  if (readAll) readAll.onclick = () => readAllNotifications();
+  const feedRefresh = $('feed-refresh');
+  if (feedRefresh) feedRefresh.onclick = () => loadFeed(true);
+  const addForm = $('friend-add-form');
+  if (addForm) addForm.onsubmit = (event) => {
+    event.preventDefault();
+    addFriend();
+  };
+  const chatRefresh = $('chat-refresh');
+  if (chatRefresh) chatRefresh.onclick = () => loadChatList(true);
+  const chatForm = $('chat-form');
+  if (chatForm) chatForm.onsubmit = (event) => {
+    event.preventDefault();
+    sendChatMessage();
+  };
+  const feedList = $('feed-list');
+  if (feedList) feedList.onclick = (event) => {
+    const mode = event.target.closest('[data-feed-mode]');
+    if (mode) { openDetail(mode.dataset.feedMode); return; }
+    const team = event.target.closest('[data-feed-team]');
+    if (team) openTeamPage({ slug: team.dataset.feedTeam, title: team.dataset.feedTitle || team.dataset.feedTeam });
+  };
+  const friendsList = $('friends-list');
+  if (friendsList) friendsList.onclick = (event) => {
+    const button = event.target.closest('button[data-friend-action]');
+    if (!button) return;
+    const username = button.dataset.username;
+    if (button.dataset.friendAction === 'profile') openPlayerProfile(username);
+    else if (button.dataset.friendAction === 'chat') openChat('direct', username, username);
+    else if (button.dataset.friendAction === 'remove') removeFriend(username);
+  };
+  const requestsList = $('friend-requests-list');
+  if (requestsList) requestsList.onclick = (event) => {
+    const button = event.target.closest('button[data-friend-request]');
+    if (!button) return;
+    respondFriendRequest(button.dataset.id, button.dataset.friendRequest);
+  };
+  const chatList = $('chat-list');
+  if (chatList) chatList.onclick = (event) => {
+    const button = event.target.closest('button[data-chat-kind]');
+    if (!button) return;
+    openChat(button.dataset.chatKind, button.dataset.chatTarget, button.dataset.chatTitle || button.dataset.chatTarget);
+  };
+  const notificationsList = $('notifications-list');
+  if (notificationsList) notificationsList.onclick = (event) => {
+    const button = event.target.closest('button[data-notification-id]');
+    if (!button) return;
+    openNotification(button);
+  };
+  const comments = $('detail-comments');
+  if (comments) comments.onclick = (event) => {
+    const button = event.target.closest('button[data-comment-delete]');
+    if (button) deleteComment(button.dataset.commentDelete);
+  };
+  const commentForm = $('comment-form');
+  if (commentForm) commentForm.onsubmit = (event) => {
+    event.preventDefault();
+    submitComment();
+  };
+  window.addEventListener('focus', () => {
+    heartbeatPresence();
+    loadNotifications();
+  });
+  setInterval(() => {
+    if (lavunioLoggedIn()) {
+      heartbeatPresence();
+      loadNotifications();
+    }
+  }, 60000);
+}
+
+async function heartbeatPresence() {
+  if (!lavunioLoggedIn() || !api.presenceHeartbeat) return;
+  try { await api.presenceHeartbeat(); } catch (_) {}
+}
+
+function feedKindLabel(kind) {
+  return ({ release: 'Новый релиз', review: 'Отзыв', team_news: 'Новость команды' })[kind] || 'Событие';
+}
+
+async function loadFeed(force = false) {
+  if (S.feedLoaded && !force) {
+    renderFeed();
+    return;
+  }
+  try {
+    const items = await api.activityFeed();
+    S.feedItems = Array.isArray(items) ? items : [];
+    S.feedLoaded = true;
+  } catch (err) {
+    toast('Не удалось загрузить ленту: ' + err, 'error');
+  }
+  renderFeed();
+}
+
+function renderFeed() {
+  if (!els.feedList) return;
+  const items = S.feedItems || [];
+  els.feedList.innerHTML = items.length
+    ? items.map((item) => `
+      <article class="pub-card">
+        <div class="pub-card-head">
+          <div>
+            <div class="pub-title">${escapeHtml(item.title)}</div>
+            <div class="pub-sub">${escapeHtml(feedKindLabel(item.kind))} · @${escapeHtml(item.username)}</div>
+          </div>
+        </div>
+        <div class="mod-changelog">${escapeHtml(item.subtitle || '')}</div>
+        <div class="pub-release-actions">
+          ${item.modeSlug ? `<button class="btn btn-ghost" type="button" data-feed-mode="${escapeHtml(item.modeSlug)}">Открыть режим</button>` : ''}
+          ${item.teamSlug ? `<button class="btn btn-ghost" type="button" data-feed-team="${escapeHtml(item.teamSlug)}" data-feed-title="${escapeHtml(item.title)}">Открыть команду</button>` : ''}
+        </div>
+      </article>
+    `).join('')
+    : '<div class="mod-empty">Лента пуста.</div>';
+}
+
+async function loadFriends(force = false) {
+  if (!lavunioLoggedIn() || !api.friendsList) return;
+  try {
+    const [friends, requests] = await Promise.all([api.friendsList(), api.friendRequests()]);
+    S.friends = Array.isArray(friends) ? friends : [];
+    S.friendRequests = requests && typeof requests === 'object'
+      ? { incoming: requests.incoming || [], outgoing: requests.outgoing || [] }
+      : { incoming: [], outgoing: [] };
+  } catch (err) {
+    toast('Не удалось загрузить друзей: ' + err, 'error');
+  }
+  renderFriends();
+}
+
+function renderFriends() {
+  if (!els.friendsList) return;
+  const requests = S.friendRequests || { incoming: [], outgoing: [] };
+  els.friendRequestsList.innerHTML = requests.incoming.length
+    ? requests.incoming.map((item) => `
+      <div class="friend-request-row">
+        <div>
+          <b>@${escapeHtml(item.username)}</b>
+          <div class="hint">Хочет добавить тебя в друзья</div>
+        </div>
+        <div class="team-invite-actions">
+          <button class="btn btn-primary btn-small" type="button" data-friend-request="accept" data-id="${escapeHtml(item.id)}">Принять</button>
+          <button class="btn btn-ghost btn-small" type="button" data-friend-request="decline" data-id="${escapeHtml(item.id)}">Отклонить</button>
+        </div>
+      </div>
+    `).join('')
+    : '';
+  els.friendsList.innerHTML = (S.friends || []).map((friend) => `
+    <article class="pub-card">
+      <div class="pub-card-head">
+        <div>
+          <div class="pub-title">${escapeHtml(friend.displayName || friend.username)}</div>
+          <div class="pub-sub">@${escapeHtml(friend.username)} · ${friend.online ? 'в сети' : 'не в сети'}</div>
+        </div>
+        <span class="pub-status ${friend.online ? 'published' : 'hidden'}">${friend.online ? 'Онлайн' : 'Офлайн'}</span>
+      </div>
+      <div class="pub-release-actions">
+        <button class="btn btn-ghost" type="button" data-friend-action="profile" data-username="${escapeHtml(friend.username)}">Профиль</button>
+        <button class="btn btn-ghost" type="button" data-friend-action="chat" data-username="${escapeHtml(friend.username)}">Написать</button>
+        <button class="btn btn-ghost" type="button" data-friend-action="remove" data-username="${escapeHtml(friend.username)}">Удалить</button>
+      </div>
+    </article>
+  `).join('');
+  if (els.friendsEmpty) els.friendsEmpty.hidden = (S.friends || []).length > 0;
+  const badge = $('side-friend-requests');
+  if (badge) {
+    const count = requests.incoming.length;
+    badge.hidden = count === 0;
+    badge.textContent = String(count);
+  }
+}
+
+async function addFriend() {
+  const input = $('friend-add-name');
+  const username = input.value.trim();
+  if (!username) return;
+  try {
+    await api.friendAdd(username);
+    input.value = '';
+    toast('Заявка отправлена', 'ok');
+    await loadFriends(true);
+  } catch (err) {
+    toast('Не удалось добавить друга: ' + err, 'error');
+  }
+}
+
+async function respondFriendRequest(id, action) {
+  try {
+    await api.friendRespond(id, action);
+    toast(action === 'accept' ? 'Заявка принята' : 'Заявка отклонена', 'ok');
+    await loadFriends(true);
+    await loadNotifications();
+  } catch (err) {
+    toast('Не удалось обработать заявку: ' + err, 'error');
+  }
+}
+
+async function removeFriend(username) {
+  const confirmed = await askConfirm('Удалить друга?', `@${username} исчезнет из списка друзей.`, 'Удалить');
+  if (!confirmed) return;
+  try {
+    await api.friendRemove(username);
+    toast('Друг удалён', 'ok');
+    await loadFriends(true);
+  } catch (err) {
+    toast('Не удалось удалить друга: ' + err, 'error');
+  }
+}
+
+async function loadNotifications() {
+  if (!lavunioLoggedIn() || !api.notificationsList) return;
+  try {
+    const result = await api.notificationsList();
+    S.notifications = Array.isArray(result && result.items) ? result.items : [];
+    S.notificationsUnread = Number(result && result.unread) || 0;
+  } catch (_) {}
+  updateNotificationsBadge();
+}
+
+function updateNotificationsBadge() {
+  if (!els.notifBadge) return;
+  const count = S.notificationsUnread || 0;
+  els.notifBadge.hidden = count === 0;
+  els.notifBadge.textContent = count > 99 ? '99+' : String(count);
+}
+
+function openNotifications() {
+  renderNotifications();
+  openModal('modal-notifications');
+  loadNotifications().then(renderNotifications);
+}
+
+function renderNotifications() {
+  if (!els.notificationsList) return;
+  const items = S.notifications || [];
+  els.notificationsList.innerHTML = items.length
+    ? items.map((item) => `
+      <button class="pub-card notification-item ${item.readAt ? 'read' : ''}" type="button"
+        data-notification-id="${escapeHtml(item.id)}"
+        data-notif-kind="${escapeHtml(item.kind)}"
+        data-notif-link-type="${escapeHtml(item.linkType || '')}"
+        data-notif-link-id="${escapeHtml(item.linkId || '')}">
+        <div class="pub-title">${escapeHtml(item.title)}</div>
+        <div class="mod-changelog">${escapeHtml(item.body || '')}</div>
+        <div class="pub-meta"><span>${escapeHtml(formatDateTime(item.createdAt))}</span></div>
+      </button>
+    `).join('')
+    : '<div class="mod-empty">Уведомлений нет.</div>';
+}
+
+async function readAllNotifications() {
+  try {
+    const result = await api.notificationsRead([]);
+    S.notifications = result.items || [];
+    S.notificationsUnread = result.unread || 0;
+    updateNotificationsBadge();
+    renderNotifications();
+  } catch (err) {
+    toast('Не удалось прочитать уведомления: ' + err, 'error');
+  }
+}
+
+async function openNotification(button) {
+  const id = button.dataset.notificationId;
+  try {
+    const result = await api.notificationsRead([id]);
+    S.notifications = result.items || S.notifications;
+    S.notificationsUnread = result.unread || 0;
+    updateNotificationsBadge();
+  } catch (_) {}
+  $('modal-notifications').hidden = true;
+  const type = button.dataset.notifLinkType;
+  const link = button.dataset.notifLinkId;
+  if (type === 'mode' && link) openDetail(link);
+  else if (type === 'team' && link) openTeamPage({ slug: link, title: link });
+  else if (type === 'user' && link) openPlayerProfile(link);
+}
+
+async function loadChatList(force = false) {
+  if (!lavunioLoggedIn()) return;
+  if (!S.friends.length) await loadFriends();
+  if (!S.teams.length) await loadTeams();
+  renderChatList();
+}
+
+function renderChatList() {
+  if (!els.chatList) return;
+  const friends = S.friends || [];
+  const teams = S.teams || [];
+  const cards = [
+    ...friends.map((friend) => `
+      <article class="pub-card">
+        <div class="pub-card-head">
+          <div><div class="pub-title">${escapeHtml(friend.displayName || friend.username)}</div>
+          <div class="pub-sub">@${escapeHtml(friend.username)} · личный чат</div></div>
+          <span class="pub-status ${friend.online ? 'published' : 'hidden'}">${friend.online ? 'Онлайн' : 'Офлайн'}</span>
+        </div>
+        <div class="pub-release-actions">
+          <button class="btn btn-primary" type="button" data-chat-kind="direct" data-chat-target="${escapeHtml(friend.username)}" data-chat-title="${escapeHtml(friend.displayName || friend.username)}">Открыть чат</button>
+        </div>
+      </article>
+    `),
+    ...teams.map((team) => `
+      <article class="pub-card">
+        <div class="pub-card-head">
+          <div><div class="pub-title">${escapeHtml(team.title)}</div>
+          <div class="pub-sub">${escapeHtml(team.slug)} · чат команды</div></div>
+          <span class="pub-status published">Команда</span>
+        </div>
+        <div class="pub-release-actions">
+          <button class="btn btn-ghost" type="button" data-chat-kind="team" data-chat-target="${escapeHtml(team.id)}" data-chat-title="${escapeHtml(team.title)}">Открыть чат</button>
+        </div>
+      </article>
+    `)
+  ];
+  els.chatList.innerHTML = cards.join('');
+  if (els.chatEmpty) els.chatEmpty.hidden = cards.length > 0;
+}
+
+function openChat(kind, target, title) {
+  S.chatKind = kind;
+  S.chatTarget = target;
+  S.chatTitle = title;
+  $('chat-title').textContent = `Чат · ${title}`;
+  $('chat-subtitle').textContent = kind === 'team' ? 'Чат команды' : `Личный чат с @${target}`;
+  els.chatMessages.innerHTML = '';
+  openModal('modal-chat');
+  loadChatMessages();
+  startChatPolling();
+}
+
+async function loadChatMessages() {
+  if (!S.chatKind || !S.chatTarget) return;
+  try {
+    const items = S.chatKind === 'direct'
+      ? await api.chatDirect(S.chatTarget)
+      : await api.chatTeam(S.chatTarget);
+    S.chatMessages = Array.isArray(items) ? items : [];
+    renderChatMessages();
+  } catch (err) {
+    els.chatMessages.innerHTML = `<div class="hint">Не удалось загрузить чат: ${escapeHtml(String(err))}</div>`;
+  }
+}
+
+function renderChatMessages() {
+  if (!els.chatMessages) return;
+  const me = S.lavunio && S.lavunio.user ? S.lavunio.user.id : '';
+  els.chatMessages.innerHTML = (S.chatMessages || []).map((message) => `
+    <div class="chat-msg ${message.senderId === me ? 'own' : ''}">
+      <div class="meta">${escapeHtml(message.senderDisplayName || message.senderUsername)} · ${escapeHtml(formatDateTime(message.createdAt))}</div>
+      ${escapeHtml(message.body)}
+    </div>
+  `).join('') || '<div class="hint">Сообщений пока нет.</div>';
+  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+}
+
+async function sendChatMessage() {
+  if (!S.chatKind || !S.chatTarget) return;
+  const input = $('chat-input');
+  const body = input.value.trim();
+  if (!body) return;
+  input.value = '';
+  try {
+    if (S.chatKind === 'direct') await api.chatSendDirect(S.chatTarget, body);
+    else await api.chatSendTeam(S.chatTarget, body);
+    await loadChatMessages();
+  } catch (err) {
+    toast('Не удалось отправить сообщение: ' + err, 'error');
+  }
+}
+
+function startChatPolling() {
+  if (S.chatTimer) clearInterval(S.chatTimer);
+  S.chatTimer = setInterval(() => {
+    if ($('modal-chat').hidden) {
+      clearInterval(S.chatTimer);
+      S.chatTimer = null;
+      return;
+    }
+    loadChatMessages();
+  }, 4000);
+}
+
+async function loadComments(mode, force = false) {
+  if (!mode || !api.commentsList) return;
+  if (!force && S.comments[mode.id]) {
+    renderComments(mode);
+    return;
+  }
+  try {
+    const items = await api.commentsList(mode.id);
+    S.comments[mode.id] = Array.isArray(items) ? items : [];
+  } catch (_) {
+    S.comments[mode.id] = [];
+  }
+  renderComments(mode);
+}
+
+function renderComments(mode) {
+  if (!els.detailComments || !els.detailCommentsSection) return;
+  const items = S.comments[mode.id] || [];
+  const roots = items.filter((item) => !item.parentId);
+  const children = new Map();
+  items.filter((item) => item.parentId).forEach((item) => {
+    if (!children.has(item.parentId)) children.set(item.parentId, []);
+    children.get(item.parentId).push(item);
+  });
+  const me = S.lavunio && S.lavunio.user ? S.lavunio.user.id : '';
+  const canDelete = (item) => me && (String(item.userId) === String(me) || (S.lavunio.user.role === 'admin' || S.lavunio.user.role === 'moderator'));
+  const renderOne = (item, reply = false) => `
+    <div class="comment ${reply ? 'reply' : ''}">
+      <div class="comment-meta">@${escapeHtml(item.username)} · ${escapeHtml(formatDateTime(item.createdAt))}</div>
+      <div class="comment-body">${escapeHtml(item.body)}</div>
+      ${canDelete(item) ? `<div class="comment-actions"><button class="link link-btn" type="button" data-comment-delete="${escapeHtml(item.id)}">Удалить</button></div>` : ''}
+    </div>
+    ${(children.get(item.id) || []).map((child) => renderOne(child, true)).join('')}
+  `;
+  els.detailComments.innerHTML = roots.map((item) => renderOne(item)).join('') || '<div class="hint">Комментариев пока нет.</div>';
+  els.detailCommentsSection.hidden = false;
+  const form = $('comment-form');
+  if (form) form.hidden = !lavunioLoggedIn();
+}
+
+async function submitComment() {
+  const mode = modeById(S.selectedId);
+  if (!mode) return;
+  const text = els.commentText.value.trim();
+  if (!text) return;
+  try {
+    await api.commentCreate(mode.id, text, null);
+    els.commentText.value = '';
+    await loadComments(mode, true);
+  } catch (err) {
+    toast('Не удалось отправить комментарий: ' + err, 'error');
+  }
+}
+
+async function deleteComment(commentId) {
+  const mode = modeById(S.selectedId);
+  if (!mode) return;
+  try {
+    await api.commentDelete(commentId);
+    toast('Комментарий удалён', 'ok');
+    await loadComments(mode, true);
+  } catch (err) {
+    toast('Не удалось удалить комментарий: ' + err, 'error');
   }
 }
 

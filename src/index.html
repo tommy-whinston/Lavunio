@@ -117,6 +117,14 @@
       <span id="update-chip-text">Обновление</span>
     </button>
 
+    <button class="icon-btn notif-btn" id="btn-notifications" title="Уведомления">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+        <path d="M10 21h4"/>
+      </svg>
+      <span class="notif-badge" id="notif-badge" hidden>0</span>
+    </button>
+
     <button class="account-chip" id="account-chip" title="Аккаунт">
       <span class="avatar" id="account-avatar"></span>
       <span id="account-name">Гость</span>
@@ -162,6 +170,26 @@
           </svg>
           <span>Загрузки</span>
           <span class="side-badge" id="side-downloads-count" hidden>0</span>
+        </button>
+        <button class="side-link" data-section="feed">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/>
+          </svg>
+          <span>Лента</span>
+        </button>
+        <button class="side-link" data-section="friends" id="side-friends">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+            <path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M18 14.5c2 .8 3 2.6 3 5.5"/>
+          </svg>
+          <span>Друзья</span>
+          <span class="side-badge" id="side-friend-requests" hidden>0</span>
+        </button>
+        <button class="side-link" data-section="chat" id="side-chat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/>
+          </svg>
+          <span>Чат</span>
         </button>
         <button class="side-link" data-section="publisher" id="side-publisher" hidden>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -359,6 +387,54 @@
       </div>
     </section>
 
+    <section id="feed-view" hidden>
+      <div class="library-head publisher-head">
+        <div class="dashboard-copy">
+          <div class="eyebrow">Lavunio</div>
+          <h1>Лента</h1>
+          <p>Новые релизы, отзывы и новости команд.</p>
+        </div>
+        <button class="btn btn-ghost" id="feed-refresh" type="button">Обновить</button>
+      </div>
+      <div id="feed-list" class="publisher-list"></div>
+    </section>
+
+    <section id="friends-view" hidden>
+      <div class="library-head publisher-head">
+        <div class="dashboard-copy">
+          <div class="eyebrow">Lavunio</div>
+          <h1>Друзья</h1>
+          <p>Заявки, друзья и их присутствие.</p>
+        </div>
+        <form class="friend-add-form" id="friend-add-form">
+          <input id="friend-add-name" type="text" maxlength="20" placeholder="username">
+          <button class="btn btn-primary" type="submit">Добавить</button>
+        </form>
+      </div>
+      <div id="friend-requests-list"></div>
+      <div id="friends-list" class="publisher-list"></div>
+      <div class="empty" id="friends-empty" hidden>
+        <h3>Друзей пока нет</h3>
+        <p>Добавь игрока по username, чтобы видеть его статус и общаться.</p>
+      </div>
+    </section>
+
+    <section id="chat-view" hidden>
+      <div class="library-head publisher-head">
+        <div class="dashboard-copy">
+          <div class="eyebrow">Lavunio</div>
+          <h1>Чат</h1>
+          <p>Личные сообщения и чаты команд.</p>
+        </div>
+        <button class="btn btn-ghost" id="chat-refresh" type="button">Обновить</button>
+      </div>
+      <div id="chat-list" class="publisher-list"></div>
+      <div class="empty" id="chat-empty" hidden>
+        <h3>Чатов пока нет</h3>
+        <p>Добавь друзей или вступи в команду.</p>
+      </div>
+    </section>
+
     <section id="team-view" hidden>
       <div class="library-head publisher-head">
         <div class="dashboard-copy">
@@ -549,6 +625,15 @@
         <section class="detail-section" id="detail-sessions-section" hidden>
           <h2>История сессий</h2>
           <div id="detail-sessions" class="session-list"></div>
+        </section>
+
+        <section class="detail-section" id="detail-comments-section" hidden>
+          <h2>Комментарии</h2>
+          <div id="detail-comments" class="comments-list"></div>
+          <form id="comment-form" class="comment-form">
+            <textarea id="comment-text" rows="2" maxlength="2000" placeholder="Написать комментарий"></textarea>
+            <button class="btn btn-primary" type="submit">Отправить</button>
+          </form>
         </section>
 
         <section class="detail-section about-section">
@@ -840,6 +925,34 @@
         <div class="form-error" id="team-invite-error" hidden></div>
         <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit">Пригласить</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Чат -->
+  <div class="modal-overlay" id="modal-chat" hidden role="dialog" aria-modal="true" aria-labelledby="chat-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="chat-title">Чат</h2>
+        <button class="modal-close" data-close="modal-chat">✕</button>
+      </div>
+      <div class="hint" id="chat-subtitle"></div>
+      <div id="chat-messages" class="chat-messages"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" type="text" maxlength="2000" placeholder="Сообщение">
+        <button class="btn btn-primary" type="submit">Отправить</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Уведомления -->
+  <div class="modal-overlay" id="modal-notifications" hidden role="dialog" aria-modal="true" aria-labelledby="notifications-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="notifications-title">Уведомления</h2>
+        <button class="modal-close" data-close="modal-notifications">✕</button>
+      </div>
+      <div id="notifications-list"></div>
+      <button class="btn btn-ghost btn-block" id="notifications-read-all" type="button">Прочитать все</button>
     </div>
   </div>
 
