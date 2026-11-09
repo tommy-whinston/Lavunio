@@ -455,7 +455,7 @@ setTimeout(() => {
 function bindWindowButtons() {
   $('btn-min').onclick = () => api.minimize();
   $('btn-settings').onclick = () => openModal('modal-settings');
-  $('btn-close').onclick = () => api.close();
+  $('btn-close').onclick = () => api.hide();
 }
 
 // ---------------------------------------------------------------- store

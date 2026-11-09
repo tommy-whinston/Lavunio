@@ -98,9 +98,16 @@ pub fn win_minimize(window: Window) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn win_close(window: Window, state: State<'_, AppState>) -> Result<(), String> {
+pub fn win_hide(window: Window, state: State<'_, AppState>) -> Result<(), String> {
     save_window_size(&window, state.inner());
-    window.close().map_err(|e| e.to_string())
+    window.hide().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn win_close(app: AppHandle, window: Window, state: State<'_, AppState>) -> Result<(), String> {
+    save_window_size(&window, state.inner());
+    app.exit(0);
+    Ok(())
 }
 
 #[tauri::command]

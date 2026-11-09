@@ -368,21 +368,19 @@
     </section>
 
     <section id="feed-view" hidden>
-      <div class="library-head publisher-head">
-        <div class="dashboard-copy">
-          <div class="eyebrow">Lavunio</div>
+      <div class="community-head">
+        <div class="community-title">
           <h1>Лента</h1>
           <p>Новые релизы, отзывы и новости команд.</p>
         </div>
         <button class="btn btn-ghost" id="feed-refresh" type="button">Обновить</button>
       </div>
-      <div id="feed-list" class="publisher-list"></div>
+      <div id="feed-list" class="community-list"></div>
     </section>
 
     <section id="friends-view" hidden>
-      <div class="library-head publisher-head">
-        <div class="dashboard-copy">
-          <div class="eyebrow">Lavunio</div>
+      <div class="community-head">
+        <div class="community-title">
           <h1>Друзья</h1>
           <p>Заявки, друзья и их присутствие.</p>
         </div>
@@ -392,24 +390,23 @@
         </form>
       </div>
       <div id="friend-requests-list"></div>
-      <div id="friends-list" class="publisher-list"></div>
-      <div class="empty" id="friends-empty" hidden>
+      <div id="friends-list" class="community-list community-grid"></div>
+      <div class="community-empty" id="friends-empty" hidden>
         <h3>Друзей пока нет</h3>
         <p>Добавь игрока по username, чтобы видеть его статус и общаться.</p>
       </div>
     </section>
 
     <section id="chat-view" hidden>
-      <div class="library-head publisher-head">
-        <div class="dashboard-copy">
-          <div class="eyebrow">Lavunio</div>
+      <div class="community-head">
+        <div class="community-title">
           <h1>Чат</h1>
           <p>Личные сообщения и чаты команд.</p>
         </div>
         <button class="btn btn-ghost" id="chat-refresh" type="button">Обновить</button>
       </div>
-      <div id="chat-list" class="publisher-list"></div>
-      <div class="empty" id="chat-empty" hidden>
+      <div id="chat-list" class="community-list community-grid"></div>
+      <div class="community-empty" id="chat-empty" hidden>
         <h3>Чатов пока нет</h3>
         <p>Добавь друзей или вступи в команду.</p>
       </div>

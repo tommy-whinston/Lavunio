@@ -13,7 +13,69 @@ mod update;
 mod util;
 
 use state::AppState;
-use tauri::Manager;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Manager};
+
+fn show_main(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
+    let lang = app
+        .state::<AppState>()
+        .store
+        .lock()
+        .unwrap()
+        .settings
+        .lang
+        .clone();
+    let (show_label, quit_label) = if lang == "en" {
+        ("Open Lavunio", "Quit")
+    } else {
+        ("Открыть Lavunio", "Выход")
+    };
+    let show_item = MenuItem::with_id(app, "show", show_label, true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+    let Some(icon) = app.default_window_icon().cloned() else {
+        return Ok(());
+    };
+
+    TrayIconBuilder::new()
+        .icon(icon)
+        .tooltip("Lavunio")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => show_main(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                let app = tray.app_handle();
+                if let Some(window) = app.get_webview_window("main") {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        show_main(app);
+                    }
+                }
+            }
+        })
+        .build(app)?;
+    Ok(())
+}
 
 fn main() {
     logging::init();
@@ -21,6 +83,7 @@ fn main() {
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::win_minimize,
+            commands::win_hide,
             commands::win_close,
             commands::win_splash,
             commands::win_ready,
@@ -158,13 +221,16 @@ fn main() {
             if let Some(window) = app.get_webview_window("main") {
                 let app_handle = app.handle().clone();
                 window.on_window_event(move |event| {
-                    if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
                         if let Some(win) = app_handle.get_webview_window("main") {
                             commands::save_window_size_for_event(&win, &app_handle);
+                            let _ = win.hide();
                         }
                     }
                 });
             }
+            setup_tray(app)?;
             Ok(())
         })
         .run(tauri::generate_context!())
