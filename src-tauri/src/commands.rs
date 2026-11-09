@@ -864,6 +864,68 @@ pub async fn admin_resolve_appeal(
 }
 
 #[tauri::command]
+pub async fn author_application_status(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/me/author-application".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn author_application_apply(
+    state: State<'_, AppState>,
+    message: String,
+    links: String,
+) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "POST",
+        "/v1/me/author-application".to_string(),
+        Some(json!({ "message": message, "links": links })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_author_applications(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/admin/author-applications".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn admin_approve_author_application(
+    state: State<'_, AppState>,
+    application_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/author-applications/{application_id}/approve");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn admin_reject_author_application(
+    state: State<'_, AppState>,
+    application_id: String,
+    note: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/author-applications/{application_id}/reject");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "note": note })),
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn admin_modes(state: State<'_, AppState>) -> Result<Value, String> {
     publisher_request(state.inner(), "GET", "/v1/admin/modes".to_string(), None).await
 }

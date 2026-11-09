@@ -418,6 +418,7 @@
         <button class="settings-tab" type="button" data-mod-tab="collections">Подборки</button>
         <button class="settings-tab" type="button" data-mod-tab="reports">Жалобы</button>
         <button class="settings-tab" type="button" data-mod-tab="appeals">Апелляции</button>
+        <button class="settings-tab" type="button" data-mod-tab="applications">Заявки</button>
         <button class="settings-tab" type="button" data-mod-tab="news">Новости</button>
         <button class="settings-tab" type="button" data-mod-tab="history">Журнал</button>
       </div>
@@ -671,6 +672,13 @@
         </form>
 
         <div id="lavunio-signed" hidden>
+          <div class="author-apply" id="author-apply" hidden>
+            <div class="author-apply-copy">
+              <b>Публикация режимов</b>
+              <span id="author-apply-text">Хочешь публиковать свои режимы в Lavunio?</span>
+            </div>
+            <button class="btn btn-ghost" id="author-apply-btn" type="button">Стать автором</button>
+          </div>
           <div class="skin-panel">
             <div class="skin-preview"><img id="lavunio-skin-img" alt="Скин" hidden></div>
             <div class="skin-controls">
@@ -795,6 +803,29 @@
         </div>
         <div class="form-error" id="pub-appeal-error" hidden></div>
         <button class="btn btn-primary btn-block" id="pub-appeal-submit" type="submit">Отправить апелляцию</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Заявка автора -->
+  <div class="modal-overlay" id="modal-author-apply" hidden role="dialog" aria-modal="true" aria-labelledby="author-apply-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="author-apply-title">Стать автором</h2>
+        <button class="modal-close" data-close="modal-author-apply">✕</button>
+      </div>
+      <div class="hint">Расскажи, что планируешь публиковать, и приложи ссылки на портфолио или сборки.</div>
+      <form id="author-apply-form" autocomplete="off">
+        <div class="field">
+          <label for="author-apply-message">О себе</label>
+          <textarea id="author-apply-message" rows="5" maxlength="2000" placeholder="Опыт, режимы, команда, планы"></textarea>
+        </div>
+        <div class="field">
+          <label for="author-apply-links">Ссылки</label>
+          <input id="author-apply-links" type="text" maxlength="500" placeholder="Портфолио, GitHub, Discord, примеры сборок">
+        </div>
+        <div class="form-error" id="author-apply-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="author-apply-submit" type="submit">Отправить заявку</button>
       </form>
     </div>
   </div>

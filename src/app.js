@@ -73,6 +73,7 @@ const S = {
   pendingPlay: null,
   lavunio: null,
   lavunioRegisterMode: false,
+  authorApplication: null,
   wishlist: [],
   follows: [],
   feed: [],
@@ -97,6 +98,7 @@ const S = {
   moderationModes: [],
   moderationReports: [],
   moderationAppeals: [],
+  moderationAuthorApplications: [],
   moderationReviews: [],
   moderationCollections: [],
   moderationHistory: [],
@@ -3343,6 +3345,13 @@ function bindAccountModal() {
   $('lavunio-skin-delete').onclick = () => deleteLavunioSkin();
   $('lavunio-cape-upload').onclick = () => uploadLavunioCape();
   $('lavunio-cape-delete').onclick = () => deleteLavunioCape();
+  const applyBtn = $('author-apply-btn');
+  if (applyBtn) applyBtn.onclick = () => openAuthorApplyModal();
+  const applyForm = $('author-apply-form');
+  if (applyForm) applyForm.onsubmit = (event) => {
+    event.preventDefault();
+    submitAuthorApplication();
+  };
 }
 
 async function refreshLavunioStatus() {
@@ -3354,6 +3363,7 @@ async function refreshLavunioStatus() {
     renderLavunioPane();
     renderAccountChip();
     loadFollows();
+    loadAuthorApplication();
   } catch (_) {}
 }
 
@@ -3397,6 +3407,7 @@ function renderLavunioPane() {
     });
     applyLavunioAvatar($('lavunio-avatar'), user);
     $('lavunio-verify').hidden = !!user.emailVerified;
+    renderAuthorApply(user);
 
     const skinImg = $('lavunio-skin-img');
     if (user.skinUrl) {
@@ -3517,6 +3528,82 @@ async function verifyLavunioEmail() {
   } finally {
     button.disabled = false;
     button.textContent = 'Подтвердить';
+  }
+}
+
+function renderAuthorApply(user) {
+  const box = $('author-apply');
+  if (!box) return;
+  const isPlayer = !!(user && user.role === 'player');
+  box.hidden = !isPlayer;
+  if (!isPlayer) return;
+  const text = $('author-apply-text');
+  const button = $('author-apply-btn');
+  const application = S.authorApplication;
+  if (!application) {
+    text.textContent = 'Хочешь публиковать свои режимы в Lavunio?';
+    button.hidden = false;
+    button.textContent = 'Стать автором';
+  } else if (application.status === 'open') {
+    text.textContent = 'Заявка на рассмотрении';
+    button.hidden = true;
+  } else if (application.status === 'rejected') {
+    text.textContent = `Заявка отклонена: ${application.note || 'без причины'}`;
+    button.hidden = false;
+    button.textContent = 'Подать заново';
+  } else {
+    text.textContent = 'Доступ автора выдан';
+    button.hidden = true;
+  }
+}
+
+async function loadAuthorApplication() {
+  const user = S.lavunio && S.lavunio.user;
+  if (!user || user.role !== 'player' || !api.authorApplicationStatus) {
+    S.authorApplication = null;
+    renderAuthorApply(user);
+    return;
+  }
+  try {
+    S.authorApplication = await api.authorApplicationStatus();
+  } catch (_) {
+    S.authorApplication = null;
+  }
+  renderAuthorApply(user);
+}
+
+function openAuthorApplyModal() {
+  $('author-apply-message').value = '';
+  $('author-apply-links').value = '';
+  $('author-apply-error').hidden = true;
+  openModal('modal-author-apply');
+  setTimeout(() => $('author-apply-message').focus(), 50);
+}
+
+async function submitAuthorApplication() {
+  const message = $('author-apply-message').value.trim();
+  const links = $('author-apply-links').value.trim();
+  const error = $('author-apply-error');
+  if (message.length < 20) {
+    error.textContent = 'Расскажи о себе — минимум 20 символов';
+    error.hidden = false;
+    return;
+  }
+  const button = $('author-apply-submit');
+  button.disabled = true;
+  button.textContent = 'Отправляем…';
+  error.hidden = true;
+  try {
+    S.authorApplication = await api.authorApplicationApply(message, links);
+    $('modal-author-apply').hidden = true;
+    toast('Заявка отправлена на рассмотрение', 'ok');
+    renderLavunioPane();
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось отправить заявку');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Отправить заявку';
   }
 }
 
@@ -4512,6 +4599,8 @@ function bindModeration() {
     else if (action === 'close-report') closeModerationReport(id);
     else if (action === 'appeal-accept') resolveModerationAppeal(id, 'accept', '');
     else if (action === 'appeal-reject') openModerationNote('appeal-reject', id, title);
+    else if (action === 'author-approve') approveAuthorApplication(id, title);
+    else if (action === 'author-reject') openModerationNote('author-reject', id, title);
     else if (action === 'review-approve') approveModerationReview(id);
     else if (action === 'review-reject') rejectModerationReview(id);
     else if (action === 'collection-delete') deleteModerationCollection(id, title);
@@ -4521,7 +4610,7 @@ function bindModeration() {
 }
 
 function setModerationTab(tab) {
-  S.moderationTab = ['queue', 'modes', 'reviews', 'collections', 'reports', 'appeals', 'news', 'history'].includes(tab) ? tab : 'queue';
+  S.moderationTab = ['queue', 'modes', 'reviews', 'collections', 'reports', 'appeals', 'applications', 'news', 'history'].includes(tab) ? tab : 'queue';
   if (S.moderationTab === 'news') loadStoreNews(true);
   renderModeration();
 }
@@ -4540,14 +4629,15 @@ async function loadModeration(force = false) {
   S.moderationLoading = true;
   renderModeration();
   try {
-    const [queue, modes, reports, reviews, collections, history, appeals] = await Promise.all([
+    const [queue, modes, reports, reviews, collections, history, appeals, applications] = await Promise.all([
       api.adminQueue(),
       api.adminModes(),
       api.adminReports(),
       api.adminReviews(),
       api.adminCollections(),
       api.adminHistory(),
-      api.adminAppeals()
+      api.adminAppeals(),
+      api.adminAuthorApplications()
     ]);
     S.moderationQueue = Array.isArray(queue) ? queue : [];
     S.moderationModes = Array.isArray(modes) ? modes : [];
@@ -4556,6 +4646,7 @@ async function loadModeration(force = false) {
     S.moderationCollections = Array.isArray(collections) ? collections : [];
     S.moderationHistory = Array.isArray(history) ? history : [];
     S.moderationAppeals = Array.isArray(appeals) ? appeals : [];
+    S.moderationAuthorApplications = Array.isArray(applications) ? applications : [];
     S.moderationLoaded = true;
   } catch (err) {
     toast('Не удалось загрузить модерацию: ' + err, 'error');
@@ -4603,6 +4694,8 @@ function renderModeration() {
     content.innerHTML = moderationReportsHtml();
   } else if (S.moderationTab === 'appeals') {
     content.innerHTML = moderationAppealsHtml();
+  } else if (S.moderationTab === 'applications') {
+    content.innerHTML = moderationAuthorApplicationsHtml();
   } else if (S.moderationTab === 'news') {
     content.innerHTML = moderationNewsHtml();
     const form = content.querySelector('#mod-news-form');
@@ -4856,6 +4949,50 @@ async function rejectModerationReview(reviewId) {
   }
 }
 
+function moderationAuthorApplicationsHtml() {
+  const items = S.moderationAuthorApplications || [];
+  if (!items.length) {
+    return '<div class="mod-empty">Заявок на автора нет.</div>';
+  }
+  return items.map((item) => `
+    <article class="pub-card">
+      <div class="pub-card-head">
+        <div>
+          <div class="pub-title">${escapeHtml(item.displayName || item.username)}</div>
+          <div class="pub-sub">@${escapeHtml(item.username)}</div>
+        </div>
+        <span class="pub-status pending">Заявка</span>
+      </div>
+      <div class="pub-meta">
+        <span>Отправлена ${escapeHtml(publisherDate(item.createdAt))}</span>
+      </div>
+      <div class="mod-changelog">${escapeHtml(item.message)}</div>
+      ${item.links ? `<div class="hint">${escapeHtml(item.links)}</div>` : ''}
+      <div class="pub-release-actions">
+        <button class="btn btn-primary" type="button" data-action="author-approve" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.displayName || item.username)}">Выдать автора</button>
+        <button class="btn btn-ghost" type="button" data-action="author-reject" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.displayName || item.username)}">Отклонить</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+async function approveAuthorApplication(id, title) {
+  const confirmed = await askConfirm(
+    'Выдать доступ автора?',
+    `Пользователь «${title}» сможет создавать режимы и публиковать релизы.`,
+    'Выдать'
+  );
+  if (!confirmed) return;
+  try {
+    await api.adminApproveAuthorApplication(id);
+    toast('Доступ автора выдан', 'ok');
+    S.moderationLoaded = false;
+    await loadModeration(true);
+  } catch (err) {
+    toast('Не удалось выдать доступ: ' + err, 'error');
+  }
+}
+
 function moderationAppealsHtml() {
   const items = S.moderationAppeals || [];
   if (!items.length) {
@@ -5025,19 +5162,24 @@ function openModerationNote(kind, id, title) {
   S.moderationNoteAction = { kind, id };
   const reject = kind === 'reject';
   const appeal = kind === 'appeal-reject';
-  $('moderation-note-title').textContent = appeal
-    ? 'Отклонить апелляцию'
-    : reject
-      ? 'Отклонить релиз'
-      : 'Скрыть режим';
-  $('moderation-note-hint').textContent = appeal
-    ? `Апелляция по режиму «${title}» будет отклонена. Автор увидит причину.`
-    : reject
-      ? `Релиз «${title}» будет отклонён. Автор увидит причину.`
-      : `Режим «${title}» исчезнет из каталога.`;
+  const author = kind === 'author-reject';
+  $('moderation-note-title').textContent = author
+    ? 'Отклонить заявку'
+    : appeal
+      ? 'Отклонить апелляцию'
+      : reject
+        ? 'Отклонить релиз'
+        : 'Скрыть режим';
+  $('moderation-note-hint').textContent = author
+    ? `Заявка пользователя «${title}» будет отклонена. Причина будет видна в лаунчере.`
+    : appeal
+      ? `Апелляция по режиму «${title}» будет отклонена. Автор увидит причину.`
+      : reject
+        ? `Релиз «${title}» будет отклонён. Автор увидит причину.`
+        : `Режим «${title}» исчезнет из каталога.`;
   $('moderation-note-text').value = '';
   $('moderation-note-error').hidden = true;
-  $('moderation-note-submit').textContent = appeal || reject ? 'Отклонить' : 'Скрыть';
+  $('moderation-note-submit').textContent = author || appeal || reject ? 'Отклонить' : 'Скрыть';
   openModal('modal-moderation-note');
   setTimeout(() => $('moderation-note-text').focus(), 50);
 }
@@ -5063,6 +5205,9 @@ async function submitModerationNote() {
     } else if (action.kind === 'appeal-reject') {
       await api.adminResolveAppeal(action.id, 'reject', note);
       toast('Апелляция отклонена', 'ok');
+    } else if (action.kind === 'author-reject') {
+      await api.adminRejectAuthorApplication(action.id, note);
+      toast('Заявка отклонена', 'ok');
     } else {
       await api.adminHideMode(action.id, note);
       toast('Режим скрыт', 'ok');
