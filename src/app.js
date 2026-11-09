@@ -100,6 +100,11 @@ const S = {
   teamMembersTeam: null,
   teamMembers: [],
   teamInvitations: [],
+  teamPage: null,
+  teamPageData: null,
+  teamJoinTeam: null,
+  teamNewsTeam: null,
+  teamTransferTeam: null,
   publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
@@ -153,6 +158,7 @@ const els = {
   teamInvitations: $('team-invitations'),
   teamMembersList: $('team-members-list'),
   teamMembersHint: $('team-members-hint'),
+  teamPageContent: $('team-page-content'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
@@ -238,6 +244,7 @@ const els = {
   detailAuthorSub: $('detail-author-sub'),
   detailAuthorModes: $('detail-author-modes'),
   detailAuthorFollow: $('detail-author-follow'),
+  detailTeam: $('detail-team'),
   feed: $('feed'),
   feedList: $('feed-list'),
   storeNews: $('store-news'),
@@ -1699,6 +1706,10 @@ function bindDetail() {
   };
   els.detailWishlist.onclick = () => toggleWishlist(modeById(S.selectedId));
   els.detailAuthorFollow.onclick = () => toggleFollowAuthor();
+  if (els.detailTeam) els.detailTeam.onclick = () => {
+    const mode = modeById(S.selectedId);
+    if (mode && mode.team) openTeamPage(mode.team);
+  };
   els.detailReport.onclick = () => openReportModal(modeById(S.selectedId));
   els.reportForm.onsubmit = (event) => {
     event.preventDefault();
@@ -2582,6 +2593,11 @@ function renderDetail() {
     const following = S.follows.includes(author.id);
     els.detailAuthorFollow.textContent = following ? 'Вы подписаны' : 'Подписаться';
     els.detailAuthorFollow.classList.toggle('active', following);
+  }
+  if (els.detailTeam) {
+    const team = mode.team;
+    els.detailTeam.hidden = !team;
+    if (team) els.detailTeam.textContent = `Команда: ${team.title}${team.verified ? ' ✓' : ''}`;
   }
 
   const wishlisted = S.wishlist.includes(mode.id);
@@ -4069,6 +4085,7 @@ function bindTeams() {
     if (button.dataset.teamAction === 'edit') openTeamModal(team);
     else if (button.dataset.teamAction === 'archive') archiveTeam(team);
     else if (button.dataset.teamAction === 'members') openTeamMembers(team);
+    else if (button.dataset.teamAction === 'page') openTeamPage(team);
   };
   const invitations = $('team-invitations');
   if (invitations) invitations.onclick = (event) => {
@@ -4095,6 +4112,40 @@ function bindTeams() {
       removeTeamMember(button.dataset.memberRemove);
     };
   }
+  const page = $('team-page-content');
+  if (page) page.onclick = (event) => {
+    const modeButton = event.target.closest('[data-team-mode]');
+    if (modeButton) {
+      $('modal-team-page').hidden = true;
+      openDetail(modeButton.dataset.teamMode);
+      return;
+    }
+    const requestButton = event.target.closest('button[data-team-request]');
+    if (requestButton) {
+      resolveTeamJoinRequest(requestButton.dataset.id, requestButton.dataset.teamRequest);
+      return;
+    }
+    const button = event.target.closest('button[data-team-page-action]');
+    if (!button) return;
+    const team = S.teamPage;
+    if (!team) return;
+    const action = button.dataset.teamPageAction;
+    if (action === 'members') openTeamMembers(team);
+    else if (action === 'join-requests') showTeamJoinRequests(team);
+    else if (action === 'news') openTeamNews(team);
+    else if (action === 'edit') openTeamModal(team);
+    else if (action === 'transfer') openTeamTransfer(team);
+    else if (action === 'follow') followTeam(team);
+    else if (action === 'unfollow') unfollowTeam(team);
+    else if (action === 'join') openTeamJoin(team);
+    else if (action === 'verify') toggleTeamVerified(team);
+  };
+  const joinForm = $('team-join-form');
+  if (joinForm) joinForm.onsubmit = (event) => { event.preventDefault(); submitTeamJoin(); };
+  const newsForm = $('team-news-form');
+  if (newsForm) newsForm.onsubmit = (event) => { event.preventDefault(); submitTeamNews(); };
+  const transferForm = $('team-transfer-form');
+  if (transferForm) transferForm.onsubmit = (event) => { event.preventDefault(); submitTeamTransfer(); };
   const title = $('team-title');
   const slug = $('team-slug');
   if (title && slug) {
@@ -4138,6 +4189,7 @@ function renderTeams() {
       </div>
       <div class="mod-changelog">${escapeHtml(team.description || 'Без описания')}</div>
       <div class="pub-release-actions">
+        <button class="btn btn-primary" type="button" data-team-action="page" data-id="${escapeHtml(team.id)}">Страница</button>
         <button class="btn btn-ghost" type="button" data-team-action="members" data-id="${escapeHtml(team.id)}">Участники</button>
         <button class="btn btn-ghost" type="button" data-team-action="edit" data-id="${escapeHtml(team.id)}">Редактировать</button>
         ${team.role === 'owner' ? `<button class="btn btn-ghost" type="button" data-team-action="archive" data-id="${escapeHtml(team.id)}">В архив</button>` : ''}
@@ -4178,6 +4230,7 @@ function openTeamModal(team) {
   $('team-links').value = team && team.links ? team.links : '';
   $('team-avatar').value = team && team.avatarUrl ? team.avatarUrl : '';
   $('team-banner').value = team && team.bannerUrl ? team.bannerUrl : '';
+  $('team-join-mode').value = team && team.joinMode ? team.joinMode : 'invite';
   $('team-error').hidden = true;
   openModal('modal-team');
   setTimeout(() => $('team-title').focus(), 50);
@@ -4191,7 +4244,8 @@ async function submitTeam() {
     description: $('team-description').value.trim(),
     links: $('team-links').value.trim(),
     avatarUrl: $('team-avatar').value.trim() || null,
-    bannerUrl: $('team-banner').value.trim() || null
+    bannerUrl: $('team-banner').value.trim() || null,
+    joinMode: $('team-join-mode').value
   };
   const error = $('team-error');
   if (!payload.title) {
@@ -4397,6 +4451,271 @@ async function removeTeamMember(userId) {
   }
 }
 
+async function openTeamPage(team) {
+  if (!team) return;
+  S.teamPage = team;
+  S.teamPageData = null;
+  $('team-page-title').textContent = team.title;
+  els.teamPageContent.innerHTML = '<div class="mod-empty">Загрузка страницы…</div>';
+  openModal('modal-team-page');
+  try {
+    const profile = api.teamProfilePublic
+      ? await api.teamProfilePublic(team.slug)
+      : await api.teamProfile(team.slug);
+    S.teamPageData = profile;
+    renderTeamPage(team, profile);
+  } catch (err) {
+    els.teamPageContent.innerHTML = `<div class="mod-empty">Не удалось загрузить команду: ${escapeHtml(String(err))}</div>`;
+  }
+}
+
+function renderTeamPage(team, profile) {
+  const data = profile && profile.team ? profile.team : {};
+  const stats = profile && profile.stats ? profile.stats : {};
+  const members = Array.isArray(profile && profile.members) ? profile.members : [];
+  const modes = Array.isArray(profile && profile.modes) ? profile.modes : [];
+  const news = Array.isArray(profile && profile.news) ? profile.news : [];
+  const manage = canManageTeam(team);
+  const isMember = !!team.role;
+  const user = S.lavunio && S.lavunio.user;
+  const actions = [];
+  if (manage) {
+    actions.push({ action: 'members', label: 'Участники' });
+    if (data.joinMode !== 'invite') actions.push({ action: 'join-requests', label: 'Заявки' });
+    actions.push({ action: 'news', label: 'Новость' });
+    actions.push({ action: 'edit', label: 'Редактировать' });
+  }
+  if (team.role === 'owner') actions.push({ action: 'transfer', label: 'Передать владение' });
+  if (user && user.role === 'admin') {
+    actions.push({ action: 'verify', label: data.verified ? 'Снять галочку' : 'Подтвердить' });
+  }
+  if (!isMember) {
+    if (data.joinMode !== 'invite') actions.push({ action: 'join', label: data.joinMode === 'open' ? 'Вступить' : 'Подать заявку' });
+    actions.push({ action: 'follow', label: 'Подписаться' });
+  }
+  const actionHtml = actions.map((item) => `
+    <button class="btn btn-ghost" type="button" data-team-page-action="${item.action}">${escapeHtml(item.label)}</button>
+  `).join('');
+
+  $('team-page-title').textContent = `${data.title || team.title}${data.verified ? ' ✓' : ''}`;
+  els.teamPageContent.innerHTML = `
+    <div class="hint">${escapeHtml(data.description || 'Без описания')}</div>
+    ${data.links ? `<div class="hint">${escapeHtml(data.links)}</div>` : ''}
+    <div class="dashboard-stats team-page-stats">
+      <div class="dash-stat"><span>Режимы</span><b>${Number(stats.modes) || 0}</b></div>
+      <div class="dash-stat"><span>Опубликовано</span><b>${Number(stats.published) || 0}</b></div>
+      <div class="dash-stat"><span>Скачивания</span><b>${Number(stats.downloads) || 0}</b></div>
+      <div class="dash-stat"><span>Установки</span><b>${Number(stats.installs) || 0}</b></div>
+      <div class="dash-stat"><span>Подписчики</span><b>${Number(profile && profile.followers) || 0}</b></div>
+    </div>
+    <div class="pub-release-actions team-page-actions">${actionHtml}</div>
+    <div id="team-page-requests"></div>
+    <h3 class="team-page-heading">Участники</h3>
+    <div class="team-members-list">
+      ${members.map((member) => `
+        <div class="team-member-row">
+          <div class="grow">
+            <div class="name">${escapeHtml(member.displayName || member.username)}</div>
+            <div class="sub">@${escapeHtml(member.username)} · ${escapeHtml(teamRoleLabel(member.role))}</div>
+          </div>
+        </div>
+      `).join('') || '<div class="hint">Участников нет</div>'}
+    </div>
+    <h3 class="team-page-heading">Режимы</h3>
+    <div class="team-mode-list">
+      ${modes.map((mode) => `
+        <button class="team-mode-row" type="button" data-team-mode="${escapeHtml(mode.slug)}">
+          <span>${escapeHtml(mode.title)}</span>
+          <b>${Number(mode.installs) || 0} установок</b>
+        </button>
+      `).join('') || '<div class="hint">Опубликованных режимов пока нет</div>'}
+    </div>
+    <h3 class="team-page-heading">Новости</h3>
+    <div class="team-news-list">
+      ${news.map((item) => `
+        <div class="session-row">
+          <span>${escapeHtml(item.title)}</span>
+          <b>${escapeHtml(publisherDate(item.createdAt))}</b>
+        </div>
+      `).join('') || '<div class="hint">Новостей пока нет</div>'}
+    </div>
+  `;
+}
+
+async function showTeamJoinRequests(team) {
+  const box = $('team-page-requests');
+  if (!box || !team) return;
+  box.innerHTML = '<div class="hint">Загрузка заявок…</div>';
+  try {
+    const items = await api.teamJoinRequests(team.id);
+    const list = Array.isArray(items) ? items : [];
+    box.innerHTML = `
+      <h3 class="team-page-heading">Заявки на вступление</h3>
+      ${list.length ? list.map((item) => `
+        <div class="session-row">
+          <span>@${escapeHtml(item.username)} · ${escapeHtml(item.displayName || '')}</span>
+          <span>
+            <button class="btn btn-primary btn-small" type="button" data-team-request="accept" data-id="${escapeHtml(item.id)}">Принять</button>
+            <button class="btn btn-ghost btn-small" type="button" data-team-request="reject" data-id="${escapeHtml(item.id)}">Отклонить</button>
+          </span>
+        </div>
+      `).join('') : '<div class="hint">Заявок нет</div>'}
+    `;
+  } catch (err) {
+    box.innerHTML = `<div class="hint">Не удалось загрузить заявки: ${escapeHtml(String(err))}</div>`;
+  }
+}
+
+async function resolveTeamJoinRequest(requestId, action) {
+  const team = S.teamPage;
+  if (!team) return;
+  try {
+    await api.teamResolveJoinRequest(team.id, requestId, action);
+    toast(action === 'accept' ? 'Заявка принята' : 'Заявка отклонена', 'ok');
+    await showTeamJoinRequests(team);
+    await openTeamPage(team);
+  } catch (err) {
+    toast('Не удалось рассмотреть заявку: ' + err, 'error');
+  }
+}
+
+function openTeamJoin(team) {
+  if (!team) return;
+  S.teamJoinTeam = team;
+  $('team-join-info').textContent = `Команда «${team.title}»`;
+  $('team-join-message').value = '';
+  $('team-join-error').hidden = true;
+  openModal('modal-team-join');
+  setTimeout(() => $('team-join-message').focus(), 50);
+}
+
+async function submitTeamJoin() {
+  const team = S.teamJoinTeam;
+  if (!team) return;
+  const message = $('team-join-message').value.trim();
+  const error = $('team-join-error');
+  const button = $('team-join-submit');
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    const result = await api.teamJoin(team.id, message);
+    $('modal-team-join').hidden = true;
+    toast(result && result.status === 'joined' ? 'Ты вступил в команду' : 'Заявка отправлена', 'ok');
+    S.teamsLoaded = false;
+    await loadTeams(true);
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось отправить заявку');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function openTeamNews(team) {
+  if (!team) return;
+  S.teamNewsTeam = team;
+  $('team-news-title').value = '';
+  $('team-news-body').value = '';
+  $('team-news-error').hidden = true;
+  openModal('modal-team-news');
+  setTimeout(() => $('team-news-title').focus(), 50);
+}
+
+async function submitTeamNews() {
+  const team = S.teamNewsTeam;
+  if (!team) return;
+  const title = $('team-news-title').value.trim();
+  const body = $('team-news-body').value.trim();
+  const error = $('team-news-error');
+  if (title.length < 3 || body.length < 3) {
+    error.textContent = 'Заполни заголовок и текст';
+    error.hidden = false;
+    return;
+  }
+  const button = $('team-news-submit');
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    await api.teamCreateNews(team.id, title, body);
+    $('modal-team-news').hidden = true;
+    toast('Новость опубликована', 'ok');
+    await openTeamPage(team);
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось опубликовать новость');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function openTeamTransfer(team) {
+  if (!team) return;
+  S.teamTransferTeam = team;
+  $('team-transfer-username').value = '';
+  $('team-transfer-error').hidden = true;
+  openModal('modal-team-transfer');
+  setTimeout(() => $('team-transfer-username').focus(), 50);
+}
+
+async function submitTeamTransfer() {
+  const team = S.teamTransferTeam;
+  if (!team) return;
+  const username = $('team-transfer-username').value.trim();
+  const error = $('team-transfer-error');
+  if (!username) {
+    error.textContent = 'Укажи username';
+    error.hidden = false;
+    return;
+  }
+  const button = $('team-transfer-submit');
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    await api.teamTransfer(team.id, username);
+    $('modal-team-transfer').hidden = true;
+    toast('Владение передано', 'ok');
+    S.teamsLoaded = false;
+    await loadTeams(true);
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось передать владение');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function followTeam(team) {
+  try {
+    await api.teamFollow(team.id);
+    toast('Подписка оформлена', 'ok');
+    await openTeamPage(team);
+  } catch (err) {
+    toast('Не удалось подписаться: ' + err, 'error');
+  }
+}
+
+async function unfollowTeam(team) {
+  try {
+    await api.teamUnfollow(team.id);
+    toast('Подписка отменена', 'info');
+    await openTeamPage(team);
+  } catch (err) {
+    toast('Не удалось отписаться: ' + err, 'error');
+  }
+}
+
+async function toggleTeamVerified(team) {
+  try {
+    await api.teamVerify(team.id, !team.verified);
+    toast('Статус команды обновлён', 'ok');
+    S.teamsLoaded = false;
+    await loadTeams(true);
+    await openTeamPage(S.teams.find((item) => item.id === team.id) || team);
+  } catch (err) {
+    toast('Не удалось изменить статус: ' + err, 'error');
+  }
+}
+
 function publisherSlug(value) {
   return String(value || '')
     .toLowerCase()
@@ -4413,10 +4732,26 @@ function openPublisherModeModal() {
   if (form) form.reset();
   const slug = $('pub-mode-slug-input');
   if (slug) delete slug.dataset.touched;
+  fillPublisherTeamSelect();
+  if (!S.teamsLoaded) loadTeams(true).then(fillPublisherTeamSelect).catch(() => {});
   hidePublisherError('pub-mode-error');
   openModal('modal-publisher-mode');
   const title = $('pub-mode-title-input');
   if (title) setTimeout(() => title.focus(), 50);
+}
+
+function fillPublisherTeamSelect() {
+  const select = $('pub-mode-team');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">Без команды</option>';
+  (S.teams || []).forEach((team) => {
+    const option = document.createElement('option');
+    option.value = team.id;
+    option.textContent = team.title;
+    select.appendChild(option);
+  });
+  if (current) select.value = current;
 }
 
 function openPublisherNewsModal(mode) {
@@ -4668,7 +5003,9 @@ async function submitPublisherMode() {
     size: $('pub-mode-size').value.trim() || null,
     coverUrl: $('pub-mode-cover').value.trim() || null,
     trailerUrl: $('pub-mode-trailer').value.trim() || null,
-    tags: $('pub-mode-tags').value.split(',').map((tag) => tag.trim()).filter(Boolean)
+    tags: $('pub-mode-tags').value.split(',').map((tag) => tag.trim()).filter(Boolean),
+    teamId: $('pub-mode-team').value || null,
+    coAuthors: $('pub-mode-coauthors').value.split(',').map((name) => name.trim()).filter(Boolean)
   };
 
   const button = $('pub-mode-submit');

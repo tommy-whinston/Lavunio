@@ -541,6 +541,7 @@
             </div>
             <button class="btn btn-ghost" id="detail-author-follow" type="button">Подписаться</button>
             <button class="btn btn-ghost" id="detail-author-modes" type="button">Все режимы автора</button>
+            <button class="btn btn-ghost" id="detail-team" type="button" hidden>Команда</button>
           </div>
         </section>
 
@@ -785,6 +786,14 @@
           <label for="team-links">Ссылки</label>
           <input id="team-links" type="text" maxlength="1000" placeholder="Сайт, Discord, YouTube">
         </div>
+        <div class="field">
+          <label for="team-join-mode">Вступление</label>
+          <select id="team-join-mode">
+            <option value="invite">Только по приглашению</option>
+            <option value="request">По заявке</option>
+            <option value="open">Свободное</option>
+          </select>
+        </div>
         <div class="pub-grid">
           <div class="field">
             <label for="team-avatar">Аватар (URL)</label>
@@ -828,6 +837,77 @@
         </div>
         <div class="form-error" id="team-invite-error" hidden></div>
         <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit">Пригласить</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Публичная страница команды -->
+  <div class="modal-overlay" id="modal-team-page" hidden role="dialog" aria-modal="true" aria-labelledby="team-page-title">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="team-page-title">Команда</h2>
+        <button class="modal-close" data-close="modal-team-page">✕</button>
+      </div>
+      <div id="team-page-content"></div>
+    </div>
+  </div>
+
+  <!-- Заявка в команду -->
+  <div class="modal-overlay" id="modal-team-join" hidden role="dialog" aria-modal="true" aria-labelledby="team-join-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="team-join-title">Заявка в команду</h2>
+        <button class="modal-close" data-close="modal-team-join">✕</button>
+      </div>
+      <div class="hint" id="team-join-info"></div>
+      <form id="team-join-form">
+        <div class="field">
+          <label for="team-join-message">Сообщение</label>
+          <textarea id="team-join-message" rows="4" maxlength="1000" placeholder="Расскажи, чем можешь помочь команде"></textarea>
+        </div>
+        <div class="form-error" id="team-join-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="team-join-submit" type="submit">Отправить заявку</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Новость команды -->
+  <div class="modal-overlay" id="modal-team-news" hidden role="dialog" aria-modal="true" aria-labelledby="team-news-title-label">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="team-news-title-label">Новость команды</h2>
+        <button class="modal-close" data-close="modal-team-news">✕</button>
+      </div>
+      <form id="team-news-form">
+        <div class="field">
+          <label for="team-news-title">Заголовок</label>
+          <input id="team-news-title" type="text" maxlength="120">
+        </div>
+        <div class="field">
+          <label for="team-news-body">Текст</label>
+          <textarea id="team-news-body" rows="5" maxlength="5000"></textarea>
+        </div>
+        <div class="form-error" id="team-news-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="team-news-submit" type="submit">Опубликовать</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Передача владения -->
+  <div class="modal-overlay" id="modal-team-transfer" hidden role="dialog" aria-modal="true" aria-labelledby="team-transfer-title">
+    <div class="modal modal-login">
+      <div class="modal-head">
+        <h2 id="team-transfer-title">Передать владение</h2>
+        <button class="modal-close" data-close="modal-team-transfer">✕</button>
+      </div>
+      <div class="hint">Новый владелец должен состоять в команде. Ты станешь администратором.</div>
+      <form id="team-transfer-form">
+        <div class="field">
+          <label for="team-transfer-username">Username</label>
+          <input id="team-transfer-username" type="text" maxlength="20">
+        </div>
+        <div class="form-error" id="team-transfer-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="team-transfer-submit" type="submit">Передать</button>
       </form>
     </div>
   </div>
@@ -882,6 +962,18 @@
           <div class="field">
             <label for="pub-mode-size">Размер</label>
             <input id="pub-mode-size" type="text" placeholder="58 МБ">
+          </div>
+        </div>
+        <div class="pub-grid">
+          <div class="field">
+            <label for="pub-mode-team">Команда</label>
+            <select id="pub-mode-team">
+              <option value="">Без команды</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pub-mode-coauthors">Соавторы</label>
+            <input id="pub-mode-coauthors" type="text" placeholder="username1, username2">
           </div>
         </div>
         <div class="field">

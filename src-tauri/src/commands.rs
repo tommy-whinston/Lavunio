@@ -958,6 +958,13 @@ pub async fn team_profile(state: State<'_, AppState>, slug: String) -> Result<Va
 }
 
 #[tauri::command]
+pub async fn team_profile_public(slug: String) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let path = format!("/v1/teams/{slug}");
+    blocking(move || net::api_request_json(&api, "GET", &path, None, None)).await?
+}
+
+#[tauri::command]
 pub async fn team_invitations(state: State<'_, AppState>) -> Result<Value, String> {
     publisher_request(
         state.inner(),
@@ -1028,6 +1035,109 @@ pub async fn team_member_remove(
 ) -> Result<Value, String> {
     let path = format!("/v1/teams/{team_id}/members/{user_id}");
     publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_join(
+    state: State<'_, AppState>,
+    team_id: String,
+    message: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/join-requests");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "message": message })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_join_requests(
+    state: State<'_, AppState>,
+    team_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/join-requests");
+    publisher_request(state.inner(), "GET", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_resolve_join_request(
+    state: State<'_, AppState>,
+    team_id: String,
+    request_id: String,
+    action: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/join-requests/{request_id}/resolve");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "action": action })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_transfer(
+    state: State<'_, AppState>,
+    team_id: String,
+    username: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/transfer");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "username": username })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_follow(state: State<'_, AppState>, team_id: String) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/follow");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_unfollow(state: State<'_, AppState>, team_id: String) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/follow");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_create_news(
+    state: State<'_, AppState>,
+    team_id: String,
+    title: String,
+    body: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/news");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "title": title, "body": body })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_verify(
+    state: State<'_, AppState>,
+    team_id: String,
+    verified: bool,
+) -> Result<Value, String> {
+    let path = format!("/v1/admin/teams/{team_id}/verify");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "verified": verified })),
+    )
+    .await
 }
 
 #[tauri::command]
