@@ -80,6 +80,8 @@ fn main() {
             commands::team_archive,
             commands::team_profile,
             commands::team_profile_public,
+            commands::player_profile,
+            commands::player_update_profile,
             commands::team_invitations,
             commands::team_invite,
             commands::team_invitation_accept,

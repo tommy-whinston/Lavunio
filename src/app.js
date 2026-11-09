@@ -105,6 +105,7 @@ const S = {
   teamJoinTeam: null,
   teamNewsTeam: null,
   teamTransferTeam: null,
+  playerProfile: null,
   publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
@@ -159,6 +160,8 @@ const els = {
   teamMembersList: $('team-members-list'),
   teamMembersHint: $('team-members-hint'),
   teamPageContent: $('team-page-content'),
+  playerContent: $('player-content'),
+  playerForm: $('player-form'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
@@ -244,6 +247,7 @@ const els = {
   detailAuthorSub: $('detail-author-sub'),
   detailAuthorModes: $('detail-author-modes'),
   detailAuthorFollow: $('detail-author-follow'),
+  detailAuthorProfile: $('detail-author-profile'),
   detailTeam: $('detail-team'),
   feed: $('feed'),
   feedList: $('feed-list'),
@@ -1706,6 +1710,10 @@ function bindDetail() {
   };
   els.detailWishlist.onclick = () => toggleWishlist(modeById(S.selectedId));
   els.detailAuthorFollow.onclick = () => toggleFollowAuthor();
+  if (els.detailAuthorProfile) els.detailAuthorProfile.onclick = () => {
+    const mode = modeById(S.selectedId);
+    if (mode && mode.author) openPlayerProfile(mode.author.username);
+  };
   if (els.detailTeam) els.detailTeam.onclick = () => {
     const mode = modeById(S.selectedId);
     if (mode && mode.team) openTeamPage(mode.team);
@@ -2589,6 +2597,7 @@ function renderDetail() {
   }
   const canFollow = !!(apiReady && author && author.id && S.lavunio.user && S.lavunio.user.username !== author.id);
   els.detailAuthorFollow.hidden = !canFollow;
+  if (els.detailAuthorProfile) els.detailAuthorProfile.hidden = !(author && author.username);
   if (canFollow) {
     const following = S.follows.includes(author.id);
     els.detailAuthorFollow.textContent = following ? 'Вы подписаны' : 'Подписаться';
@@ -3379,6 +3388,28 @@ function bindAccountModal() {
     $('lavunio-email').focus();
   };
   $('lavunio-logout').onclick = () => logoutLavunio();
+  $('lavunio-profile').onclick = () => {
+    const user = S.lavunio && S.lavunio.user;
+    if (user) openPlayerProfile(user.username);
+  };
+  const playerForm = $('player-form');
+  if (playerForm) playerForm.onsubmit = (event) => {
+    event.preventDefault();
+    savePlayerProfile();
+  };
+  const playerContent = els.playerContent;
+  if (playerContent) playerContent.onclick = (event) => {
+    const teamButton = event.target.closest('[data-player-team]');
+    if (teamButton) {
+      openTeamPage({ slug: teamButton.dataset.playerTeam, title: teamButton.dataset.playerTitle || teamButton.dataset.playerTeam });
+      return;
+    }
+    const modeButton = event.target.closest('[data-player-mode]');
+    if (modeButton) {
+      $('modal-player').hidden = true;
+      openDetail(modeButton.dataset.playerMode);
+    }
+  };
   $('lavunio-verify-btn').onclick = () => verifyLavunioEmail();
   $('lavunio-skin-upload').onclick = () => uploadLavunioSkin();
   $('lavunio-skin-delete').onclick = () => deleteLavunioSkin();
@@ -3643,6 +3674,115 @@ async function submitAuthorApplication() {
   } finally {
     button.disabled = false;
     button.textContent = 'Отправить заявку';
+  }
+}
+
+async function openPlayerProfile(username) {
+  if (!username) return;
+  $('player-title').textContent = 'Профиль';
+  els.playerContent.innerHTML = '<div class="mod-empty">Загрузка профиля…</div>';
+  els.playerForm.hidden = true;
+  openModal('modal-player');
+  try {
+    const profile = await api.playerProfile(username);
+    S.playerProfile = profile;
+    renderPlayerProfile(profile);
+  } catch (err) {
+    els.playerContent.innerHTML = `<div class="mod-empty">Не удалось загрузить профиль: ${escapeHtml(String(err))}</div>`;
+  }
+}
+
+function renderPlayerProfile(profile) {
+  const own = !!(S.lavunio && S.lavunio.user &&
+    String(S.lavunio.user.username).toLowerCase() === String(profile.username).toLowerCase());
+  const roleLabel = profile.role === 'admin' ? 'администратор'
+    : profile.role === 'author' ? 'автор'
+      : profile.role === 'moderator' ? 'модератор' : 'игрок';
+  $('player-title').textContent = `${profile.displayName || profile.username}${profile.role === 'author' || profile.role === 'admin' ? ' ✓' : ''}`;
+  els.playerContent.innerHTML = `
+    <div class="player-head">
+      <span class="avatar" id="player-avatar"></span>
+      <div class="grow">
+        <div class="player-name">${escapeHtml(profile.displayName || profile.username)}</div>
+        <div class="player-sub">@${escapeHtml(profile.username)} · ${escapeHtml(roleLabel)}</div>
+        <div class="hint">${escapeHtml(profile.bio || 'Без статуса')}</div>
+      </div>
+    </div>
+    <div class="dashboard-stats team-page-stats">
+      <div class="dash-stat"><span>Режимы</span><b>${Number(profile.stats && profile.stats.modes) || 0}</b></div>
+      <div class="dash-stat"><span>Скачивания</span><b>${Number(profile.stats && profile.stats.downloads) || 0}</b></div>
+      <div class="dash-stat"><span>Установки</span><b>${Number(profile.stats && profile.stats.installs) || 0}</b></div>
+    </div>
+    <h3 class="team-page-heading">Команды</h3>
+    <div class="team-mode-list">
+      ${(profile.teams || []).map((team) => `
+        <button class="team-mode-row" type="button" data-player-team="${escapeHtml(team.slug)}" data-player-title="${escapeHtml(team.title)}">
+          <span>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</span>
+          <b>${escapeHtml(teamRoleLabel(team.role))}</b>
+        </button>
+      `).join('') || '<div class="hint">Не состоит в командах</div>'}
+    </div>
+    ${own ? `
+      <h3 class="team-page-heading">Моя библиотека</h3>
+      <div class="team-mode-list">
+        ${S.modes.filter((mode) => inLibrary(mode)).slice(0, 20).map((mode) => `
+          <button class="team-mode-row" type="button" data-player-mode="${escapeHtml(mode.id)}">
+            <span>${escapeHtml(mode.title)}</span>
+            <b>${isInstalled(mode) ? 'установлен' : 'в библиотеке'}</b>
+          </button>
+        `).join('') || '<div class="hint">Библиотека пуста</div>'}
+      </div>
+    ` : ''}
+    <h3 class="team-page-heading">Режимы</h3>
+    <div class="team-mode-list">
+      ${(profile.modes || []).map((mode) => `
+        <button class="team-mode-row" type="button" data-player-mode="${escapeHtml(mode.slug)}">
+          <span>${escapeHtml(mode.title)}</span>
+          <b>${Number(mode.installs) || 0} установок</b>
+        </button>
+      `).join('') || '<div class="hint">Опубликованных режимов нет</div>'}
+    </div>
+    <div class="hint">В Lavunio с ${escapeHtml(formatDateTime(profile.createdAt))}</div>
+  `;
+  applyLavunioAvatar($('player-avatar'), {
+    skinUrl: profile.skinUrl,
+    username: profile.username,
+    displayName: profile.displayName
+  });
+  els.playerForm.hidden = !own;
+  if (own) {
+    $('player-display-name').value = profile.displayName || profile.username;
+    $('player-bio').value = profile.bio || '';
+    $('player-error').hidden = true;
+  }
+}
+
+async function savePlayerProfile() {
+  const displayName = $('player-display-name').value.trim();
+  const bio = $('player-bio').value.trim();
+  const error = $('player-error');
+  if (!displayName) {
+    error.textContent = 'Укажи отображаемое имя';
+    error.hidden = false;
+    return;
+  }
+  const button = $('player-save');
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    await api.playerUpdateProfile(displayName, bio);
+    if (api.lavunioRefreshProfile) {
+      try { S.lavunio = await api.lavunioRefreshProfile(); } catch (_) {}
+    }
+    renderAccountChip();
+    renderLavunioPane();
+    toast('Профиль сохранён', 'ok');
+    if (S.playerProfile) await openPlayerProfile(S.playerProfile.username);
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось сохранить профиль');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
   }
 }
 

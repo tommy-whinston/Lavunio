@@ -74,6 +74,8 @@
     teamArchive: (teamId) => invoke("team_archive", { teamId }),
     teamProfile: (slug) => invoke("team_profile", { slug }),
     teamProfilePublic: (slug) => invoke("team_profile_public", { slug }),
+    playerProfile: (username) => invoke("player_profile", { username }),
+    playerUpdateProfile: (displayName, bio) => invoke("player_update_profile", { displayName, bio }),
     teamInvitations: () => invoke("team_invitations"),
     teamInvite: (teamId, username, role) => invoke("team_invite", { teamId, username, role }),
     teamInvitationAccept: (invitationId) => invoke("team_invitation_accept", { invitationId }),

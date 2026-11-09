@@ -965,6 +965,28 @@ pub async fn team_profile_public(slug: String) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub async fn player_profile(username: String) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let path = format!("/v1/users/{username}");
+    blocking(move || net::api_request_json(&api, "GET", &path, None, None)).await?
+}
+
+#[tauri::command]
+pub async fn player_update_profile(
+    state: State<'_, AppState>,
+    display_name: String,
+    bio: String,
+) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "PUT",
+        "/v1/me/profile".to_string(),
+        Some(json!({ "displayName": display_name, "bio": bio })),
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn team_invitations(state: State<'_, AppState>) -> Result<Value, String> {
     publisher_request(
         state.inner(),

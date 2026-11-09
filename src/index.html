@@ -541,6 +541,7 @@
             </div>
             <button class="btn btn-ghost" id="detail-author-follow" type="button">Подписаться</button>
             <button class="btn btn-ghost" id="detail-author-modes" type="button">Все режимы автора</button>
+            <button class="btn btn-ghost" id="detail-author-profile" type="button">Профиль</button>
             <button class="btn btn-ghost" id="detail-team" type="button" hidden>Команда</button>
           </div>
         </section>
@@ -749,6 +750,7 @@
             </div>
           </div>
 
+          <button class="btn btn-ghost btn-block" id="lavunio-profile" type="button">Мой профиль</button>
           <button class="btn btn-ghost btn-block" id="lavunio-logout" type="button">Выйти из Lavunio</button>
         </div>
 
@@ -837,6 +839,29 @@
         </div>
         <div class="form-error" id="team-invite-error" hidden></div>
         <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit">Пригласить</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Профиль игрока -->
+  <div class="modal-overlay" id="modal-player" hidden role="dialog" aria-modal="true" aria-labelledby="player-title">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="player-title">Профиль</h2>
+        <button class="modal-close" data-close="modal-player">✕</button>
+      </div>
+      <div id="player-content"></div>
+      <form id="player-form" hidden>
+        <div class="field">
+          <label for="player-display-name">Отображаемое имя</label>
+          <input id="player-display-name" type="text" maxlength="48">
+        </div>
+        <div class="field">
+          <label for="player-bio">Статус</label>
+          <textarea id="player-bio" rows="3" maxlength="500" placeholder="Пара слов о себе"></textarea>
+        </div>
+        <div class="form-error" id="player-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="player-save" type="submit">Сохранить</button>
       </form>
     </div>
   </div>
