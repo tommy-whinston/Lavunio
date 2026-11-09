@@ -952,6 +952,85 @@ pub async fn team_archive(state: State<'_, AppState>, team_id: String) -> Result
 }
 
 #[tauri::command]
+pub async fn team_profile(state: State<'_, AppState>, slug: String) -> Result<Value, String> {
+    let path = format!("/v1/teams/{slug}");
+    publisher_request(state.inner(), "GET", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_invitations(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "GET",
+        "/v1/me/team-invitations".to_string(),
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_invite(
+    state: State<'_, AppState>,
+    team_id: String,
+    username: String,
+    role: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/invitations");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "username": username, "role": role })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_invitation_accept(
+    state: State<'_, AppState>,
+    invitation_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/me/team-invitations/{invitation_id}/accept");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_invitation_decline(
+    state: State<'_, AppState>,
+    invitation_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/me/team-invitations/{invitation_id}/decline");
+    publisher_request(state.inner(), "POST", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_member_role(
+    state: State<'_, AppState>,
+    team_id: String,
+    user_id: String,
+    role: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/members/{user_id}");
+    publisher_request(
+        state.inner(),
+        "PUT",
+        path,
+        Some(json!({ "role": role })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_member_remove(
+    state: State<'_, AppState>,
+    team_id: String,
+    user_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/members/{user_id}");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
 pub async fn admin_modes(state: State<'_, AppState>) -> Result<Value, String> {
     publisher_request(state.inner(), "GET", "/v1/admin/modes".to_string(), None).await
 }

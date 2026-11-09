@@ -97,6 +97,9 @@ const S = {
   teamsLoaded: false,
   teamsLoading: false,
   teamEditing: null,
+  teamMembersTeam: null,
+  teamMembers: [],
+  teamInvitations: [],
   publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
@@ -147,6 +150,9 @@ const els = {
   teamEmpty: $('team-empty'),
   teamHint: $('team-hint'),
   teamStatCount: $('team-stat-count'),
+  teamInvitations: $('team-invitations'),
+  teamMembersList: $('team-members-list'),
+  teamMembersHint: $('team-members-hint'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
@@ -622,6 +628,7 @@ function showSection(section) {
   } else if (S.section === 'team') {
     renderTeams();
     loadTeams();
+    loadTeamInvitations();
   } else if (S.section === 'moderation') {
     renderModeration();
     loadModeration();
@@ -4061,7 +4068,33 @@ function bindTeams() {
     if (!team) return;
     if (button.dataset.teamAction === 'edit') openTeamModal(team);
     else if (button.dataset.teamAction === 'archive') archiveTeam(team);
+    else if (button.dataset.teamAction === 'members') openTeamMembers(team);
   };
+  const invitations = $('team-invitations');
+  if (invitations) invitations.onclick = (event) => {
+    const button = event.target.closest('button[data-invite-action]');
+    if (!button) return;
+    if (button.dataset.inviteAction === 'accept') acceptTeamInvitation(button.dataset.id);
+    else if (button.dataset.inviteAction === 'decline') declineTeamInvitation(button.dataset.id);
+  };
+  const inviteForm = $('team-invite-form');
+  if (inviteForm) inviteForm.onsubmit = (event) => {
+    event.preventDefault();
+    submitTeamInvite();
+  };
+  const membersList = $('team-members-list');
+  if (membersList) {
+    membersList.onchange = (event) => {
+      const select = event.target.closest('select[data-member-role]');
+      if (!select) return;
+      changeTeamMemberRole(select.dataset.user, select.value);
+    };
+    membersList.onclick = (event) => {
+      const button = event.target.closest('button[data-member-remove]');
+      if (!button) return;
+      removeTeamMember(button.dataset.memberRemove);
+    };
+  }
   const title = $('team-title');
   const slug = $('team-slug');
   if (title && slug) {
@@ -4105,6 +4138,7 @@ function renderTeams() {
       </div>
       <div class="mod-changelog">${escapeHtml(team.description || 'Без описания')}</div>
       <div class="pub-release-actions">
+        <button class="btn btn-ghost" type="button" data-team-action="members" data-id="${escapeHtml(team.id)}">Участники</button>
         <button class="btn btn-ghost" type="button" data-team-action="edit" data-id="${escapeHtml(team.id)}">Редактировать</button>
         ${team.role === 'owner' ? `<button class="btn btn-ghost" type="button" data-team-action="archive" data-id="${escapeHtml(team.id)}">В архив</button>` : ''}
       </div>
@@ -4203,6 +4237,163 @@ async function archiveTeam(team) {
     await loadTeams(true);
   } catch (err) {
     toast('Не удалось архивировать команду: ' + err, 'error');
+  }
+}
+
+function renderTeamInvitations() {
+  const box = els.teamInvitations;
+  if (!box) return;
+  const items = S.teamInvitations || [];
+  box.hidden = items.length === 0;
+  box.innerHTML = items.map((invitation) => `
+    <div class="team-invite-card">
+      <div class="team-invite-copy">
+        <b>Приглашение в «${escapeHtml(invitation.teamTitle)}»</b>
+        <span>${escapeHtml(invitation.inviterName)} приглашает на роль «${escapeHtml(teamRoleLabel(invitation.role))}»</span>
+      </div>
+      <div class="team-invite-actions">
+        <button class="btn btn-primary btn-small" type="button" data-invite-action="accept" data-id="${escapeHtml(invitation.id)}">Принять</button>
+        <button class="btn btn-ghost btn-small" type="button" data-invite-action="decline" data-id="${escapeHtml(invitation.id)}">Отклонить</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadTeamInvitations() {
+  if (!publisherAllowed() || !api.teamInvitations) return;
+  try {
+    const items = await api.teamInvitations();
+    S.teamInvitations = Array.isArray(items) ? items : [];
+  } catch (_) {
+    S.teamInvitations = [];
+  }
+  renderTeamInvitations();
+}
+
+async function acceptTeamInvitation(invitationId) {
+  try {
+    await api.teamInvitationAccept(invitationId);
+    toast('Приглашение принято', 'ok');
+    S.teamsLoaded = false;
+    await loadTeams(true);
+    await loadTeamInvitations();
+  } catch (err) {
+    toast('Не удалось принять приглашение: ' + err, 'error');
+  }
+}
+
+async function declineTeamInvitation(invitationId) {
+  try {
+    await api.teamInvitationDecline(invitationId);
+    toast('Приглашение отклонено', 'info');
+    await loadTeamInvitations();
+  } catch (err) {
+    toast('Не удалось отклонить приглашение: ' + err, 'error');
+  }
+}
+
+function canManageTeam(team) {
+  const user = S.lavunio && S.lavunio.user;
+  return !!user && (user.role === 'admin' || (team && (team.role === 'owner' || team.role === 'admin')));
+}
+
+function memberRoleOptions(current) {
+  return ['admin', 'publisher', 'designer', 'member'].map((role) =>
+    `<option value="${role}" ${role === current ? 'selected' : ''}>${escapeHtml(teamRoleLabel(role))}</option>`
+  ).join('');
+}
+
+async function openTeamMembers(team) {
+  if (!team) return;
+  S.teamMembersTeam = team;
+  $('team-members-title').textContent = `Участники · ${team.title}`;
+  $('team-members-hint').textContent = 'Загрузка…';
+  $('team-members-list').innerHTML = '';
+  $('team-invite-form').hidden = true;
+  openModal('modal-team-members');
+  try {
+    const profile = await api.teamProfile(team.slug);
+    const members = Array.isArray(profile && profile.members) ? profile.members : [];
+    S.teamMembers = members;
+    renderTeamMembers(team, members);
+  } catch (err) {
+    $('team-members-hint').textContent = 'Не удалось загрузить участников: ' + err;
+  }
+}
+
+function renderTeamMembers(team, members) {
+  const manage = canManageTeam(team);
+  $('team-members-hint').textContent = `Участников: ${members.length}`;
+  els.teamMembersList.innerHTML = members.map((member) => `
+    <div class="team-member-row">
+      <div class="grow">
+        <div class="name">${escapeHtml(member.displayName || member.username)}</div>
+        <div class="sub">@${escapeHtml(member.username)} · ${escapeHtml(teamRoleLabel(member.role))}</div>
+      </div>
+      ${manage && member.role !== 'owner'
+        ? `<select data-member-role data-user="${escapeHtml(member.userId)}">${memberRoleOptions(member.role)}</select>
+           <button class="btn btn-ghost btn-small" type="button" data-member-remove="${escapeHtml(member.userId)}">Удалить</button>`
+        : ''}
+    </div>
+  `).join('');
+  $('team-invite-form').hidden = !manage;
+}
+
+async function submitTeamInvite() {
+  const team = S.teamMembersTeam;
+  if (!team) return;
+  const username = $('team-invite-username').value.trim();
+  const role = $('team-invite-role').value;
+  const error = $('team-invite-error');
+  if (!username) {
+    error.textContent = 'Укажи username';
+    error.hidden = false;
+    return;
+  }
+  const button = $('team-invite-submit');
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    await api.teamInvite(team.id, username, role);
+    $('team-invite-username').value = '';
+    toast('Приглашение отправлено', 'ok');
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось отправить приглашение');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function changeTeamMemberRole(userId, role) {
+  const team = S.teamMembersTeam;
+  if (!team) return;
+  try {
+    await api.teamMemberRole(team.id, userId, role);
+    toast('Роль обновлена', 'ok');
+    await openTeamMembers(team);
+  } catch (err) {
+    toast('Не удалось изменить роль: ' + err, 'error');
+    await openTeamMembers(team);
+  }
+}
+
+async function removeTeamMember(userId) {
+  const team = S.teamMembersTeam;
+  if (!team) return;
+  const confirmed = await askConfirm(
+    'Удалить участника?',
+    'Участник покинет команду. Его авторство в опубликованных режимах сохранится.',
+    'Удалить'
+  );
+  if (!confirmed) return;
+  try {
+    await api.teamMemberRemove(team.id, userId);
+    toast('Участник удалён', 'ok');
+    await openTeamMembers(team);
+    S.teamsLoaded = false;
+  } catch (err) {
+    toast('Не удалось удалить участника: ' + err, 'error');
   }
 }
 

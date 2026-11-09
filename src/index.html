@@ -379,6 +379,8 @@
         <button class="btn btn-ghost" id="team-refresh" type="button">Обновить</button>
       </div>
 
+      <div id="team-invitations" class="team-invites" hidden></div>
+
       <div id="team-list" class="publisher-list"></div>
 
       <div class="empty" id="team-empty" hidden>
@@ -795,6 +797,37 @@
         </div>
         <div class="form-error" id="team-error" hidden></div>
         <button class="btn btn-primary btn-block" id="team-submit" type="submit">Создать команду</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Участники команды -->
+  <div class="modal-overlay" id="modal-team-members" hidden role="dialog" aria-modal="true" aria-labelledby="team-members-title">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="team-members-title">Участники</h2>
+        <button class="modal-close" data-close="modal-team-members">✕</button>
+      </div>
+      <div class="hint" id="team-members-hint"></div>
+      <div id="team-members-list" class="team-members-list"></div>
+      <form id="team-invite-form" autocomplete="off" hidden>
+        <div class="pub-grid">
+          <div class="field">
+            <label for="team-invite-username">Username</label>
+            <input id="team-invite-username" type="text" maxlength="20" placeholder="steve">
+          </div>
+          <div class="field">
+            <label for="team-invite-role">Роль</label>
+            <select id="team-invite-role">
+              <option value="publisher">Публикатор</option>
+              <option value="designer">Дизайнер</option>
+              <option value="member" selected>Участник</option>
+              <option value="admin">Администратор</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-error" id="team-invite-error" hidden></div>
+        <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit">Пригласить</button>
       </form>
     </div>
   </div>

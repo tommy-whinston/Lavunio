@@ -1061,6 +1061,35 @@ body::before {
 .author-apply-copy b { display: block; font-size: 12px; color: #f7f1eb; }
 .author-apply-copy span { display: block; margin-top: 3px; color: #a69d95; font-size: 11px; }
 .author-apply[hidden] { display: none; }
+.team-invites { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.team-invites[hidden] { display: none; }
+.team-invite-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #3a2a12;
+  border-radius: 8px;
+  background: rgba(240, 179, 90, 0.06);
+}
+.team-invite-copy b { display: block; color: #f0b35a; font-size: 12px; }
+.team-invite-copy span { display: block; margin-top: 3px; color: #a69d95; font-size: 11px; }
+.team-invite-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.team-members-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.team-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid #2b2220;
+  border-radius: 7px;
+  background: rgba(8, 8, 8, 0.7);
+}
+.team-member-row .grow { flex: 1; min-width: 0; }
+.team-member-row .name { color: #f7f1eb; font-size: 12px; }
+.team-member-row .sub { color: #83776f; font-size: 10.5px; }
+.team-member-row select { width: 150px; }
 
 .catalog-head { flex-wrap: wrap; }
 .shelf-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
