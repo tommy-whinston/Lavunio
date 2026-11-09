@@ -202,12 +202,9 @@
 
     <main id="app">
     <section id="store-view">
-      <div class="store-dashboard">
-        <div class="dashboard-copy">
-          <div class="eyebrow">Lavunio</div>
-          <h1>Каталог режимов</h1>
-          <p>Выбирай режимы, ставь одной кнопкой и следи за обновлениями.</p>
-        </div>
+      <div class="store-intro">
+        <h1>Каталог режимов</h1>
+        <p>Выбирай режимы, ставь одной кнопкой и следи за обновлениями.</p>
       </div>
 
       <section id="featured" class="featured">
@@ -223,22 +220,6 @@
             <span class="featured-status" id="featured-status"></span>
           </div>
         </div>
-      </section>
-
-      <div id="collections" class="collections" hidden></div>
-
-      <section id="feed" class="shelf feed-shelf" hidden>
-        <div class="shelf-head">
-          <div class="shelf-title"><h2>Лента подписок</h2></div>
-        </div>
-        <div id="feed-list" class="feed-list"></div>
-      </section>
-
-      <section id="store-news" class="shelf news-shelf" hidden>
-        <div class="shelf-head">
-          <div class="shelf-title"><h2>Новости магазина</h2></div>
-        </div>
-        <div id="store-news-list" class="news-list"></div>
       </section>
 
       <section id="catalog-section" class="shelf">
@@ -275,6 +256,22 @@
           <div class="skeleton-card"></div>
           <div class="skeleton-card"></div>
         </div>
+      </section>
+
+      <div id="collections" class="collections" hidden></div>
+
+      <section id="feed" class="shelf feed-shelf" hidden>
+        <div class="shelf-head">
+          <div class="shelf-title"><h2>Лента подписок</h2></div>
+        </div>
+        <div id="feed-list" class="feed-list"></div>
+      </section>
+
+      <section id="store-news" class="shelf news-shelf" hidden>
+        <div class="shelf-head">
+          <div class="shelf-title"><h2>Новости магазина</h2></div>
+        </div>
+        <div id="store-news-list" class="news-list"></div>
       </section>
 
     </section>
@@ -544,8 +541,10 @@
           <div class="hero-action">
             <button class="btn btn-primary btn-block btn-big" id="detail-action">Установить</button>
             <button class="btn btn-ghost btn-block" id="detail-defer" type="button" hidden>Отложить обновление</button>
-            <button class="btn btn-ghost btn-block" id="detail-wishlist" type="button">В список желаемого</button>
-            <button class="btn btn-ghost btn-block" id="detail-report" type="button">Пожаловаться</button>
+            <div class="hero-secondary">
+              <button class="btn btn-ghost" id="detail-wishlist" type="button">В список желаемого</button>
+              <button class="btn btn-ghost" id="detail-report" type="button">Пожаловаться</button>
+            </div>
             <div class="status-text" id="detail-status"></div>
             <div class="progress" id="detail-progress" hidden><div class="progress-bar" id="detail-progress-bar"></div></div>
           </div>
@@ -561,8 +560,15 @@
         <button class="btn btn-ghost detail-folder" id="detail-verify" type="button">Проверить файлы</button>
       </div>
 
+      <div class="detail-tabs" id="detail-tabs" role="tablist" aria-label="Разделы режима">
+        <button class="detail-tab active" type="button" role="tab" aria-selected="true" data-detail-tab="about">Об игре</button>
+        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="updates">Обновления</button>
+        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="reviews">Отзывы</button>
+        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="requirements">Требования</button>
+      </div>
+
       <div class="detail-content">
-        <section class="release-spotlight" id="detail-spotlight" hidden>
+        <section class="release-spotlight" id="detail-spotlight" data-detail-tab="updates" hidden>
           <div class="spotlight-left">
             <span class="spotlight-label">Последнее обновление</span>
             <div class="spotlight-title" id="spotlight-title">—</div>
@@ -574,23 +580,28 @@
           </div>
         </section>
 
-        <section class="detail-section" id="detail-gallery-section" hidden>
+        <section class="detail-section about-section" data-detail-tab="about">
+          <h2>Об игре</h2>
+          <div id="detail-desc" class="detail-desc"></div>
+        </section>
+
+        <section class="detail-section" id="detail-gallery-section" data-detail-tab="about" hidden>
           <h2>Скриншоты</h2>
           <div id="detail-gallery" class="detail-gallery"></div>
         </section>
 
-        <section class="detail-section" id="detail-trailer-section" hidden>
+        <section class="detail-section" id="detail-trailer-section" data-detail-tab="about" hidden>
           <h2>Трейлер</h2>
           <div id="detail-trailer" class="trailer-frame"></div>
           <button class="btn btn-ghost trailer-open" id="detail-trailer-open" type="button">Открыть в браузере</button>
         </section>
 
-        <section class="detail-section" id="detail-news-section" hidden>
+        <section class="detail-section" id="detail-news-section" data-detail-tab="about" hidden>
           <h2>Новости режима</h2>
           <div id="detail-news-list" class="news-list"></div>
         </section>
 
-        <section class="detail-section" id="detail-author-section" hidden>
+        <section class="detail-section" id="detail-author-section" data-detail-tab="about" hidden>
           <h2>Автор</h2>
           <div class="author-card">
             <span class="avatar" id="detail-author-avatar"></span>
@@ -605,17 +616,12 @@
           </div>
         </section>
 
-        <section class="detail-section" id="detail-sessions-section" hidden>
+        <section class="detail-section" id="detail-sessions-section" data-detail-tab="about" hidden>
           <h2>История сессий</h2>
           <div id="detail-sessions" class="session-list"></div>
         </section>
 
-        <section class="detail-section about-section">
-          <h2>Об игре</h2>
-          <div id="detail-desc" class="detail-desc"></div>
-        </section>
-
-        <section class="detail-section reviews-section" id="detail-reviews-section" hidden>
+        <section class="detail-section reviews-section" id="detail-reviews-section" data-detail-tab="reviews" hidden>
           <div class="reviews-head">
             <h2>Отзывы</h2>
             <span id="reviews-summary"></span>
@@ -637,7 +643,7 @@
           <div class="hint" id="review-login-hint">Войдите в Lavunio ID, чтобы оставить отзыв.</div>
         </section>
 
-        <section class="detail-section" id="detail-requirements-section">
+        <section class="detail-section" id="detail-requirements-section" data-detail-tab="requirements">
           <h2>Системные требования</h2>
           <div class="req-grid">
             <div class="req-item"><span>Процессор</span><b>Intel Core i5-9400F / AMD Ryzen 5 2600</b></div>
@@ -649,7 +655,7 @@
           </div>
         </section>
 
-        <section class="detail-section changelog-section" id="detail-changelog-section">
+        <section class="detail-section changelog-section" id="detail-changelog-section" data-detail-tab="updates">
           <div class="changelog-head">
             <h2>История обновлений</h2>
             <button class="changelog-toggle" id="changelog-toggle" type="button" aria-expanded="false" hidden>Развернуть всё</button>
@@ -657,7 +663,7 @@
           <div id="detail-changelog" class="changelog-list"></div>
         </section>
 
-        <section class="shelf" id="more-section" hidden>
+        <section class="shelf" id="more-section" data-detail-tab="about" hidden>
           <div class="shelf-head"><h2>Другие режимы</h2></div>
           <div id="more-grid" class="grid"></div>
         </section>

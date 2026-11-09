@@ -123,6 +123,9 @@
     "О себе": "About you",
     "ОЗУ": "RAM",
     "Об игре": "About the game",
+    "Требования": "Requirements",
+    "Разделы режима": "Mode sections",
+    "Можно установить": "Ready to install",
     "Обложка (URL)": "Cover (URL)",
     "Обнови установленные режимы до актуальных версий.":
       "Update installed modes to the latest versions.",

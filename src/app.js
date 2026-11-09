@@ -51,6 +51,7 @@ const S = {
   settings: null,
   systemRamGb: 0,
   selectedId: null,
+  detailTab: 'about',
   featuredId: null,
   view: 'store',
   busy: null,
@@ -1146,6 +1147,7 @@ function renderCollections() {
     ? S.collections
     : localCollections();
   const sections = source
+    .filter((section) => String((section && section.id) || '') !== 'featured')
     .map((section) => ({
       id: String((section && section.id) || ''),
       title: String((section && section.title) || ''),
@@ -1751,6 +1753,13 @@ function wireImage(img, mode) {
 
 function bindDetail() {
   els.detailBack.onclick = () => showStore();
+  const detailTabs = $('detail-tabs');
+  if (detailTabs) {
+    detailTabs.onclick = (event) => {
+      const button = event.target.closest('[data-detail-tab]');
+      if (button) selectDetailTab(button.dataset.detailTab);
+    };
+  }
   els.sideFolder.onclick = () => {
     if (!S.selectedId) return;
     api.openModeFolder(S.selectedId).catch((err) => {
@@ -2408,6 +2417,7 @@ function openCardContext(card, x, y, playMode) {
 function openDetail(id) {
   const mode = modeById(id);
   if (!mode) return;
+  if (S.selectedId !== id) S.detailTab = 'about';
   S.detailFrom = S.section || 'store';
   S.selectedId = id;
   els.storeView.hidden = true;
@@ -2434,7 +2444,6 @@ function modeById(id) {
 
 function computeAction(mode) {
   if (S.running === mode.id) return 'running';
-  if (!inLibrary(mode)) return 'add';
   if (isUpdate(mode)) return 'update';
   if (isInstalled(mode)) return 'play';
   return 'install';
@@ -2452,9 +2461,9 @@ function actionLabel(action) {
 
 function defaultStatus(mode) {
   if (S.running === mode.id) return 'Игра запущена';
-  if (!inLibrary(mode)) return 'Режим не добавлен в библиотеку';
   if (isUpdate(mode)) return 'Доступно обновление';
   if (isInstalled(mode)) return 'Готов к запуску';
+  if (!inLibrary(mode)) return 'Можно установить';
   return 'Файлы ещё не скачаны';
 }
 
@@ -2602,6 +2611,19 @@ function renderTrailer(mode) {
   };
 }
 
+function selectDetailTab(tab) {
+  const allowed = ['about', 'updates', 'reviews', 'requirements'];
+  S.detailTab = allowed.includes(tab) ? tab : 'about';
+  document.querySelectorAll('#detail-tabs .detail-tab').forEach((button) => {
+    const active = button.dataset.detailTab === S.detailTab;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('.detail-content [data-detail-tab]').forEach((section) => {
+    section.classList.toggle('tab-hidden', section.dataset.detailTab !== S.detailTab);
+  });
+}
+
 function renderDetail() {
   const mode = modeById(S.selectedId);
   if (!mode) {
@@ -2625,19 +2647,15 @@ function renderDetail() {
   const latest = latestUpdateEntry(mode);
   const updated = latest && latest.date ? formatUpdateDate(latest.date) : '—';
   const released = modeReleaseDate(mode);
-  const stats = S.state[mode.id] || {};
   els.detailMeta.innerHTML = [
     ['Версия', 'v' + (mode.version || '—')],
     ['Minecraft', mode.mcVersion || '—'],
-    ['Автор', modeAuthors(mode).join(', ') || '—'],
     ['Ядро', loaderLabel(mode)],
     ['Размер', mode.size || '—'],
-    ['Установки', String(Number(mode.installs) || 0)],
     ['Рейтинг', mode.rating ? `${Number(mode.rating).toFixed(1)} ★ (${Number(mode.reviewsCount) || 0})` : '—'],
+    ['Установки', String(Number(mode.installs) || 0)],
     ['Вышла', released ? formatUpdateDate(released) : '—'],
-    ['Обновлено', updated],
-    ['Наиграно', formatPlaytime(stats.playtimeSecs)],
-    ['Последний запуск', formatDateTime(stats.lastPlayedAt)]
+    ['Обновлено', updated]
   ].map(([label, value]) => `
     <div class="meta-item">
       <span class="meta-label">${label}</span>
@@ -2651,6 +2669,7 @@ function renderDetail() {
       <img src="${escapeHtml(url)}" alt="" loading="lazy">
     </button>`).join('');
 
+  const stats = S.state[mode.id] || {};
   const sessions = Array.isArray(stats.sessions) ? stats.sessions.slice().reverse().slice(0, 5) : [];
   els.detailSessionsSection.hidden = sessions.length === 0;
   els.detailSessions.innerHTML = sessions.map((session) => `
@@ -2710,6 +2729,7 @@ function renderDetail() {
   renderModeGrid(els.moreGrid, others);
 
   updateDetailAction();
+  selectDetailTab(S.detailTab || 'about');
 }
 
 async function loadWishlist() {
