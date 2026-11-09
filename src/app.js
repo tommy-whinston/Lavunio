@@ -715,6 +715,15 @@ function updateSidebar() {
   updatePublisherNav();
   updateModerationNav();
   updateSocialNav();
+  updateSideGroups();
+}
+
+function updateSideGroups() {
+  document.querySelectorAll('.side-group').forEach((group) => {
+    const links = [...group.querySelectorAll('.side-link')];
+    if (!links.length) return;
+    group.hidden = links.every((link) => link.hidden);
+  });
 }
 
 function renderCurrentSection() {
@@ -4283,6 +4292,7 @@ function updateSocialNav() {
   const chat = $('side-chat');
   if (friends) friends.hidden = !logged;
   if (chat) chat.hidden = !logged;
+  updateSideGroups();
 }
 
 function updatePublisherNav() {
@@ -4291,6 +4301,7 @@ function updatePublisherNav() {
   if (button) button.hidden = !allowed;
   const teamButton = $('side-team');
   if (teamButton) teamButton.hidden = !allowed;
+  updateSideGroups();
   if (!allowed && (S.section === 'publisher' || S.section === 'team')) {
     S.section = 'store';
     S.view = 'store';
@@ -4316,6 +4327,7 @@ function updateModerationNav() {
   const allowed = moderatorAllowed();
   const button = $('side-moderator');
   if (button) button.hidden = !allowed;
+  updateSideGroups();
   if (!allowed && S.section === 'moderation') {
     S.section = 'store';
     S.view = 'store';

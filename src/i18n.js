@@ -85,6 +85,8 @@
     "Комментарии": "Comments",
     "Короткое описание": "Short description",
     "Лента": "Feed",
+    "Сообщество": "Community",
+    "Управление": "Management",
     "Лента подписок": "Following feed",
     "Личные сообщения и чаты команд.": "Direct messages and team chats.",
     "Логи": "Logs",
