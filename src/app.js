@@ -93,6 +93,10 @@ const S = {
   publisherUpload: null,
   publisherReleaseMode: null,
   publisherAppealRelease: null,
+  teams: [],
+  teamsLoaded: false,
+  teamsLoading: false,
+  teamEditing: null,
   publisherNewsMode: null,
   moderationQueue: [],
   moderationModes: [],
@@ -138,6 +142,11 @@ const els = {
   downloadsClear: $('downloads-clear'),
   sideDownloadsCount: $('side-downloads-count'),
   publisherView: $('publisher-view'),
+  teamView: $('team-view'),
+  teamList: $('team-list'),
+  teamEmpty: $('team-empty'),
+  teamHint: $('team-hint'),
+  teamStatCount: $('team-stat-count'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
@@ -279,6 +288,7 @@ async function init() {
   bindSettings();
   bindAccountModal();
   bindPublisher();
+  bindTeams();
   bindModeration();
   bindUpdateModal();
 
@@ -592,13 +602,15 @@ function bindSidebar() {
 
 function showSection(section) {
   if (section === 'publisher' && !publisherAllowed()) section = 'store';
+  if (section === 'team' && !publisherAllowed()) section = 'store';
   if (section === 'moderation' && !moderatorAllowed()) section = 'store';
-  S.section = ['library', 'publisher', 'moderation', 'downloads'].includes(section) ? section : 'store';
+  S.section = ['library', 'publisher', 'team', 'moderation', 'downloads'].includes(section) ? section : 'store';
   S.view = S.section;
   els.storeView.hidden = S.section !== 'store';
   els.libraryView.hidden = S.section !== 'library';
   if (els.downloadsView) els.downloadsView.hidden = S.section !== 'downloads';
   if (els.publisherView) els.publisherView.hidden = S.section !== 'publisher';
+  if (els.teamView) els.teamView.hidden = S.section !== 'team';
   if (els.moderationView) els.moderationView.hidden = S.section !== 'moderation';
   els.detailView.hidden = true;
   updateSidebar();
@@ -607,6 +619,9 @@ function showSection(section) {
   else if (S.section === 'publisher') {
     renderPublisher();
     loadPublisher();
+  } else if (S.section === 'team') {
+    renderTeams();
+    loadTeams();
   } else if (S.section === 'moderation') {
     renderModeration();
     loadModeration();
@@ -628,6 +643,7 @@ function renderCurrentSection() {
   if (S.section === 'library') renderLibrary();
   else if (S.section === 'downloads') renderDownloads();
   else if (S.section === 'publisher') renderPublisher();
+  else if (S.section === 'team') renderTeams();
   else if (S.section === 'moderation') renderModeration();
   else renderStore();
 }
@@ -3925,12 +3941,15 @@ function updatePublisherNav() {
   const allowed = publisherAllowed();
   const button = $('side-publisher');
   if (button) button.hidden = !allowed;
-  if (!allowed && S.section === 'publisher') {
+  const teamButton = $('side-team');
+  if (teamButton) teamButton.hidden = !allowed;
+  if (!allowed && (S.section === 'publisher' || S.section === 'team')) {
     S.section = 'store';
     S.view = 'store';
     if (els.storeView) els.storeView.hidden = false;
     if (els.libraryView) els.libraryView.hidden = true;
     if (els.publisherView) els.publisherView.hidden = true;
+    if (els.teamView) els.teamView.hidden = true;
     if (els.moderationView) els.moderationView.hidden = true;
     if (els.detailView) els.detailView.hidden = true;
     document.querySelectorAll('.side-link').forEach((link) => {
@@ -4022,6 +4041,169 @@ function bindPublisher() {
 
   if (api.onPublisherProgress) api.onPublisherProgress(onPublisherProgress);
   updatePublisherNav();
+}
+
+function bindTeams() {
+  const newButton = $('team-new');
+  if (newButton) newButton.onclick = () => openTeamModal(null);
+  const refresh = $('team-refresh');
+  if (refresh) refresh.onclick = () => loadTeams(true);
+  const form = $('team-form');
+  if (form) form.onsubmit = (event) => {
+    event.preventDefault();
+    submitTeam();
+  };
+  const list = $('team-list');
+  if (list) list.onclick = (event) => {
+    const button = event.target.closest('button[data-team-action]');
+    if (!button) return;
+    const team = S.teams.find((item) => item.id === button.dataset.id);
+    if (!team) return;
+    if (button.dataset.teamAction === 'edit') openTeamModal(team);
+    else if (button.dataset.teamAction === 'archive') archiveTeam(team);
+  };
+  const title = $('team-title');
+  const slug = $('team-slug');
+  if (title && slug) {
+    title.oninput = () => {
+      if (!slug.dataset.touched) slug.value = publisherSlug(title.value);
+    };
+    slug.oninput = () => { slug.dataset.touched = '1'; };
+  }
+}
+
+function teamRoleLabel(role) {
+  return ({
+    owner: 'владелец',
+    admin: 'администратор',
+    publisher: 'публикатор',
+    designer: 'дизайнер',
+    member: 'участник'
+  })[role] || role;
+}
+
+function renderTeams() {
+  if (!els.teamList) return;
+  const teams = S.teams || [];
+  if (els.teamStatCount) els.teamStatCount.textContent = String(teams.length);
+  if (els.teamHint) {
+    els.teamHint.textContent = S.teamsLoading && !S.teamsLoaded
+      ? 'Загрузка…'
+      : teams.length
+        ? `Команд: ${teams.length}`
+        : 'Создай первую команду';
+  }
+  if (els.teamEmpty) els.teamEmpty.hidden = teams.length > 0;
+  els.teamList.innerHTML = teams.map((team) => `
+    <article class="pub-card">
+      <div class="pub-card-head">
+        <div>
+          <div class="pub-title">${escapeHtml(team.title)}</div>
+          <div class="pub-sub">${escapeHtml(team.slug)} · ${escapeHtml(teamRoleLabel(team.role))}</div>
+        </div>
+        <span class="pub-status ${team.status === 'active' ? 'published' : 'hidden'}">${team.status === 'active' ? 'Активна' : 'В архиве'}</span>
+      </div>
+      <div class="mod-changelog">${escapeHtml(team.description || 'Без описания')}</div>
+      <div class="pub-release-actions">
+        <button class="btn btn-ghost" type="button" data-team-action="edit" data-id="${escapeHtml(team.id)}">Редактировать</button>
+        ${team.role === 'owner' ? `<button class="btn btn-ghost" type="button" data-team-action="archive" data-id="${escapeHtml(team.id)}">В архив</button>` : ''}
+      </div>
+    </article>
+  `).join('');
+}
+
+async function loadTeams(force = false) {
+  if (!publisherAllowed()) return;
+  if (S.teamsLoading) return;
+  if (S.teamsLoaded && !force) {
+    renderTeams();
+    return;
+  }
+  S.teamsLoading = true;
+  renderTeams();
+  try {
+    const teams = await api.teamsMine();
+    S.teams = Array.isArray(teams) ? teams : [];
+    S.teamsLoaded = true;
+  } catch (err) {
+    toast('Не удалось загрузить команды: ' + err, 'error');
+  } finally {
+    S.teamsLoading = false;
+    renderTeams();
+  }
+}
+
+function openTeamModal(team) {
+  S.teamEditing = team || null;
+  $('team-modal-title').textContent = team ? 'Редактировать команду' : 'Новая команда';
+  $('team-submit').textContent = team ? 'Сохранить' : 'Создать команду';
+  $('team-title').value = team ? team.title : '';
+  $('team-slug').value = team ? team.slug : '';
+  $('team-slug').dataset.touched = team ? '1' : '';
+  $('team-description').value = team ? team.description : '';
+  $('team-links').value = team && team.links ? team.links : '';
+  $('team-avatar').value = team && team.avatarUrl ? team.avatarUrl : '';
+  $('team-banner').value = team && team.bannerUrl ? team.bannerUrl : '';
+  $('team-error').hidden = true;
+  openModal('modal-team');
+  setTimeout(() => $('team-title').focus(), 50);
+}
+
+async function submitTeam() {
+  const editing = S.teamEditing;
+  const payload = {
+    slug: $('team-slug').value.trim(),
+    title: $('team-title').value.trim(),
+    description: $('team-description').value.trim(),
+    links: $('team-links').value.trim(),
+    avatarUrl: $('team-avatar').value.trim() || null,
+    bannerUrl: $('team-banner').value.trim() || null
+  };
+  const error = $('team-error');
+  if (!payload.title) {
+    error.textContent = 'Укажи название команды';
+    error.hidden = false;
+    return;
+  }
+  if (!/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(payload.slug)) {
+    error.textContent = 'Slug: 3–64 символа, строчные латинские буквы, цифры и дефис';
+    error.hidden = false;
+    return;
+  }
+  const button = $('team-submit');
+  button.disabled = true;
+  error.hidden = true;
+  try {
+    if (editing) await api.teamUpdate(editing.id, payload);
+    else await api.teamCreate(payload);
+    $('modal-team').hidden = true;
+    S.teamsLoaded = false;
+    toast(editing ? 'Команда обновлена' : 'Команда создана', 'ok');
+    await loadTeams(true);
+  } catch (err) {
+    error.textContent = String(err || 'Не удалось сохранить команду');
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function archiveTeam(team) {
+  if (!team) return;
+  const confirmed = await askConfirm(
+    'Архивировать команду?',
+    `Команда «${team.title}» будет скрыта. Режимы и история сохранятся.`,
+    'В архив'
+  );
+  if (!confirmed) return;
+  try {
+    await api.teamArchive(team.id);
+    toast('Команда в архиве', 'ok');
+    S.teamsLoaded = false;
+    await loadTeams(true);
+  } catch (err) {
+    toast('Не удалось архивировать команду: ' + err, 'error');
+  }
 }
 
 function publisherSlug(value) {

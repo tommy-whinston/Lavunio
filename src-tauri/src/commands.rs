@@ -926,6 +926,32 @@ pub async fn admin_reject_author_application(
 }
 
 #[tauri::command]
+pub async fn teams_mine(state: State<'_, AppState>) -> Result<Value, String> {
+    publisher_request(state.inner(), "GET", "/v1/me/teams".to_string(), None).await
+}
+
+#[tauri::command]
+pub async fn team_create(state: State<'_, AppState>, payload: Value) -> Result<Value, String> {
+    publisher_request(state.inner(), "POST", "/v1/teams".to_string(), Some(payload)).await
+}
+
+#[tauri::command]
+pub async fn team_update(
+    state: State<'_, AppState>,
+    team_id: String,
+    payload: Value,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}");
+    publisher_request(state.inner(), "PUT", path, Some(payload)).await
+}
+
+#[tauri::command]
+pub async fn team_archive(state: State<'_, AppState>, team_id: String) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
 pub async fn admin_modes(state: State<'_, AppState>) -> Result<Value, String> {
     publisher_request(state.inner(), "GET", "/v1/admin/modes".to_string(), None).await
 }
