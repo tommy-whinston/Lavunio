@@ -44,6 +44,9 @@ const ART_CACHE = new Map();
 const DEFAULT_ACCENT = '#e5322b';
 const SPLASH_START = performance.now();
 let lastUpdateCheckAt = 0;
+let activeSelectMenu = null;
+let selectEnhanceFrame = 0;
+let selectSyncTimer = null;
 
 const S = {
   modes: [],
@@ -329,6 +332,8 @@ async function init() {
   bindSocial();
   bindModeration();
   bindUpdateModal();
+  initCustomSelects();
+  initAutoGrowTextareas();
   window.addEventListener('focus', () => checkUpdateInBackground());
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') checkUpdateInBackground();
@@ -612,11 +617,6 @@ function bindStore() {
   if (appScroll) appScroll.addEventListener('scroll', closeCardContext, true);
 
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      els.search.focus();
-      return;
-    }
     if (e.key === 'Escape') {
       if (els.cardContext && !els.cardContext.hidden) {
         closeCardContext();
@@ -1353,7 +1353,7 @@ async function handleCardAction(modeId, action, autoPlay = false) {
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
-      toast('Режим убран из библиотеки', 'ok');
+      toast('Режим скрыт', 'ok');
     } catch (err) {
       toast('Не удалось убрать режим: ' + err, 'error');
     }
@@ -2164,7 +2164,7 @@ function openCardContext(card, x, y, playMode) {
 
   if (playMode) actions.push({ action: 'page', label: 'Страница режима' });
   if (installed) actions.push({ action: 'folder', label: 'Открыть папку' });
-  if (inLib) actions.push({ action: 'hide', label: 'Убрать из библиотеки' });
+  if (inLib) actions.push({ action: 'hide', label: 'Скрыть' });
   if (installed && action !== 'running') {
     actions.push({ action: 'uninstall', label: 'Удалить с устройства', danger: true });
   }
@@ -2408,6 +2408,7 @@ function selectDetailTab(tab) {
   document.querySelectorAll('.detail-content [data-detail-tab]').forEach((section) => {
     section.classList.toggle('tab-hidden', section.dataset.detailTab !== S.detailTab);
   });
+  requestAnimationFrame(() => growAllTextareas($('detail-view')));
 }
 
 function renderDetail() {
@@ -4196,6 +4197,7 @@ function restoreFocus() {
 
 function openModal(id) {
   if (document.getElementById(id).hidden) rememberFocus();
+  closeSelectMenu();
   if (id === 'modal-settings') {
     fillSettingsForm();
   }
@@ -4204,10 +4206,15 @@ function openModal(id) {
     refreshLavunioStatus();
   }
   $(id).hidden = false;
+  requestAnimationFrame(() => {
+    syncSelectLabels();
+    growAllTextareas($(id));
+  });
   setTimeout(() => focusFirstIn($(id)), 30);
 }
 
 function closeModals() {
+  closeSelectMenu();
   document.querySelectorAll('.modal-overlay').forEach((m) => (m.hidden = true));
   if (confirmResolve) {
     const resolve = confirmResolve;
@@ -4308,6 +4315,260 @@ function escapeHtml(s) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[c]);
 }
+
+// ---------------------------------------------------------------- кастомные списки
+
+function enhanceSelects(root = document) {
+  root.querySelectorAll('select:not([data-custom-select])').forEach(enhanceSelect);
+  syncSelectLabels();
+}
+
+function enhanceSelect(select) {
+  if (!select || select.dataset.customSelect || select.multiple) return;
+  select.dataset.customSelect = '1';
+
+  const shell = document.createElement('span');
+  shell.className = 'select-shell';
+  if (select.classList.contains('sort-select')) shell.classList.add('sort-select-shell');
+  if (select.id) shell.dataset.selectId = select.id;
+  select.parentNode.insertBefore(shell, select);
+  shell.appendChild(select);
+
+  select.classList.add('native-select');
+  select.tabIndex = -1;
+  select.setAttribute('aria-hidden', 'true');
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'select-trigger';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+  const label = labelForSelect(select);
+  if (label) trigger.setAttribute('aria-label', label);
+  trigger.innerHTML = '<span class="select-value"></span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4.5 6 8.5 10 4.5"/></svg>';
+  shell.appendChild(trigger);
+
+  select._customTrigger = trigger;
+  select._customShell = shell;
+
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleSelectMenu(select);
+  });
+  trigger.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openSelectMenu(select);
+    } else if (event.key === 'Escape') {
+      closeSelectMenu(true);
+    }
+  });
+  select.addEventListener('change', () => syncSelectLabel(select));
+  select.addEventListener('input', () => syncSelectLabel(select));
+  syncSelectLabel(select);
+}
+
+function labelForSelect(select) {
+  try {
+    return [...(select.labels || [])].map((label) => label.textContent).join(' ').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+function syncSelectLabel(select) {
+  const trigger = select && select._customTrigger;
+  if (!trigger) return;
+  const option = select.selectedOptions && select.selectedOptions[0];
+  const value = option ? option.textContent.trim() : '—';
+  const target = trigger.querySelector('.select-value');
+  if (target && target.textContent !== value) target.textContent = value;
+  trigger.disabled = !!select.disabled;
+}
+
+function syncSelectLabels() {
+  document.querySelectorAll('select[data-custom-select]').forEach(syncSelectLabel);
+}
+
+function toggleSelectMenu(select) {
+  if (activeSelectMenu && activeSelectMenu.select === select) {
+    closeSelectMenu(true);
+    return;
+  }
+  openSelectMenu(select);
+}
+
+function openSelectMenu(select) {
+  const trigger = select && select._customTrigger;
+  if (!trigger || select.disabled) return;
+  closeSelectMenu();
+
+  const menu = document.createElement('div');
+  menu.className = 'select-menu';
+  menu.setAttribute('role', 'listbox');
+  [...select.options].forEach((option, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'select-option' + (index === select.selectedIndex ? ' selected' : '');
+    button.setAttribute('role', 'option');
+    button.setAttribute('data-index', String(index));
+    button.setAttribute('aria-selected', index === select.selectedIndex ? 'true' : 'false');
+    if (option.disabled) button.disabled = true;
+    const check = document.createElement('span');
+    check.className = 'select-option-check';
+    check.textContent = index === select.selectedIndex ? '✓' : '';
+    button.appendChild(check);
+    button.appendChild(document.createTextNode(option.textContent));
+    menu.appendChild(button);
+  });
+  document.body.appendChild(menu);
+
+  const rect = trigger.getBoundingClientRect();
+  const width = Math.max(150, Math.round(rect.width));
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+  const spaceBelow = window.innerHeight - rect.bottom - 12;
+  const spaceAbove = rect.top - 12;
+  menu.style.left = `${left}px`;
+  menu.style.width = `${width}px`;
+  if (spaceBelow < 160 && spaceAbove > spaceBelow) {
+    menu.style.bottom = `${window.innerHeight - rect.top + 6}px`;
+    menu.style.maxHeight = `${Math.min(320, Math.max(120, spaceAbove))}px`;
+  } else {
+    menu.style.top = `${rect.bottom + 6}px`;
+    menu.style.maxHeight = `${Math.min(320, Math.max(120, spaceBelow))}px`;
+  }
+
+  activeSelectMenu = { select, trigger, menu };
+  trigger.classList.add('open');
+  trigger.setAttribute('aria-expanded', 'true');
+
+  menu.addEventListener('click', (event) => {
+    const option = event.target.closest('.select-option');
+    if (!option || option.disabled) return;
+    const index = Number(option.dataset.index);
+    if (!Number.isInteger(index) || !select.options[index]) return;
+    select.selectedIndex = index;
+    syncSelectLabel(select);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    closeSelectMenu(true);
+  });
+  menu.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSelectMenu(true);
+      return;
+    }
+    if (event.key === 'Tab') {
+      closeSelectMenu();
+      return;
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const options = [...menu.querySelectorAll('.select-option:not(:disabled)')];
+    if (!options.length) return;
+    const current = options.indexOf(document.activeElement);
+    const next = event.key === 'ArrowDown'
+      ? (current + 1 + options.length) % options.length
+      : (current - 1 + options.length) % options.length;
+    options[next].focus();
+  });
+
+  const selectedOption = menu.querySelector('.select-option.selected') || menu.querySelector('.select-option:not(:disabled)');
+  if (selectedOption) {
+    requestAnimationFrame(() => {
+      if (!activeSelectMenu || activeSelectMenu.menu !== menu) return;
+      selectedOption.focus({ preventScroll: true });
+      selectedOption.scrollIntoView({ block: 'nearest' });
+    });
+  }
+}
+
+function closeSelectMenu(restoreFocus = false) {
+  if (!activeSelectMenu) return;
+  const { trigger, menu } = activeSelectMenu;
+  trigger.classList.remove('open');
+  trigger.setAttribute('aria-expanded', 'false');
+  menu.remove();
+  activeSelectMenu = null;
+  if (restoreFocus) {
+    try { trigger.focus({ preventScroll: true }); } catch (_) {}
+  }
+}
+
+function initCustomSelects() {
+  enhanceSelects(document);
+  const observer = new MutationObserver(() => {
+    if (selectEnhanceFrame) return;
+    selectEnhanceFrame = requestAnimationFrame(() => {
+      selectEnhanceFrame = 0;
+      enhanceSelects(document);
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  if (selectSyncTimer) clearInterval(selectSyncTimer);
+  selectSyncTimer = setInterval(syncSelectLabels, 700);
+  document.addEventListener('click', (event) => {
+    if (!activeSelectMenu) return;
+    if (event.target.closest('.select-menu') || event.target.closest('.select-trigger')) return;
+    closeSelectMenu();
+  });
+  document.addEventListener('scroll', (event) => {
+    if (!activeSelectMenu) return;
+    if (event.target.closest && event.target.closest('.select-menu')) return;
+    closeSelectMenu();
+  }, true);
+  window.addEventListener('resize', () => closeSelectMenu());
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && activeSelectMenu) closeSelectMenu(true);
+  });
+  document.addEventListener('click', (event) => {
+    const label = event.target.closest('label[for]');
+    if (!label) return;
+    const field = document.getElementById(label.htmlFor);
+    if (field && field._customTrigger) {
+      event.preventDefault();
+      field._customTrigger.focus();
+    }
+  });
+}
+
+// ---------------------------------------------------------------- textarea autosize
+
+function growTextarea(el) {
+  if (!el || el.tagName !== 'TEXTAREA' || !el.offsetParent) return;
+  const max = Math.max(80, Math.round(window.innerHeight * 0.45));
+  el.style.height = 'auto';
+  const height = Math.min(el.scrollHeight, max);
+  el.style.height = `${height}px`;
+  el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
+  el.dataset.growValue = el.value;
+  el.dataset.growWidth = String(el.clientWidth);
+}
+
+function growAllTextareas(root = document) {
+  root.querySelectorAll('textarea').forEach(growTextarea);
+}
+
+function initAutoGrowTextareas() {
+  document.addEventListener('input', (event) => {
+    if (event.target && event.target.tagName === 'TEXTAREA') growTextarea(event.target);
+  });
+  document.addEventListener('focusin', (event) => {
+    if (event.target && event.target.tagName === 'TEXTAREA') growTextarea(event.target);
+  });
+  window.addEventListener('resize', () => growAllTextareas());
+  growAllTextareas();
+  setInterval(() => {
+    document.querySelectorAll('textarea').forEach((el) => {
+      if (document.activeElement === el) return;
+      if (!el.offsetParent) return;
+      if (el.dataset.growValue === el.value && el.dataset.growWidth === String(el.clientWidth)) return;
+      growTextarea(el);
+    });
+  }, 900);
+}
+
 
 let toastTimer = null;
 function toast(msg, type = 'info') {
