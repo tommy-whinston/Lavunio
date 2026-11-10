@@ -43,6 +43,7 @@ function modeStatusMeta(mode) {
 const ART_CACHE = new Map();
 const DEFAULT_ACCENT = '#e5322b';
 const SPLASH_START = performance.now();
+let lastUpdateCheckAt = 0;
 
 const S = {
   modes: [],
@@ -336,6 +337,11 @@ async function init() {
   bindSocial();
   bindModeration();
   bindUpdateModal();
+  window.addEventListener('focus', () => checkUpdateInBackground());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkUpdateInBackground();
+  });
+  setInterval(() => checkUpdateInBackground(true), 30 * 60 * 1000);
   document.addEventListener('lavunio:lang', () => {
     renderAccountChip();
     renderStore();
@@ -3312,6 +3318,30 @@ async function checkLauncherUpdate() {
   }
 }
 
+async function checkUpdateInBackground(force = false) {
+  if (!api.checkUpdate || S.autoUpdating || S.loading) return;
+  const now = Date.now();
+  if (!force && now - lastUpdateCheckAt < 15 * 60 * 1000) return;
+  lastUpdateCheckAt = now;
+  const info = await checkLauncherUpdate();
+  if (!info) return;
+  if (els.updateChip && !els.updateChip.hidden && S.updateInfo && S.updateInfo.latest === info.latest) {
+    return;
+  }
+  let hidden = false;
+  if (api.isWindowVisible) {
+    try {
+      hidden = !(await api.isWindowVisible());
+    } catch (_) {}
+  }
+  if (hidden && info.installerUrl && !S.running && !activeDownloadTask()) {
+    startAutoUpdate(info);
+    return;
+  }
+  showUpdateChip(info);
+  toast(`Доступно обновление ${info.latest}`, 'info');
+}
+
 async function finishStartup() {
   try {
     if (api.windowReady) await api.windowReady();
@@ -3323,6 +3353,7 @@ async function finishStartup() {
 
 async function handleStartupUpdate(pending) {
   const info = await withTimeout(pending, 900);
+  lastUpdateCheckAt = Date.now();
   if (info && info.installerUrl) {
     startAutoUpdate(info);
     return;

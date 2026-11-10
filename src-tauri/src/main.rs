@@ -83,6 +83,7 @@ fn main() {
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::win_minimize,
+            commands::win_is_visible,
             commands::win_hide,
             commands::win_close,
             commands::win_splash,

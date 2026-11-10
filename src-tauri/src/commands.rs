@@ -98,6 +98,11 @@ pub fn win_minimize(window: Window) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn win_is_visible(window: Window) -> bool {
+    window.is_visible().unwrap_or(false)
+}
+
+#[tauri::command]
 pub fn win_hide(window: Window, state: State<'_, AppState>) -> Result<(), String> {
     save_window_size(&window, state.inner());
     window.hide().map_err(|e| e.to_string())
@@ -542,9 +547,17 @@ fn save_lavunio_session(state: &AppState, session: LavunioSession) -> Result<(),
 }
 
 #[tauri::command]
-pub fn lavunio_status(state: State<'_, AppState>) -> Value {
+pub async fn lavunio_status(state: State<'_, AppState>) -> Result<Value, String> {
     let session = state.store.lock().unwrap().lavunio.clone();
-    lavunio_status_value(net::api_base_url().is_some(), &session)
+    if !session.access_token.is_empty()
+        && !session.refresh_token.is_empty()
+        && session.access_expires_at <= now_ms().saturating_add(60_000)
+    {
+        let _ = lavunio_access_token(state.inner()).await;
+        let refreshed = state.store.lock().unwrap().lavunio.clone();
+        return Ok(lavunio_status_value(net::api_base_url().is_some(), &refreshed));
+    }
+    Ok(lavunio_status_value(net::api_base_url().is_some(), &session))
 }
 
 #[tauri::command]

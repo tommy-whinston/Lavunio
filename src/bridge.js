@@ -12,6 +12,7 @@
   window.tm = {
     // окно
     minimize: () => invoke("win_minimize"),
+    isWindowVisible: () => invoke("win_is_visible"),
     hide: () => invoke("win_hide"),
     close: () => invoke("win_close"),
     windowSplash: () => invoke("win_splash"),
