@@ -20,6 +20,7 @@ function argValue(name) {
 const dryRun = hasFlag('--dry-run');
 const prerelease = hasFlag('--prerelease');
 const allowDirty = hasFlag('--allow-dirty');
+const skipTests = hasFlag('--skip-tests');
 const notesFile = argValue('--notes-file');
 const notesArg = argValue('--notes');
 const versionArg = argValue('--version');
@@ -141,6 +142,7 @@ Options:
   --notes-file <path>   файл с release notes
   --prerelease          пометить релиз как pre-release
   --allow-dirty         не проверять чистоту рабочего дерева (не рекомендуется)
+  --skip-tests          не запускать headless-тесты перед сборкой
   --dry-run             показать план без изменений и сборки
 
 Требования: закрытый Lavunio, чистый git, авторизованный gh, установленный Node.`);
@@ -161,6 +163,8 @@ Options:
 
   console.log(`\n[release] ${current} -> ${version}${dryRun ? ' (dry-run)' : ''}`);
   console.log(`[release] notes:\n${notes}`);
+
+  if (!skipTests) run('node', ['tools/headless/run.js']);
 
   if (!dryRun) {
     write('package.json', replaceVersionInJson('package.json', current, version));

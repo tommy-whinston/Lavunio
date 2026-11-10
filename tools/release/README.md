@@ -16,18 +16,20 @@ npm run release -- --version 0.23.35
 --notes-file <path>   файл с release notes
 --prerelease          пометить релиз как pre-release
 --allow-dirty         не проверять чистоту рабочего дерева (не рекомендуется)
+--skip-tests          не запускать headless-тесты
 --dry-run             показать план без изменений и сборки
 ```
 
 ## Что делает
 
 1. Проверяет, что git чистый и лаунчер закрыт.
-2. Поднимает версию в `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `tauri.conf.json`.
-3. Запускает `build-installer.bat --no-pause`.
-4. Копирует `Lavunio Setup.exe` в `Lavunio.Setup.exe` и `Lavunio.Setup.<version>.exe`.
-5. Делает commit `Release <version>`, тег `v<version>`, push в `main`.
-6. Создаёт GitHub release с `Lavunio.exe` и обоими installer-файлами.
-7. По умолчанию релиз обычный, не pre-release.
+2. Запускает headless-тесты (`tools/headless`).
+3. Поднимает версию в `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `tauri.conf.json`.
+4. Запускает `build-installer.bat --no-pause`.
+5. Копирует `Lavunio Setup.exe` в `Lavunio.Setup.exe` и `Lavunio.Setup.<version>.exe`.
+6. Делает commit `Release <version>`, тег `v<version>`, push в `main`.
+7. Создаёт GitHub release с `Lavunio.exe` и обоими installer-файлами.
+8. По умолчанию релиз обычный, не pre-release.
 
 ## Требования
 

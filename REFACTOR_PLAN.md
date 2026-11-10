@@ -88,7 +88,11 @@ src/
    - `features/detail/actions`, `features/game/events`, `ui/modal`.
    - В `app.js` остаются только инициализация, оболочка, навигация и debug-точка.
 
-10. **TypeScript / Vite**
+10. **Headless-тесты**
+   - Проверка загрузки, секций, модалок, RU/EN и ключей i18n.
+   - Запуск перед релизом.
+
+11. **TypeScript / Vite**
    - Только после разбиения, если понадобятся типы, HMR или npm-компоненты.
    - Не обязательны для поддержки кода.
 
@@ -103,7 +107,8 @@ src/
 - [x] Этап 7 — Rust: команды разбиты на `window`, `system`, `library`, `account`, `social`, `publisher`, `game`, `content`; `mod.rs` — только общие хелперы.
 - [x] Этап 8 — i18n: все UI-строки переведены на ключи (`tKey`, `data-i18n*`); DOM-observer и перевод DOM по фразам удалены; фразовый словарь используется только для внешних сообщений сервера.
 - [x] Этап 9 — `app.js` разбит: store, news, account, updates, notifications, social, detail actions, game events и модалки вынесены; entrypoint ~650 строк.
-- [ ] Этап 10 — TypeScript / Vite при необходимости.
+- [x] Этап 10 — headless-тесты: загрузка, секции, модалки, RU/EN, данные публикатора/модерации и проверка ключей i18n; запускаются перед релизом.
+- [ ] Этап 11 — TypeScript / Vite при необходимости.
 
 ## Правила
 

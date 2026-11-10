@@ -9,6 +9,7 @@
     "dev": "tauri dev",
     "build": "tauri build",
     "smoke": "node tools/smoke/smoke.js",
+    "test:headless": "node tools/headless/run.js",
     "release": "node tools/release/release.js"
   },
   "devDependencies": {

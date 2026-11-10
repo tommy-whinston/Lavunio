@@ -3,7 +3,8 @@
 import { tKey } from '../../i18n/index.js';
 
 import { S } from '../../core/state.js';
-import { escapeHtml } from '../../core/dom.js';
+import { els } from '../../core/elements.js';
+import { $, escapeHtml } from '../../core/dom.js';
 import { formatDateTime } from '../../core/format.js';
 import { isInstalled, isVisibleInLibrary } from '../../core/modes.js';
 import { teamRoleLabel } from '../../core/labels.js';
