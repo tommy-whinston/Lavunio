@@ -55,6 +55,8 @@ export function refreshStore(options = {}) {
     S.storeTotal = 0;
     S.storePage = 0;
     S.storeHasMore = false;
+    S.storeLoading = false;
+    S.storeSeq += 1;
     renderStore();
   };
   if (debounce > 0) storeRefreshTimer = setTimeout(run, debounce);
@@ -62,12 +64,12 @@ export function refreshStore(options = {}) {
 }
 
 export async function loadStorePage({ reset = false } = {}) {
-  if (S.storeLoading) return;
   if (!canUseRemoteStore() || typeof api.searchModes !== 'function') {
     refreshStore({ reset: true });
     return;
   }
-  if (!reset && !S.storeHasMore) return;
+  if (!reset && (S.storeLoading || !S.storeHasMore)) return;
+  const seq = ++S.storeSeq;
   if (reset) {
     S.storeItems = [];
     S.storeTotal = 0;
@@ -88,6 +90,7 @@ export async function loadStorePage({ reset = false } = {}) {
       page,
       limit: S.storePageSize
     });
+    if (seq !== S.storeSeq) return;
     const items = result && Array.isArray(result.items) ? result.items : [];
     S.storeItems = reset ? items : [...S.storeItems, ...items];
     S.storeTotal = Number(result && result.total) || S.storeItems.length;
@@ -95,14 +98,17 @@ export async function loadStorePage({ reset = false } = {}) {
     S.storeRemote = true;
     S.storeHasMore = S.storeItems.length < S.storeTotal && items.length > 0;
   } catch (_) {
+    if (seq !== S.storeSeq) return;
     S.storeRemote = false;
     S.storeItems = [];
     S.storeTotal = 0;
     S.storePage = 0;
     S.storeHasMore = false;
   } finally {
-    S.storeLoading = false;
-    renderStore();
+    if (seq === S.storeSeq) {
+      S.storeLoading = false;
+      renderStore();
+    }
   }
 }
 

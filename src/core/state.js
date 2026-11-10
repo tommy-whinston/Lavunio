@@ -32,6 +32,7 @@ export const S = {
   storePageSize: 24,
   storeHasMore: false,
   storeLoading: false,
+  storeSeq: 0,
   libraryFilter: 'all',
   librarySort: 'date',
   pendingPlay: null,
