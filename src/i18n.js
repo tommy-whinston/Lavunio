@@ -885,7 +885,12 @@
     "Выбери друга или команду слева": "Choose a friend or team on the left",
     "Игрок": "Player",
     "Скин": "Skin",
-    "Показать все": "Show all"
+    "Показать все": "Show all",
+    "Обновить и перезапустить": "Update and restart",
+    "Скачиваю…": "Downloading…",
+    "Обновление скачано. Лаунчер закроется и запустится заново.":
+      "Update downloaded. The launcher will close and start again.",
+    "Не удалось установить обновление:": "Failed to install update:"
   };
 
   // Patterns with * wildcards, applied after exact matches.

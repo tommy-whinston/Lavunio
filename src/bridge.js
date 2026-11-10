@@ -38,7 +38,6 @@
     getLogsPath: () => invoke("app_logs_path"),
     openLogs: () => invoke("app_open_logs"),
     checkUpdate: () => invoke("check_update"),
-    downloadUpdate: (url) => invoke("download_update", { url }),
     installUpdate: (url) => invoke("install_update", { url }),
     onUpdateProgress: (cb) => listen("update:progress", (e) => cb(e.payload)),
 

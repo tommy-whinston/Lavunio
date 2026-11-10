@@ -3026,8 +3026,9 @@ function bindUpdateModal() {
     els.updateLatest.textContent = `v${S.updateInfo.latest}`;
     els.updateNotes.textContent = (S.updateInfo.notes || '').trim() || 'Список изменений появится позже.';
     els.btnUpdateDownload.textContent = S.updateInfo.installerUrl
-      ? 'Скачать обновление'
+      ? 'Обновить и перезапустить'
       : 'Открыть релиз';
+    els.btnUpdateDownload.disabled = false;
     $('modal-update').hidden = false;
   };
   els.btnUpdateDownload.onclick = async () => {
@@ -3037,18 +3038,7 @@ function bindUpdateModal() {
       api.openUrl(info.url).catch((err) => toast(String(err), 'error'));
       return;
     }
-    els.btnUpdateDownload.disabled = true;
-    els.btnUpdateDownload.textContent = 'Скачиваю…';
-    try {
-      await api.downloadUpdate(info.installerUrl);
-      close();
-      toast('Установщик открыт. Заверши установку обновления.', 'ok');
-    } catch (err) {
-      toast(String(err), 'error');
-    } finally {
-      els.btnUpdateDownload.disabled = false;
-      els.btnUpdateDownload.textContent = 'Скачать обновление';
-    }
+    await startAutoUpdate(info, { manual: true });
   };
 }
 
@@ -3185,11 +3175,21 @@ function hideSplashUpdate() {
   if (els.splashNormal) els.splashNormal.hidden = false;
 }
 
-async function startAutoUpdate(info) {
+async function startAutoUpdate(info, options = {}) {
   if (S.autoUpdating) return;
+  const manual = !!options.manual;
+  const tr = (text) => (window.I18n ? window.I18n.t(text) : text);
+  const button = els.btnUpdateDownload;
   S.autoUpdating = true;
   els.updateChip.hidden = true;
-  showSplashUpdate(info);
+  if (manual) {
+    if (button) {
+      button.disabled = true;
+      button.textContent = `${tr('Скачиваю…')} 0%`;
+    }
+  } else {
+    showSplashUpdate(info);
+  }
 
   let unlisten = null;
   try {
@@ -3198,6 +3198,10 @@ async function startAutoUpdate(info) {
         const total = Number(payload && payload.total) || 0;
         const downloaded = Number(payload && payload.downloaded) || 0;
         const percent = total > 0 ? Math.min(100, Math.round((downloaded / total) * 100)) : 0;
+        if (manual) {
+          if (button) button.textContent = `${tr('Скачиваю…')} ${percent}%`;
+          return;
+        }
         const status = total > 0
           ? `Скачивание… ${formatBytes(downloaded)} из ${formatBytes(total)}`
           : 'Скачивание обновления…';
@@ -3206,18 +3210,35 @@ async function startAutoUpdate(info) {
     }
 
     await api.installUpdate(info.installerUrl);
-    if (els.splashUpdate) els.splashUpdate.classList.add('installing');
-    setSplashProgress(100, 'Устанавливаю обновление. Лаунчер сейчас закроется…');
+    if (manual) {
+      if (button) button.textContent = tr('Устанавливаю обновление. Лаунчер сейчас закроется…');
+      if (els.updateNotes) {
+        els.updateNotes.textContent = tr('Обновление скачано. Лаунчер закроется и запустится заново.');
+      }
+    } else {
+      if (els.splashUpdate) els.splashUpdate.classList.add('installing');
+      setSplashProgress(100, 'Устанавливаю обновление. Лаунчер сейчас закроется…');
+    }
     setTimeout(() => {
       api.close().catch(() => {});
     }, 800);
   } catch (err) {
     S.autoUpdating = false;
-    hideSplashUpdate();
-    els.updateChipText.textContent = `Обновление ${info.latest}`;
-    els.updateChip.hidden = false;
-    toast('Автообновление не удалось: ' + err, 'error');
-    await finishStartup();
+    if (manual) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = tr('Обновить и перезапустить');
+      }
+    } else {
+      hideSplashUpdate();
+      els.updateChipText.textContent = `Обновление ${info.latest}`;
+      els.updateChip.hidden = false;
+      await finishStartup();
+    }
+    toast(
+      (window.I18n ? window.I18n.t('Не удалось установить обновление:') : 'Не удалось установить обновление:') + ' ' + err,
+      'error'
+    );
   } finally {
     if (typeof unlisten === 'function') unlisten();
   }

@@ -219,7 +219,6 @@ fn main() {
             commands::game_mark_launched,
             commands::game_open_mode_folder,
             update::check_update,
-            update::download_update,
             update::install_update,
         ])
         .setup(|app| {
