@@ -237,7 +237,6 @@ const els = {
   detailTags: $('detail-tags'),
   detailSub: $('detail-sub'),
   detailAction: $('detail-action'),
-  detailLibrary: $('detail-library'),
   detailReport: $('detail-report'),
   detailStatus: $('detail-status'),
   detailProgress: $('detail-progress'),
@@ -1677,7 +1676,6 @@ function bindDetail() {
     S.search = name.toLowerCase();
     showSection('store');
   };
-  els.detailLibrary.onclick = () => handleCardAction(S.selectedId, 'addlib');
   if (els.detailSessionsMore) {
     els.detailSessionsMore.onclick = () => {
       S.sessionsExpanded = !S.sessionsExpanded;
@@ -2122,14 +2120,8 @@ async function startMode(mode, autoPlay = false) {
       toast('Режим добавлен в библиотеку', 'ok');
     } catch (err) {
       toast('Не удалось добавить режим: ' + err, 'error');
-      return;
     }
-    action = computeAction(mode);
-    if (action === 'add' || action === 'running') return;
-    if (action === 'play') {
-      await startMode(mode, autoPlay);
-      return;
-    }
+    return;
   }
   if (!lavunioLoggedIn()) {
     openModal('modal-account');
@@ -2172,10 +2164,7 @@ function openCardContext(card, x, y, playMode) {
 
   if (playMode) actions.push({ action: 'page', label: 'Страница режима' });
   if (installed) actions.push({ action: 'folder', label: 'Открыть папку' });
-  actions.push({
-    action: inLib ? 'hide' : 'addlib',
-    label: inLib ? 'Убрать из библиотеки' : 'Добавить в библиотеку'
-  });
+  if (inLib) actions.push({ action: 'hide', label: 'Убрать из библиотеки' });
   if (installed && action !== 'running') {
     actions.push({ action: 'uninstall', label: 'Удалить с устройства', danger: true });
   }
@@ -2240,6 +2229,7 @@ function modeById(id) {
 
 function computeAction(mode) {
   if (S.running === mode.id) return 'running';
+  if (!inLibrary(mode)) return 'add';
   if (isUpdate(mode)) return 'update';
   if (isInstalled(mode)) return 'play';
   return 'install';
@@ -2257,9 +2247,9 @@ function actionLabel(action) {
 
 function defaultStatus(mode) {
   if (S.running === mode.id) return 'Игра запущена';
+  if (!inLibrary(mode)) return 'Сначала добавь режим в библиотеку';
   if (isUpdate(mode)) return 'Доступно обновление';
   if (isInstalled(mode)) return 'Готов к запуску';
-  if (!inLibrary(mode)) return 'Можно установить';
   return 'Файлы ещё не скачаны';
 }
 
@@ -2792,10 +2782,6 @@ function updateDetailAction() {
   const mode = modeById(S.selectedId);
   if (!mode) return;
   if (els.detailDefer) els.detailDefer.hidden = true;
-  if (els.detailLibrary) {
-    els.detailLibrary.hidden = inLibrary(mode);
-    els.detailLibrary.disabled = false;
-  }
 
   const task = downloadTaskForMode(mode.id);
   if (task && task.status === 'queued') {
