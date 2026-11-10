@@ -83,7 +83,12 @@ src/
    - `locales/ru.js`, `locales/en.js` (JSON требует загрузчика или сборщика).
    - Фразовый fallback только для внешних сообщений сервера.
 
-9. **TypeScript / Vite**
+9. **Остатки `app.js`**
+   - `features/store`, `features/news`, `features/account`, `features/updates`, `features/notifications`, `features/social`.
+   - `features/detail/actions`, `features/game/events`, `ui/modal`.
+   - В `app.js` остаются только инициализация, оболочка, навигация и debug-точка.
+
+10. **TypeScript / Vite**
    - Только после разбиения, если понадобятся типы, HMR или npm-компоненты.
    - Не обязательны для поддержки кода.
 
@@ -97,7 +102,8 @@ src/
 - [x] Этап 6 — CSS разбит на 42 partials, `styles.css` и `theme.css` стали import-манифестами.
 - [x] Этап 7 — Rust: команды разбиты на `window`, `system`, `library`, `account`, `social`, `publisher`, `game`, `content`; `mod.rs` — только общие хелперы.
 - [x] Этап 8 — i18n: все UI-строки переведены на ключи (`tKey`, `data-i18n*`); DOM-observer и перевод DOM по фразам удалены; фразовый словарь используется только для внешних сообщений сервера.
-- [ ] Этап 9 — TypeScript / Vite при необходимости.
+- [x] Этап 9 — `app.js` разбит: store, news, account, updates, notifications, social, detail actions, game events и модалки вынесены; entrypoint ~650 строк.
+- [ ] Этап 10 — TypeScript / Vite при необходимости.
 
 ## Правила
 
