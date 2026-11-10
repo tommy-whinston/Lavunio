@@ -164,7 +164,10 @@ Options:
   console.log(`\n[release] ${current} -> ${version}${dryRun ? ' (dry-run)' : ''}`);
   console.log(`[release] notes:\n${notes}`);
 
-  if (!skipTests) run('node', ['tools/headless/run.js']);
+  if (!skipTests) {
+    run('node', ['tools/headless/run.js']);
+    run('cmd', ['/c', 'call build-env.bat && cd src-tauri && cargo test --bin lavunio']);
+  }
 
   if (!dryRun) {
     write('package.json', replaceVersionInJson('package.json', current, version));

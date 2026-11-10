@@ -342,12 +342,18 @@ async function runScenario(cdp, scenario) {
     if (!state.i18n || !state.debug || state.loading) throw new Error(JSON.stringify(state));
     if (state.errors?.length) throw new Error(JSON.stringify(state.errors));
   });
+  if (scenario === 'offline') {
+    await check(cdp, results, 'offline cached catalog', async () => {
+      const count = await cdp.evaluate(`document.querySelectorAll('.mode-card').length`);
+      if (!count) throw new Error('каталог не загрузился из кэша');
+    });
+  }
   await check(cdp, results, 'language switch', () => checkLanguage(cdp));
   await check(cdp, results, 'sections', () => checkSections(cdp));
   await check(cdp, results, 'detail', () => checkDetail(cdp));
   await check(cdp, results, 'settings/account', () => checkStaticPanels(cdp));
 
-  if (scenario !== 'guest') {
+  if (scenario === 'admin') {
     await check(cdp, results, 'team flows', () => runTeamFlows(cdp));
     await check(cdp, results, 'publisher flows', () => runPublisherFlows(cdp));
     await check(cdp, results, 'moderation flows', () => runModerationFlows(cdp));
@@ -402,7 +408,7 @@ async function main() {
     const target = await getTarget(debugPort);
     cdp = await connect(target.webSocketDebuggerUrl);
     cdp.port = port;
-    for (const scenario of ['guest', 'admin']) {
+    for (const scenario of ['guest', 'offline', 'admin']) {
       const results = await runScenario(cdp, scenario);
       failed += results.filter((result) => !result.ok).length;
     }

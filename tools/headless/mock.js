@@ -10,7 +10,8 @@ function createMockScript(scenario) {
   const now = Date.now();
   const admin = { id: 'admin', username: 'admin', displayName: 'Admin', role: 'admin', email: 'admin@example.com', emailVerified: true, skinUrl: '', skinModel: 'classic' };
   const player = { id: 'steve', username: 'steve', displayName: 'Steve', role: 'player', email: 'steve@example.com', emailVerified: true, skinUrl: '', skinModel: 'classic' };
-  const user = scenario === 'guest' ? null : scenario === 'player' ? player : admin;
+  const offline = scenario === 'offline';
+  const user = (scenario === 'guest' || offline) ? null : scenario === 'player' ? player : admin;
 
   const mode = {
     id: 'night-demon',
@@ -75,7 +76,8 @@ function createMockScript(scenario) {
 
   const data = {
     user,
-    enabled: scenario !== 'guest',
+    enabled: scenario === 'admin' || scenario === 'player',
+    offline,
     mode,
     team,
     friend,
@@ -103,11 +105,13 @@ const base = {
   minimize: async () => {}, toggleMaximize: async () => true, toggleFullscreen: async () => true,
   isWindowVisible: async () => true, hide: async () => {}, close: async () => {},
   windowSplash: async () => {}, windowReady: async () => {},
-  getModes: async () => [data.mode], getCachedModes: async () => [data.mode], refreshModes: async () => [data.mode],
+  getModes: async () => { if (data.offline) throw new Error('offline'); return [data.mode]; },
+  getCachedModes: async () => [data.mode],
+  refreshModes: async () => { if (data.offline) throw new Error('offline'); return [data.mode]; },
   getState: async () => ({ 'night-demon': { installed: true, library: true, version: '1.0.0', installedAt: now } }),
   getSettings: async () => ({ lang: 'en', ramGb: 4 }), saveSettings: async (p) => ({ ...p }),
   getSystemRam: async () => 16, diskInfo: async () => ({ availableBytes: 1024 * 1024 * 1024, totalBytes: 4 * 1024 * 1024 * 1024, libraryBytes: 1024 * 1024 }),
-  checkUpdate: async () => ({ available: false }), onUpdateProgress: async () => () => {},
+  checkUpdate: async () => { if (data.offline) throw new Error('offline'); return { available: false }; }, onUpdateProgress: async () => () => {},
   lavunioStatus: async () => ({ configured: true, hasSession: !!data.user, user: data.user }),
   lavunioRefreshProfile: async () => ({ configured: true, hasSession: !!data.user, user: data.user }),
   lavunioLogin: async () => ({ configured: true, hasSession: true, user: data.user || data.profile }),

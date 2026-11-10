@@ -23,7 +23,7 @@ npm run release -- --version 0.23.35
 ## Что делает
 
 1. Проверяет, что git чистый и лаунчер закрыт.
-2. Запускает headless-тесты (`tools/headless`).
+2. Запускает headless-тесты и `cargo test`.
 3. Поднимает версию в `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `tauri.conf.json`.
 4. Запускает `build-installer.bat --no-pause`.
 5. Копирует `Lavunio Setup.exe` в `Lavunio.Setup.exe` и `Lavunio.Setup.<version>.exe`.

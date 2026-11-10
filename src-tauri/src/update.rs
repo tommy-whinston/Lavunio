@@ -445,4 +445,49 @@ mod tests {
         assert!(!source.exists(), "downloaded update should be removed");
         let _ = std::fs::remove_dir_all(&base);
     }
+
+    #[test]
+    fn version_comparison_handles_prefixes_and_patch_versions() {
+        assert!(is_newer("0.23.35", "0.23.34"));
+        assert!(is_newer("v0.24.0", "0.23.99"));
+        assert!(!is_newer("0.23.35", "0.23.35"));
+        assert!(!is_newer("0.23.34", "0.23.35"));
+        assert_eq!(version_parts("v1.2.3"), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn update_assets_prefer_portable_build() {
+        let release = json!({
+            "assets": [
+                { "name": "Lavunio.Setup.0.23.35.exe", "browser_download_url": "https://github.com/setup" },
+                { "name": "Lavunio.exe", "browser_download_url": "https://github.com/portable" }
+            ]
+        });
+        assert_eq!(
+            portable_url(&release).as_deref(),
+            Some("https://github.com/portable")
+        );
+        assert_eq!(
+            installer_url(&release).as_deref(),
+            Some("https://github.com/setup")
+        );
+        assert_eq!(
+            update_url(&release).as_deref(),
+            Some("https://github.com/portable")
+        );
+    }
+
+    #[test]
+    fn update_assets_fall_back_to_installer() {
+        let release = json!({
+            "assets": [
+                { "name": "Lavunio.Setup.exe", "browser_download_url": "https://github.com/setup" }
+            ]
+        });
+        assert!(portable_url(&release).is_none());
+        assert_eq!(
+            update_url(&release).as_deref(),
+            Some("https://github.com/setup")
+        );
+    }
 }

@@ -1055,4 +1055,29 @@ mod tests {
 
         let _ = fs::remove_dir_all(&root);
     }
+
+    #[test]
+    fn required_java_major_matches_minecraft_versions() {
+        assert_eq!(required_java_major("1.16.5"), 8);
+        assert_eq!(required_java_major("1.17.1"), 17);
+        assert_eq!(required_java_major("1.20.4"), 17);
+        assert_eq!(required_java_major("1.20.5"), 21);
+        assert_eq!(required_java_major("1.21"), 21);
+        assert_eq!(required_java_major("2.0"), 21);
+    }
+
+    #[test]
+    fn parse_java_major_handles_legacy_and_modern_versions() {
+        assert_eq!(parse_java_major("java version \"1.8.0_402\""), Some(8));
+        assert_eq!(
+            parse_java_major("openjdk version \"17.0.10\" 2024-01-16"),
+            Some(17)
+        );
+        assert_eq!(
+            parse_java_major("java version \"21.0.3\" 2024-04-16 LTS"),
+            Some(21)
+        );
+        assert_eq!(parse_java_major("java version \"11.0.22\""), Some(11));
+        assert_eq!(parse_java_major("not a java version"), None);
+    }
 }
