@@ -96,7 +96,7 @@ src/
 - [x] Этап 5 — команды, публикатор, модерация, настройки.
 - [x] Этап 6 — CSS разбит на 42 partials, `styles.css` и `theme.css` стали import-манифестами.
 - [x] Этап 7 — Rust: команды разбиты на `window`, `system`, `library`, `account`, `social`, `publisher`, `game`, `content`; `mod.rs` — только общие хелперы.
-- [ ] Этап 8 — i18n.
+- [~] Этап 8 — i18n разбит на `en.js`, `patterns.js`, `index.js`; переход на ключи ещё впереди.
 - [ ] Этап 9 — TypeScript / Vite при необходимости.
 
 ## Правила
