@@ -95,7 +95,7 @@ src/
 - [x] Этап 4 — профиль и сообщения.
 - [x] Этап 5 — команды, публикатор, модерация, настройки.
 - [x] Этап 6 — CSS разбит на 42 partials, `styles.css` и `theme.css` стали import-манифестами.
-- [ ] Этап 7 — Rust.
+- [~] Этап 7 — Rust: `commands.rs` разделён на `commands/window.rs` и `commands/system.rs`; остальные команды ещё в `commands/mod.rs`.
 - [ ] Этап 8 — i18n.
 - [ ] Этап 9 — TypeScript / Vite при необходимости.
 
