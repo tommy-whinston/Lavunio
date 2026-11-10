@@ -1,10 +1,13 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $, escapeHtml } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { teamRoleLabel } from '../../core/labels.js';
+import { formatDateTime } from '../../core/format.js';
 import { toast } from '../../ui/toast.js';
 
 let teamActions = {
@@ -114,10 +117,10 @@ export function renderTeams() {
   if (els.teamStatCount) els.teamStatCount.textContent = String(teams.length);
   if (els.teamHint) {
     els.teamHint.textContent = S.teamsLoading && !S.teamsLoaded
-      ? 'Загрузка…'
+      ? tKey("loading.2")
       : teams.length
-        ? `Команд: ${teams.length}`
-        : 'Создай первую команду';
+        ? tKey("teams.count", [teams.length])
+        : tKey("teams.create.first");
   }
   if (els.teamEmpty) els.teamEmpty.hidden = teams.length > 0;
   els.teamList.innerHTML = teams.map((team) => `
@@ -127,14 +130,14 @@ export function renderTeams() {
           <div class="pub-title">${escapeHtml(team.title)}</div>
           <div class="pub-sub">${escapeHtml(team.slug)} · ${escapeHtml(teamRoleLabel(team.role))}</div>
         </div>
-        <span class="pub-status ${team.status === 'active' ? 'published' : 'hidden'}">${team.status === 'active' ? 'Активна' : 'В архиве'}</span>
+        <span class="pub-status ${team.status === 'active' ? 'published' : 'hidden'}">${team.status === 'active' ? tKey("active.2") : tKey("archived")}</span>
       </div>
-      <div class="mod-changelog">${escapeHtml(team.description || 'Без описания')}</div>
+      <div class="mod-changelog">${escapeHtml(team.description || tKey("no.description"))}</div>
       <div class="pub-release-actions">
-        <button class="btn btn-primary" type="button" data-team-action="page" data-id="${escapeHtml(team.id)}">Страница</button>
-        <button class="btn btn-ghost" type="button" data-team-action="members" data-id="${escapeHtml(team.id)}">Участники</button>
-        <button class="btn btn-ghost" type="button" data-team-action="edit" data-id="${escapeHtml(team.id)}">Редактировать</button>
-        ${team.role === 'owner' ? `<button class="btn btn-ghost" type="button" data-team-action="archive" data-id="${escapeHtml(team.id)}">В архив</button>` : ''}
+        <button class="btn btn-primary" type="button" data-team-action="page" data-id="${escapeHtml(team.id)}">${tKey("teams.page")}</button>
+        <button class="btn btn-ghost" type="button" data-team-action="members" data-id="${escapeHtml(team.id)}">${tKey("members")}</button>
+        <button class="btn btn-ghost" type="button" data-team-action="edit" data-id="${escapeHtml(team.id)}">${tKey("edit")}</button>
+        ${team.role === 'owner' ? `<button class="btn btn-ghost" type="button" data-team-action="archive" data-id="${escapeHtml(team.id)}">${tKey("teams.archive")}</button>` : ''}
       </div>
     </article>
   `).join('');
@@ -154,7 +157,7 @@ export async function loadTeams(force = false) {
     S.teams = Array.isArray(teams) ? teams : [];
     S.teamsLoaded = true;
   } catch (err) {
-    toast('Не удалось загрузить команды: ' + err, 'error');
+    toast(tKey("failed.to.load.teams") + " " + err, 'error');
   } finally {
     S.teamsLoading = false;
     renderTeams();
@@ -163,8 +166,8 @@ export async function loadTeams(force = false) {
 
 export function openTeamModal(team) {
   S.teamEditing = team || null;
-  $('team-modal-title').textContent = team ? 'Редактировать команду' : 'Новая команда';
-  $('team-submit').textContent = team ? 'Сохранить' : 'Создать команду';
+  $('team-modal-title').textContent = team ? tKey("edit.team") : tKey("new.team");
+  $('team-submit').textContent = team ? tKey("save") : tKey("create.team");
   $('team-title').value = team ? team.title : '';
   $('team-slug').value = team ? team.slug : '';
   $('team-slug').dataset.touched = team ? '1' : '';
@@ -191,12 +194,12 @@ export async function submitTeam() {
   };
   const error = $('team-error');
   if (!payload.title) {
-    error.textContent = 'Укажи название команды';
+    error.textContent = tKey("enter.a.team.name");
     error.hidden = false;
     return;
   }
   if (!/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(payload.slug)) {
-    error.textContent = 'Slug: 3–64 символа, строчные латинские буквы, цифры и дефис';
+    error.textContent = tKey("slug.3.64.characters");
     error.hidden = false;
     return;
   }
@@ -208,10 +211,10 @@ export async function submitTeam() {
     else await api.teamCreate(payload);
     $('modal-team').hidden = true;
     S.teamsLoaded = false;
-    toast(editing ? 'Команда обновлена' : 'Команда создана', 'ok');
+    toast(editing ? tKey("teams.updated") : tKey("teams.created"), 'ok');
     await loadTeams(true);
   } catch (err) {
-    error.textContent = String(err || 'Не удалось сохранить команду');
+    error.textContent = String(err || tKey("teams.failed.save"));
     error.hidden = false;
   } finally {
     button.disabled = false;
@@ -221,18 +224,18 @@ export async function submitTeam() {
 export async function archiveTeam(team) {
   if (!team) return;
   const confirmed = await teamActions.askConfirm(
-    'Архивировать команду?',
-    `Команда «${team.title}» будет скрыта. Режимы и история сохранятся.`,
-    'В архив'
+    tKey("teams.confirm.archive.title"),
+    tKey("teams.confirm.archive.text", [team.title]),
+    tKey("teams.archive")
   );
   if (!confirmed) return;
   try {
     await api.teamArchive(team.id);
-    toast('Команда в архиве', 'ok');
+    toast(tKey("team.is.archived"), 'ok');
     S.teamsLoaded = false;
     await loadTeams(true);
   } catch (err) {
-    toast('Не удалось архивировать команду: ' + err, 'error');
+    toast(tKey("failed.to.archive.team") + ' ' + err, 'error');
   }
 }
 
@@ -244,12 +247,12 @@ export function renderTeamInvitations() {
   box.innerHTML = items.map((invitation) => `
     <div class="team-invite-card">
       <div class="team-invite-copy">
-        <b>Приглашение в «${escapeHtml(invitation.teamTitle)}»</b>
-        <span>${escapeHtml(invitation.inviterName)} приглашает на роль «${escapeHtml(teamRoleLabel(invitation.role))}»</span>
+        <b>${tKey("pattern.invitation.to.x", [escapeHtml(invitation.teamTitle)])}</b>
+        <span>${tKey("pattern.x.invites.you.as", [escapeHtml(invitation.inviterName), escapeHtml(teamRoleLabel(invitation.role))])}</span>
       </div>
       <div class="team-invite-actions">
-        <button class="btn btn-primary btn-small" type="button" data-invite-action="accept" data-id="${escapeHtml(invitation.id)}">Принять</button>
-        <button class="btn btn-ghost btn-small" type="button" data-invite-action="decline" data-id="${escapeHtml(invitation.id)}">Отклонить</button>
+        <button class="btn btn-primary btn-small" type="button" data-invite-action="accept" data-id="${escapeHtml(invitation.id)}">${tKey("accept")}</button>
+        <button class="btn btn-ghost btn-small" type="button" data-invite-action="decline" data-id="${escapeHtml(invitation.id)}">${tKey("decline")}</button>
       </div>
     </div>
   `).join('');
@@ -269,22 +272,22 @@ export async function loadTeamInvitations() {
 export async function acceptTeamInvitation(invitationId) {
   try {
     await api.teamInvitationAccept(invitationId);
-    toast('Приглашение принято', 'ok');
+    toast(tKey("invitation.accepted"), 'ok');
     S.teamsLoaded = false;
     await loadTeams(true);
     await loadTeamInvitations();
   } catch (err) {
-    toast('Не удалось принять приглашение: ' + err, 'error');
+    toast(tKey("failed.to.accept.invitation") + " " + err, 'error');
   }
 }
 
 export async function declineTeamInvitation(invitationId) {
   try {
     await api.teamInvitationDecline(invitationId);
-    toast('Приглашение отклонено', 'info');
+    toast(tKey("invitation.declined"), 'info');
     await loadTeamInvitations();
   } catch (err) {
-    toast('Не удалось отклонить приглашение: ' + err, 'error');
+    toast(tKey("failed.to.decline.invitation") + " " + err, 'error');
   }
 }
 
@@ -302,8 +305,8 @@ export function memberRoleOptions(current) {
 export async function openTeamMembers(team) {
   if (!team) return;
   S.teamMembersTeam = team;
-  $('team-members-title').textContent = `Участники · ${team.title}`;
-  $('team-members-hint').textContent = 'Загрузка…';
+  $('team-members-title').textContent = tKey("pattern.members.x", [team.title]);
+  $('team-members-hint').textContent = tKey("loading.2");
   $('team-members-list').innerHTML = '';
   $('team-invite-form').hidden = true;
   teamActions.openModal('modal-team-members');
@@ -313,13 +316,13 @@ export async function openTeamMembers(team) {
     S.teamMembers = members;
     renderTeamMembers(team, members);
   } catch (err) {
-    $('team-members-hint').textContent = 'Не удалось загрузить участников: ' + err;
+    $('team-members-hint').textContent = tKey("teams.failed.load.members") + ' ' + err;
   }
 }
 
 export function renderTeamMembers(team, members) {
   const manage = canManageTeam(team);
-  $('team-members-hint').textContent = `Участников: ${members.length}`;
+  $('team-members-hint').textContent = tKey("pattern.members.x.2", [members.length]);
   els.teamMembersList.innerHTML = members.map((member) => `
     <div class="team-member-row">
       <div class="grow">
@@ -328,7 +331,7 @@ export function renderTeamMembers(team, members) {
       </div>
       ${manage && member.role !== 'owner'
         ? `<select data-member-role data-user="${escapeHtml(member.userId)}">${memberRoleOptions(member.role)}</select>
-           <button class="btn btn-ghost btn-small" type="button" data-member-remove="${escapeHtml(member.userId)}">Удалить</button>`
+           <button class="btn btn-ghost btn-small" type="button" data-member-remove="${escapeHtml(member.userId)}">${tKey("delete")}</button>`
         : ''}
     </div>
   `).join('');
@@ -342,7 +345,7 @@ export async function submitTeamInvite() {
   const role = $('team-invite-role').value;
   const error = $('team-invite-error');
   if (!username) {
-    error.textContent = 'Укажи username';
+    error.textContent = tKey("teams.enter.username");
     error.hidden = false;
     return;
   }
@@ -352,9 +355,9 @@ export async function submitTeamInvite() {
   try {
     await api.teamInvite(team.id, username, role);
     $('team-invite-username').value = '';
-    toast('Приглашение отправлено', 'ok');
+    toast(tKey("teams.invite.sent"), 'ok');
   } catch (err) {
-    error.textContent = String(err || 'Не удалось отправить приглашение');
+    error.textContent = String(err || tKey("teams.failed.invite"));
     error.hidden = false;
   } finally {
     button.disabled = false;
@@ -366,10 +369,10 @@ export async function changeTeamMemberRole(userId, role) {
   if (!team) return;
   try {
     await api.teamMemberRole(team.id, userId, role);
-    toast('Роль обновлена', 'ok');
+    toast(tKey("teams.role.updated"), 'ok');
     await openTeamMembers(team);
   } catch (err) {
-    toast('Не удалось изменить роль: ' + err, 'error');
+    toast(tKey("teams.failed.role") + ' ' + err, 'error');
     await openTeamMembers(team);
   }
 }
@@ -378,18 +381,18 @@ export async function removeTeamMember(userId) {
   const team = S.teamMembersTeam;
   if (!team) return;
   const confirmed = await teamActions.askConfirm(
-    'Удалить участника?',
-    'Участник покинет команду. Его авторство в опубликованных режимах сохранится.',
-    'Удалить'
+    tKey("teams.confirm.remove.title"),
+    tKey("teams.confirm.remove.text"),
+    tKey("delete")
   );
   if (!confirmed) return;
   try {
     await api.teamMemberRemove(team.id, userId);
-    toast('Участник удалён', 'ok');
+    toast(tKey("teams.member.removed"), 'ok');
     await openTeamMembers(team);
     S.teamsLoaded = false;
   } catch (err) {
-    toast('Не удалось удалить участника: ' + err, 'error');
+    toast(tKey("teams.failed.remove.member") + ' ' + err, 'error');
   }
 }
 
@@ -398,7 +401,7 @@ export async function openTeamPage(team) {
   S.teamPage = team;
   S.teamPageData = null;
   $('team-page-title').textContent = team.title;
-  els.teamPageContent.innerHTML = '<div class="mod-empty">Загрузка страницы…</div>';
+  els.teamPageContent.innerHTML = '<div class="mod-empty">' + tKey("teams.loading.page") + '</div>';
   teamActions.openModal('modal-team-page');
   try {
     const profile = api.teamProfilePublic
@@ -407,7 +410,7 @@ export async function openTeamPage(team) {
     S.teamPageData = profile;
     renderTeamPage(team, profile);
   } catch (err) {
-    els.teamPageContent.innerHTML = `<div class="mod-empty">Не удалось загрузить команду: ${escapeHtml(String(err))}</div>`;
+    els.teamPageContent.innerHTML = `<div class="mod-empty">${tKey("failed.to.load.team")} ${escapeHtml(String(err))}</div>`;
   }
 }
 
@@ -422,18 +425,18 @@ export function renderTeamPage(team, profile) {
   const user = S.lavunio && S.lavunio.user;
   const actions = [];
   if (manage) {
-    actions.push({ action: 'members', label: 'Участники' });
-    if (data.joinMode !== 'invite') actions.push({ action: 'join-requests', label: 'Заявки' });
-    actions.push({ action: 'news', label: 'Новость' });
-    actions.push({ action: 'edit', label: 'Редактировать' });
+    actions.push({ action: 'members', label: tKey("members") });
+    if (data.joinMode !== 'invite') actions.push({ action: 'join-requests', label: tKey("applications") });
+    actions.push({ action: 'news', label: tKey("common.news") });
+    actions.push({ action: 'edit', label: tKey("edit") });
   }
-  if (team.role === 'owner') actions.push({ action: 'transfer', label: 'Передать владение' });
+  if (team.role === 'owner') actions.push({ action: 'transfer', label: tKey("transfer.ownership") });
   if (user && user.role === 'admin') {
-    actions.push({ action: 'verify', label: data.verified ? 'Снять галочку' : 'Подтвердить' });
+    actions.push({ action: 'verify', label: data.verified ? tKey("teams.remove.verified") : tKey("confirm") });
   }
   if (!isMember) {
-    if (data.joinMode !== 'invite') actions.push({ action: 'join', label: data.joinMode === 'open' ? 'Вступить' : 'Подать заявку' });
-    actions.push({ action: 'follow', label: 'Подписаться' });
+    if (data.joinMode !== 'invite') actions.push({ action: 'join', label: data.joinMode === 'open' ? tKey("teams.join") : tKey("teams.apply") });
+    actions.push({ action: 'follow', label: tKey("follow") });
   }
   const actionHtml = actions.map((item) => `
     <button class="btn btn-ghost" type="button" data-team-page-action="${item.action}">${escapeHtml(item.label)}</button>
@@ -441,18 +444,18 @@ export function renderTeamPage(team, profile) {
 
   $('team-page-title').textContent = `${data.title || team.title}${data.verified ? ' ✓' : ''}`;
   els.teamPageContent.innerHTML = `
-    <div class="hint">${escapeHtml(data.description || 'Без описания')}</div>
+    <div class="hint">${escapeHtml(data.description || tKey("no.description"))}</div>
     ${data.links ? `<div class="hint">${escapeHtml(data.links)}</div>` : ''}
     <div class="dashboard-stats team-page-stats">
-      <div class="dash-stat"><span>Режимы</span><b>${Number(stats.modes) || 0}</b></div>
-      <div class="dash-stat"><span>Опубликовано</span><b>${Number(stats.published) || 0}</b></div>
-      <div class="dash-stat"><span>Скачивания</span><b>${Number(stats.downloads) || 0}</b></div>
-      <div class="dash-stat"><span>Установки</span><b>${Number(stats.installs) || 0}</b></div>
-      <div class="dash-stat"><span>Подписчики</span><b>${Number(profile && profile.followers) || 0}</b></div>
+      <div class="dash-stat"><span>${tKey("modes")}</span><b>${Number(stats.modes) || 0}</b></div>
+      <div class="dash-stat"><span>${tKey("published")}</span><b>${Number(stats.published) || 0}</b></div>
+      <div class="dash-stat"><span>${tKey("downloads.2")}</span><b>${Number(stats.downloads) || 0}</b></div>
+      <div class="dash-stat"><span>${tKey("installs")}</span><b>${Number(stats.installs) || 0}</b></div>
+      <div class="dash-stat"><span>${tKey("followers")}</span><b>${Number(profile && profile.followers) || 0}</b></div>
     </div>
     <div class="pub-release-actions team-page-actions">${actionHtml}</div>
     <div id="team-page-requests"></div>
-    <h3 class="team-page-heading">Участники</h3>
+    <h3 class="team-page-heading">${tKey("members")}</h3>
     <div class="team-members-list">
       ${members.map((member) => `
         <div class="team-member-row">
@@ -461,25 +464,25 @@ export function renderTeamPage(team, profile) {
             <div class="sub">@${escapeHtml(member.username)} · ${escapeHtml(teamRoleLabel(member.role))}</div>
           </div>
         </div>
-      `).join('') || '<div class="hint">Участников нет</div>'}
+      `).join('') || '<div class="hint">' + tKey("teams.no.members") + '</div>'}
     </div>
-    <h3 class="team-page-heading">Режимы</h3>
+    <h3 class="team-page-heading">${tKey("modes")}</h3>
     <div class="team-mode-list">
       ${modes.map((mode) => `
         <button class="team-mode-row" type="button" data-team-mode="${escapeHtml(mode.slug)}">
           <span>${escapeHtml(mode.title)}</span>
-          <b>${Number(mode.installs) || 0} установок</b>
+          <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
         </button>
-      `).join('') || '<div class="hint">Опубликованных режимов пока нет</div>'}
+      `).join('') || '<div class="hint">' + tKey("no.published.modes.yet.2") + '</div>'}
     </div>
-    <h3 class="team-page-heading">Новости</h3>
+    <h3 class="team-page-heading">${tKey("news")}</h3>
     <div class="team-news-list">
       ${news.map((item) => `
         <div class="session-row">
           <span>${escapeHtml(item.title)}</span>
-          <b>${escapeHtml(publisherDate(item.createdAt))}</b>
+          <b>${escapeHtml(formatDateTime(item.createdAt))}</b>
         </div>
-      `).join('') || '<div class="hint">Новостей пока нет</div>'}
+      `).join('') || '<div class="hint">' + tKey("no.news.yet") + '</div>'}
     </div>
   `;
 }
@@ -487,24 +490,24 @@ export function renderTeamPage(team, profile) {
 export async function showTeamJoinRequests(team) {
   const box = $('team-page-requests');
   if (!box || !team) return;
-  box.innerHTML = '<div class="hint">Загрузка заявок…</div>';
+  box.innerHTML = '<div class="hint">' + tKey("teams.loading.applications") + '</div>';
   try {
     const items = await api.teamJoinRequests(team.id);
     const list = Array.isArray(items) ? items : [];
     box.innerHTML = `
-      <h3 class="team-page-heading">Заявки на вступление</h3>
+      <h3 class="team-page-heading">${tKey("teams.join.requests")}</h3>
       ${list.length ? list.map((item) => `
         <div class="session-row">
           <span>@${escapeHtml(item.username)} · ${escapeHtml(item.displayName || '')}</span>
           <span>
-            <button class="btn btn-primary btn-small" type="button" data-team-request="accept" data-id="${escapeHtml(item.id)}">Принять</button>
-            <button class="btn btn-ghost btn-small" type="button" data-team-request="reject" data-id="${escapeHtml(item.id)}">Отклонить</button>
+            <button class="btn btn-primary btn-small" type="button" data-team-request="accept" data-id="${escapeHtml(item.id)}">${tKey("accept")}</button>
+            <button class="btn btn-ghost btn-small" type="button" data-team-request="reject" data-id="${escapeHtml(item.id)}">${tKey("decline")}</button>
           </span>
         </div>
-      `).join('') : '<div class="hint">Заявок нет</div>'}
+      `).join('') : '<div class="hint">' + tKey("no.applications") + '</div>'}
     `;
   } catch (err) {
-    box.innerHTML = `<div class="hint">Не удалось загрузить заявки: ${escapeHtml(String(err))}</div>`;
+    box.innerHTML = `<div class="hint">${tKey("failed.to.load.applications")} ${escapeHtml(String(err))}</div>`;
   }
 }
 
@@ -513,18 +516,18 @@ export async function resolveTeamJoinRequest(requestId, action) {
   if (!team) return;
   try {
     await api.teamResolveJoinRequest(team.id, requestId, action);
-    toast(action === 'accept' ? 'Заявка принята' : 'Заявка отклонена', 'ok');
+    toast(action === 'accept' ? tKey("request.accepted") : tKey("request.declined"), 'ok');
     await showTeamJoinRequests(team);
     await openTeamPage(team);
   } catch (err) {
-    toast('Не удалось рассмотреть заявку: ' + err, 'error');
+    toast(tKey("failed.to.resolve.application") + " " + err, 'error');
   }
 }
 
 export function openTeamJoin(team) {
   if (!team) return;
   S.teamJoinTeam = team;
-  $('team-join-info').textContent = `Команда «${team.title}»`;
+  $('team-join-info').textContent = tKey("pattern.team.x", [team.title]);
   $('team-join-message').value = '';
   $('team-join-error').hidden = true;
   teamActions.openModal('modal-team-join');
@@ -542,11 +545,11 @@ export async function submitTeamJoin() {
   try {
     const result = await api.teamJoin(team.id, message);
     $('modal-team-join').hidden = true;
-    toast(result && result.status === 'joined' ? 'Ты вступил в команду' : 'Заявка отправлена', 'ok');
+    toast(result && result.status === 'joined' ? tKey("you.joined.the.team") : tKey("request.sent"), 'ok');
     S.teamsLoaded = false;
     await loadTeams(true);
   } catch (err) {
-    error.textContent = String(err || 'Не удалось отправить заявку');
+    error.textContent = String(err || tKey("failed.to.submit.application"));
     error.hidden = false;
   } finally {
     button.disabled = false;
@@ -570,7 +573,7 @@ export async function submitTeamNews() {
   const body = $('team-news-body').value.trim();
   const error = $('team-news-error');
   if (title.length < 3 || body.length < 3) {
-    error.textContent = 'Заполни заголовок и текст';
+    error.textContent = tKey("fill.in.the.title");
     error.hidden = false;
     return;
   }
@@ -580,10 +583,10 @@ export async function submitTeamNews() {
   try {
     await api.teamCreateNews(team.id, title, body);
     $('modal-team-news').hidden = true;
-    toast('Новость опубликована', 'ok');
+    toast(tKey("teams.news.published"), 'ok');
     await openTeamPage(team);
   } catch (err) {
-    error.textContent = String(err || 'Не удалось опубликовать новость');
+    error.textContent = String(err || tKey("failed.to.publish.news"));
     error.hidden = false;
   } finally {
     button.disabled = false;
@@ -605,7 +608,7 @@ export async function submitTeamTransfer() {
   const username = $('team-transfer-username').value.trim();
   const error = $('team-transfer-error');
   if (!username) {
-    error.textContent = 'Укажи username';
+    error.textContent = tKey("teams.enter.username");
     error.hidden = false;
     return;
   }
@@ -615,11 +618,11 @@ export async function submitTeamTransfer() {
   try {
     await api.teamTransfer(team.id, username);
     $('modal-team-transfer').hidden = true;
-    toast('Владение передано', 'ok');
+    toast(tKey("teams.ownership.transferred"), 'ok');
     S.teamsLoaded = false;
     await loadTeams(true);
   } catch (err) {
-    error.textContent = String(err || 'Не удалось передать владение');
+    error.textContent = String(err || tKey("failed.to.transfer.ownership"));
     error.hidden = false;
   } finally {
     button.disabled = false;
@@ -629,32 +632,32 @@ export async function submitTeamTransfer() {
 export async function followTeam(team) {
   try {
     await api.teamFollow(team.id);
-    toast('Подписка оформлена', 'ok');
+    toast(tKey("teams.subscribed"), 'ok');
     await openTeamPage(team);
   } catch (err) {
-    toast('Не удалось подписаться: ' + err, 'error');
+    toast(tKey("teams.failed.subscribe") + ' ' + err, 'error');
   }
 }
 
 export async function unfollowTeam(team) {
   try {
     await api.teamUnfollow(team.id);
-    toast('Подписка отменена', 'info');
+    toast(tKey("teams.unsubscribed"), 'info');
     await openTeamPage(team);
   } catch (err) {
-    toast('Не удалось отписаться: ' + err, 'error');
+    toast(tKey("teams.failed.unsubscribe") + ' ' + err, 'error');
   }
 }
 
 export async function toggleTeamVerified(team) {
   try {
     await api.teamVerify(team.id, !team.verified);
-    toast('Статус команды обновлён', 'ok');
+    toast(tKey("teams.status.updated"), 'ok');
     S.teamsLoaded = false;
     await loadTeams(true);
     await openTeamPage(S.teams.find((item) => item.id === team.id) || team);
   } catch (err) {
-    toast('Не удалось изменить статус: ' + err, 'error');
+    toast(tKey("teams.failed.status") + ' ' + err, 'error');
   }
 }
 

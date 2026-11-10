@@ -1,12 +1,14 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { els } from '../../core/elements.js';
 import { escapeHtml } from '../../core/dom.js';
 import { formatDateTime } from '../../core/format.js';
 import { friendByUsername } from '../../core/social.js';
-import { applyLavunioAvatar } from '../../core/lavunio.js';
+import { applyLavunioAvatar, lavunioLoggedIn } from '../../core/lavunio.js';
 import { toast } from '../../ui/toast.js';
 
 let messageActions = {
@@ -51,7 +53,7 @@ export function renderMessagesList() {
   const teams = S.teams || [];
   const parts = [];
   if (friends.length) {
-    parts.push('<div class="messages-group-label">Друзья</div>');
+    parts.push('<div class="messages-group-label">' + tKey("friends") + '</div>');
     parts.push(friends.map((friend) => {
       const active = S.chatKind === 'direct'
         && String(S.chatTarget || '').toLowerCase() === String(friend.username || '').toLowerCase();
@@ -71,7 +73,7 @@ export function renderMessagesList() {
     }).join(''));
   }
   if (teams.length) {
-    parts.push('<div class="messages-group-label">Команды</div>');
+    parts.push('<div class="messages-group-label">' + tKey("teams.2") + '</div>');
     parts.push(teams.map((team) => {
       const active = S.chatKind === 'team' && String(S.chatTarget || '') === String(team.id || '');
       return `
@@ -89,7 +91,7 @@ export function renderMessagesList() {
       `;
     }).join(''));
   }
-  wrap.innerHTML = parts.join('') || '<div class="profile-empty">Добавь друга, чтобы начать переписку</div>';
+  wrap.innerHTML = parts.join('') || '<div class="profile-empty">' + tKey("add.a.friend.to") + '</div>';
   wrap.querySelectorAll('[data-avatar-friend]').forEach((el) => {
     const friendItem = friendByUsername(el.dataset.avatarFriend);
     if (friendItem) applyLavunioAvatar(el, friendItem);
@@ -97,8 +99,8 @@ export function renderMessagesList() {
 }
 
 export function showChatEmpty() {
-  if (els.chatTitle) els.chatTitle.textContent = 'Сообщения';
-  if (els.chatSubtitle) els.chatSubtitle.textContent = 'Выбери чат слева';
+  if (els.chatTitle) els.chatTitle.textContent = tKey("messages.title");
+  if (els.chatSubtitle) els.chatSubtitle.textContent = tKey("messages.chooseChat");
   if (els.chatMessages) {
     els.chatMessages.innerHTML = '';
     els.chatMessages.hidden = true;
@@ -116,7 +118,7 @@ export function openChat(kind, target, title) {
   renderMessagesList();
   if (els.chatTitle) els.chatTitle.textContent = S.chatTitle;
   if (els.chatSubtitle) {
-    els.chatSubtitle.textContent = kind === 'team' ? 'Чат команды' : `Личный чат с @${target}`;
+    els.chatSubtitle.textContent = kind === 'team' ? tKey("team.chat") : tKey("pattern.direct.chat.with.x", [target]);
   }
   if (els.chatMessages) {
     els.chatMessages.innerHTML = '';
@@ -138,7 +140,7 @@ export async function loadChatMessages() {
     renderChatMessages();
   } catch (err) {
     if (els.chatMessages) {
-      els.chatMessages.innerHTML = `<div class="hint">Не удалось загрузить чат: ${escapeHtml(String(err))}</div>`;
+      els.chatMessages.innerHTML = `<div class="hint">${tKey("messages.failed.load.chat", [escapeHtml(String(err))])}</div>`;
     }
   }
 }
@@ -151,7 +153,7 @@ export function renderChatMessages() {
       <div class="meta">${escapeHtml(message.senderDisplayName || message.senderUsername)} · ${escapeHtml(formatDateTime(message.createdAt))}</div>
       ${escapeHtml(message.body)}
     </div>
-  `).join('') || '<div class="hint">Сообщений пока нет.</div>';
+  `).join('') || '<div class="hint">' + tKey("no.messages.yet") + '</div>';
   els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
 }
 
@@ -165,7 +167,7 @@ export async function sendChatMessage() {
     else await api.chatSendTeam(S.chatTarget, body);
     await loadChatMessages();
   } catch (err) {
-    toast('Не удалось отправить сообщение: ' + err, 'error');
+    toast(tKey("failed.to.send.message") + " " + err, 'error');
   }
 }
 

@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { S } from '../../core/state.js';
 import { els } from '../../core/elements.js';
 import { formatPlaytime } from '../../core/format.js';
@@ -49,14 +51,14 @@ export function renderLibrary() {
   els.libraryEmpty.hidden = !showEmpty;
   if (showEmpty) {
     if (S.search) {
-      els.libraryEmptyTitle.textContent = 'Ничего не найдено';
-      els.libraryEmptySub.textContent = 'Попробуй изменить запрос или выбрать другой фильтр';
+      els.libraryEmptyTitle.textContent = tKey("nothing.found");
+      els.libraryEmptySub.textContent = tKey("try.changing.the.query");
     } else if (S.libraryFilter === 'hidden') {
-      els.libraryEmptyTitle.textContent = 'Скрытых режимов нет';
-      els.libraryEmptySub.textContent = 'Скрытые режимы появятся здесь';
+      els.libraryEmptyTitle.textContent = tKey("no.hidden.modes");
+      els.libraryEmptySub.textContent = tKey("library.hidden.empty");
     } else {
-      els.libraryEmptyTitle.textContent = 'Библиотека пуста';
-      els.libraryEmptySub.textContent = 'Добавь режим в библиотеку, чтобы он появился здесь';
+      els.libraryEmptyTitle.textContent = tKey("library.is.empty");
+      els.libraryEmptySub.textContent = tKey("add.a.mode.to.2");
     }
   }
   updateSidebarCounts();

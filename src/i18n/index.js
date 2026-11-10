@@ -1,29 +1,27 @@
 'use strict';
 
-import { EN } from './en.js';
-import { EN_PATTERNS } from './patterns.js';
+/* Keyed UI translations. The phrase dictionary is a fallback for
+   external/server-provided text (notifications, errors) only. */
+import { EN as EXTERNAL_EN } from './en.js';
+import { EN_PATTERNS as EXTERNAL_PATTERNS } from './patterns.js';
 import { RU as KEYS_RU } from './locales/ru.js';
 import { EN as KEYS_EN } from './locales/en.js';
 
 const STORAGE_KEY = "lavunio.lang";
 const LEGAL_BASE = "https://lavunio.pro/legal";
 
-const ATTRS = ["placeholder", "title", "aria-label", "alt"];
 let LANG = "ru";
-let observer = null;
-const trackedText = new Set();
-const trackedElements = new Set();
 
 function hasCyrillic(value) {
   return /[А-Яа-яЁё]/.test(value);
 }
 
 function exact(text) {
-  return Object.prototype.hasOwnProperty.call(EN, text) ? EN[text] : null;
+  return Object.prototype.hasOwnProperty.call(EXTERNAL_EN, text) ? EXTERNAL_EN[text] : null;
 }
 
 function applyPatterns(text) {
-  for (const pair of EN_PATTERNS) {
+  for (const pair of EXTERNAL_PATTERNS) {
     const pattern = pair[0];
     if (!pattern.includes("*")) continue;
     const parts = pattern.split("*");
@@ -114,81 +112,14 @@ function translatePhrase(text) {
   return current;
 }
 
-function translateText(raw) {
-  if (LANG !== "en") return raw;
-  const text = String(raw);
-  const trimmed = text.trim();
-  if (!trimmed || !hasCyrillic(trimmed)) return text;
-  const translated = translatePhrase(trimmed);
-  if (translated === trimmed) return text;
-  const start = text.indexOf(trimmed);
-  return text.slice(0, start) + translated + text.slice(start + trimmed.length);
-}
-
-function shouldSkip(element) {
-  if (!element || element.nodeType !== 1) return false;
-  if (element.closest("[data-i18n-skip]")) return true;
-  const tag = element.tagName;
-  return tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA";
-}
-
-function translateTextNode(node) {
-  if (!node || node.nodeType !== 3) return;
-  if (node.parentElement && shouldSkip(node.parentElement)) return;
-  const current = node.nodeValue;
-  let source = node.__i18nSrc;
-  if (source !== undefined) {
-    const previous = translateText(source);
-    if (current !== previous) {
-      source = current;
-      node.__i18nSrc = source;
-    }
-  } else {
-    source = current;
-    node.__i18nSrc = source;
-  }
-  if (!hasCyrillic(source)) return;
-  const translated = translateText(source);
-  if (translated !== node.nodeValue) node.nodeValue = translated;
-  if (translated !== source) trackedText.add(node);
-}
-
-function isKeyedAttr(element, attr) {
-  if (attr === "placeholder" && element.hasAttribute("data-i18n-placeholder")) return true;
-  if ((attr === "title" || attr === "aria-label") && element.hasAttribute("data-i18n-title")) return true;
-  return false;
-}
-
-function translateAttribute(element, attr) {
-  if (!element.hasAttribute(attr)) return;
-  if (isKeyedAttr(element, attr)) return;
-  const current = element.getAttribute(attr);
-  let store = element.__i18nAttrs;
-  if (!store) {
-    store = {};
-    element.__i18nAttrs = store;
-  }
-  let source = store[attr];
-  if (source !== undefined) {
-    const previous = translateText(source);
-    if (current !== previous) {
-      source = current;
-      store[attr] = source;
-    }
-  } else {
-    source = current;
-    store[attr] = source;
-  }
-  if (!hasCyrillic(source)) return;
-  const translated = translateText(source);
-  if (translated !== current) element.setAttribute(attr, translated);
-  if (translated !== source) trackedElements.add(element);
-}
-
 function tKey(key, vars) {
   const dict = LANG === "en" ? KEYS_EN : KEYS_RU;
   let value = dict[key] ?? KEYS_RU[key] ?? key;
-  if (vars) {
+  if (Array.isArray(vars)) {
+    vars.forEach((replacement, index) => {
+      value = value.replaceAll(`{${index}}`, String(replacement));
+    });
+  } else if (vars) {
     for (const [name, replacement] of Object.entries(vars)) {
       value = value.replaceAll(`{${name}}`, String(replacement));
     }
@@ -209,51 +140,27 @@ function applyKeysToElement(element) {
     element.setAttribute("title", value);
     element.setAttribute("aria-label", value);
   }
+  if (element.hasAttribute("data-i18n-aria")) {
+    element.setAttribute("aria-label", tKey(element.getAttribute("data-i18n-aria")));
+  }
+  if (element.hasAttribute("data-i18n-alt")) {
+    element.setAttribute("alt", tKey(element.getAttribute("data-i18n-alt")));
+  }
 }
 
 function applyKeyTranslations(root = document) {
   if (!root) return;
   if (root.nodeType === 1) applyKeysToElement(root);
   if (!root.querySelectorAll) return;
-  root.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-title]").forEach(applyKeysToElement);
-}
-
-function translateElement(element) {
-  if (!element) return;
-  if (element.closest("[data-i18n-skip]")) return;
-  applyKeysToElement(element);
-  for (const attr of ATTRS) translateAttribute(element, attr);
-  const children = element.childNodes;
-  for (let i = 0; i < children.length; i += 1) {
-    const child = children[i];
-    if (child.nodeType === 3) translateTextNode(child);
-    else if (child.nodeType === 1) translateElement(child);
-  }
-}
-
-function restoreTextNode(node) {
-  if (node.__i18nSrc !== undefined) {
-    node.nodeValue = node.__i18nSrc;
-  }
-}
-
-function restoreElement(element) {
-  const store = element.__i18nAttrs;
-  if (!store) return;
-  for (const attr of Object.keys(store)) {
-    if (isKeyedAttr(element, attr)) continue;
-    element.setAttribute(attr, store[attr]);
-  }
+  root.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-title], [data-i18n-aria], [data-i18n-alt]").forEach(applyKeysToElement);
 }
 
 function translateAll() {
   if (!document.body) return;
   applyKeyTranslations(document.body);
-  if (LANG === "en") translateElement(document.body);
-  else {
-    trackedText.forEach(restoreTextNode);
-    trackedElements.forEach(restoreElement);
-  }
+  document.querySelectorAll(".modal-close").forEach((button) => {
+    button.setAttribute("aria-label", tKey("topbar.close"));
+  });
 }
 
 function setLang(next, options) {
@@ -299,39 +206,9 @@ function init() {
   LANG = saved === "en" ? "en" : "ru";
   document.documentElement.lang = LANG;
   if (document.body) applyKeyTranslations(document.body);
-  if (document.body && LANG === "en") translateElement(document.body);
-
-  if (!observer && document.body) {
-    observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "childList") {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === 3) {
-              if (LANG === "en") translateTextNode(node);
-            } else if (node.nodeType === 1) {
-              applyKeysToElement(node);
-              applyKeyTranslations(node);
-              if (LANG === "en") translateElement(node);
-            }
-          });
-        } else if (mutation.type === "characterData") {
-          if (LANG === "en") translateTextNode(mutation.target);
-        } else if (mutation.type === "attributes") {
-          if (LANG === "en") translateAttribute(mutation.target, mutation.attributeName);
-        }
-      }
-    });
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ATTRS
-    });
-  }
 
   document.querySelectorAll(".modal-close").forEach((button) => {
-    if (!button.hasAttribute("aria-label")) button.setAttribute("aria-label", "Закрыть");
+    if (!button.hasAttribute("aria-label")) button.setAttribute("aria-label", tKey("topbar.close"));
   });
 
   document.addEventListener("click", (event) => {
@@ -364,3 +241,4 @@ if (document.readyState === "loading") {
 }
 
 export const I18n = window.I18n;
+export { tKey };

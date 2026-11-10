@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $ } from '../../core/dom.js';
@@ -22,7 +24,7 @@ export function applyRamLimit() {
   els.ram.max = String(total);
   const current = Math.min(Math.max(2, Number(els.ram.value) || 4), total);
   els.ram.value = String(current);
-  els.ramOut.textContent = `${current} ГБ`;
+  els.ramOut.textContent = tKey("pattern.x.gb", [current]);
 }
 
 export function bindSettings() {
@@ -35,17 +37,16 @@ export function bindSettings() {
       try {
         const saved = await api.saveSettings({ lang });
         S.settings = saved;
-        toast(window.I18n ? window.I18n.t('Язык изменён') : 'Язык изменён', 'ok');
+        toast(tKey("language.changed"), 'ok');
       } catch (err) {
         S.settings = { ...(S.settings || {}), lang: previous };
         if (window.I18n) window.I18n.setLang(previous);
-        toast('Не удалось сохранить язык: ' + err, 'error');
+        toast(tKey("failed.to.save.language") + " " + err, 'error');
       }
     };
   }
   els.ram.addEventListener('input', () => {
-    const unit = window.I18n && window.I18n.lang() === 'en' ? 'GB' : 'ГБ';
-    els.ramOut.textContent = `${els.ram.value} ${unit}`;
+    els.ramOut.textContent = tKey("pattern.x.gb", [els.ram.value]);
   });
   $('btn-choose-dir').onclick = async () => {
     try {
@@ -66,7 +67,7 @@ export function bindSettings() {
       }
       refreshDiskInfo();
     } catch (ex) {
-      toast('Не удалось выбрать папку: ' + ex, 'error');
+      toast(tKey("failed.to.select.folder") + " " + ex, 'error');
     }
   };
   if (els.setDirSelect) {
@@ -77,7 +78,7 @@ export function bindSettings() {
   }
   $('btn-open-dir').onclick = () => api.openGameFolder().catch(() => {});
   $('btn-open-logs').onclick = () => api.openLogs().catch((err) => {
-    toast('Не удалось открыть папку логов: ' + err, 'error');
+    toast(tKey("failed.to.open.logs") + " " + err, 'error');
   });
   $('btn-save-settings').onclick = async () => {
     try {
@@ -93,9 +94,9 @@ export function bindSettings() {
       });
       S.settings = s;
       settingsActions.closeModals();
-      toast('Настройки сохранены', 'ok');
+      toast(tKey("settings.saved"), 'ok');
     } catch (err) {
-      toast('Не удалось сохранить настройки: ' + err, 'error');
+      toast(tKey("failed.to.save.settings") + " " + err, 'error');
     }
   };
 }
@@ -106,8 +107,7 @@ export function fillSettingsForm() {
   if (total >= 2) els.ram.max = String(total);
   const ram = Math.min(Number(s.ramGb) || 4, Number(els.ram.max) || 32);
   els.ram.value = String(ram);
-  const unit = window.I18n && window.I18n.lang() === 'en' ? 'GB' : 'ГБ';
-  els.ramOut.textContent = `${ram} ${unit}`;
+  els.ramOut.textContent = tKey("pattern.x.gb", [ram]);
   if (els.setLang) {
     const lang = (s.lang === 'en' || (window.I18n && window.I18n.lang() === 'en')) ? 'en' : 'ru';
     els.setLang.value = lang;
@@ -152,10 +152,7 @@ export async function refreshDiskInfo() {
     const free = formatBytes(info.availableBytes || 0);
     const total = formatBytes(info.totalBytes || 0);
     const library = formatBytes(info.libraryBytes || 0);
-    const en = window.I18n && window.I18n.lang() === 'en';
-    els.settingsDiskInfo.textContent = en
-      ? `Free: ${free} of ${total} · Library: ${library}`
-      : `Свободно: ${free} из ${total} · Библиотека: ${library}`;
+    els.settingsDiskInfo.textContent = tKey("pattern.free.x.of.x", [free, total, library]);
     els.settingsDiskInfo.classList.toggle(
       'warn',
       Number(info.availableBytes) > 0 && Number(info.availableBytes) < 2 * 1024 * 1024 * 1024

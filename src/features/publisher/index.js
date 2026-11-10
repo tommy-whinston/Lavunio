@@ -1,10 +1,14 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $, escapeHtml } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { publisherAllowed } from '../../core/permissions.js';
+import { LOADER_LABELS } from '../../core/modes.js';
+import { formatBytes } from '../../core/format.js';
 import { toast } from '../../ui/toast.js';
 import { loadTeams } from '../teams/index.js';
 
@@ -19,12 +23,17 @@ export function configurePublisher(actions) {
 }
 
 export const PUBLISHER_STATUS = {
-  draft: 'Черновик',
-  pending: 'На модерации',
-  published: 'Опубликован',
-  rejected: 'Отклонён',
-  hidden: 'Скрыт'
+  draft: 'publisher.status.draft',
+  pending: 'pending.review',
+  published: 'published.3',
+  rejected: 'publisher.status.rejected',
+  hidden: 'publisher.status.hidden'
 };
+
+export function publisherStatusLabel(status) {
+  const key = PUBLISHER_STATUS[status];
+  return key ? tKey(key) : status;
+}
 
 const PUBLISHER_TRANSLIT = {
   а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z',
@@ -121,7 +130,7 @@ export function fillPublisherTeamSelect() {
   const select = $('pub-mode-team');
   if (!select) return;
   const current = select.value;
-  select.innerHTML = '<option value="">Без команды</option>';
+  select.innerHTML = '<option value="">' + tKey("no.team") + '</option>';
   (S.teams || []).forEach((team) => {
     const option = document.createElement('option');
     option.value = team.id;
@@ -196,7 +205,7 @@ export async function loadPublisher(force = false) {
 
   S.publisherLoading = true;
   const hint = $('publisher-hint');
-  if (hint) hint.textContent = 'Загрузка списка…';
+  if (hint) hint.textContent = tKey("loading.list");
   renderPublisher();
 
   try {
@@ -205,13 +214,13 @@ export async function loadPublisher(force = false) {
     S.publisherLoaded = true;
     if (hint) {
       hint.textContent = S.publisherModes.length
-        ? 'Черновики видны только вам. После отправки релиз проверит модератор.'
+        ? tKey("publisher.hint.drafts")
         : '';
     }
   } catch (err) {
     S.publisherLoaded = false;
-    if (hint) hint.textContent = 'Не удалось загрузить режимы: ' + err;
-    toast('Не удалось загрузить режимы: ' + err, 'error');
+    if (hint) hint.textContent = tKey("publisher.failed.load.modes") + ' ' + err;
+    toast(tKey("publisher.failed.load.modes") + ' ' + err, 'error');
   } finally {
     S.publisherLoading = false;
     renderPublisher();
@@ -248,22 +257,22 @@ export function renderPublisher() {
 
 export function publisherModeCard(mode) {
   const releases = mode.releases || [];
-  const status = PUBLISHER_STATUS[mode.status] || mode.status;
+  const status = publisherStatusLabel(mode.status);
   const loader = LOADER_LABELS[mode.loader] || mode.loader || 'Vanilla';
   const stats = mode.stats || {};
   const meta = [
-    mode.mcVersion ? `Minecraft ${escapeHtml(mode.mcVersion)}` : 'Minecraft не указан',
+    mode.mcVersion ? `Minecraft ${escapeHtml(mode.mcVersion)}` : tKey("publisher.mc.not.specified"),
     loader,
-    mode.size ? escapeHtml(mode.size) : 'Размер не указан',
-    `Обновлён ${escapeHtml(publisherDate(mode.updatedAt))}`
+    mode.size ? escapeHtml(mode.size) : tKey("publisher.size.not.specified"),
+    tKey("pattern.updated.x.2", [escapeHtml(publisherDate(mode.updatedAt))])
   ].join(' · ');
   const coverHtml = mode.coverUrl
-    ? `<img class="pub-cover" src="${escapeHtml(mode.coverUrl)}" alt="Обложка ${escapeHtml(mode.title)}">`
+    ? `<img class="pub-cover" src="${escapeHtml(mode.coverUrl)}" alt="${tKey("publisher.cover.alt", [escapeHtml(mode.title)])}">`
     : '';
 
   const releaseCards = releases.length
     ? releases.map((release) => publisherReleaseCard(mode, release)).join('')
-    : '<div class="pub-empty-release">Релизов пока нет. Создай первый релиз и загрузи сборку.</div>';
+    : '<div class="pub-empty-release">' + tKey("no.releases.yet.create") + '</div>';
 
   return `
     <article class="pub-card">
@@ -277,24 +286,24 @@ export function publisherModeCard(mode) {
       ${coverHtml}
       <div class="pub-meta"><span>${meta}</span></div>
       <div class="pub-stats">
-        <span>Скачивания <b>${Number(stats.downloads) || 0}</b></span>
-        <span>Установки <b>${Number(stats.installs) || 0}</b></span>
-        <span>Обновления <b>${Number(stats.updates) || 0}</b></span>
-        <span>Игроки <b>${Number(stats.uniqueUsers) || 0}</b></span>
+        <span>${tKey("downloads.2")} <b>${Number(stats.downloads) || 0}</b></span>
+        <span>${tKey("installs")} <b>${Number(stats.installs) || 0}</b></span>
+        <span>${tKey("updates.2")} <b>${Number(stats.updates) || 0}</b></span>
+        <span>${tKey("players")} <b>${Number(stats.uniqueUsers) || 0}</b></span>
       </div>
       <div class="pub-releases">${releaseCards}</div>
       <div class="pub-release-actions">
-        <button class="btn btn-ghost" type="button" data-action="news" data-mode="${escapeHtml(mode.id)}">Новость</button>
-        <button class="btn btn-ghost" type="button" data-action="new-release" data-mode="${escapeHtml(mode.id)}">Новый релиз</button>
-        <button class="btn btn-ghost" type="button" data-action="upload-cover" data-mode="${escapeHtml(mode.id)}">Загрузить обложку</button>
-        ${mode.coverUrl ? `<button class="btn btn-ghost" type="button" data-action="delete-cover" data-mode="${escapeHtml(mode.id)}">Убрать обложку</button>` : ''}
+        <button class="btn btn-ghost" type="button" data-action="news" data-mode="${escapeHtml(mode.id)}">${tKey("common.news")}</button>
+        <button class="btn btn-ghost" type="button" data-action="new-release" data-mode="${escapeHtml(mode.id)}">${tKey("new.release")}</button>
+        <button class="btn btn-ghost" type="button" data-action="upload-cover" data-mode="${escapeHtml(mode.id)}">${tKey("upload.cover")}</button>
+        ${mode.coverUrl ? `<button class="btn btn-ghost" type="button" data-action="delete-cover" data-mode="${escapeHtml(mode.id)}">${tKey("remove.cover")}</button>` : ''}
       </div>
     </article>
   `;
 }
 
 export function publisherReleaseCard(mode, release) {
-  const status = PUBLISHER_STATUS[release.status] || release.status;
+  const status = publisherStatusLabel(release.status);
   const archive = (release.assets || []).find((asset) => asset.kind === 'archive' && asset.url);
   const uploading = !!(S.publisherUpload && S.publisherUpload.releaseId === release.id);
   const changelog = String(release.changelog || '').replace(/\s+/g, ' ').trim();
@@ -302,37 +311,37 @@ export function publisherReleaseCard(mode, release) {
     ? `<div class="hint">${escapeHtml(changelog.slice(0, 180))}${changelog.length > 180 ? '…' : ''}</div>`
     : '';
   const archiveHtml = archive
-    ? `Сборка: ${escapeHtml(formatBytes(archive.size || 0))}${archive.fileName ? ` · ${escapeHtml(archive.fileName)}` : ''}`
-    : 'Сборка не загружена';
+    ? tKey("pattern.build.x", [escapeHtml(formatBytes(archive.size || 0)) + (archive.fileName ? ` · ${escapeHtml(archive.fileName)}` : '')])
+    : tKey("no.build.uploaded");
   const uploadedAction = uploading
-    ? '<span class="pub-uploading">Загрузка…</span>'
+    ? '<span class="pub-uploading">' + tKey("loading.2") + '</span>'
     : '';
   const rejectionHtml = release.rejectionNote
-    ? `<div class="mod-reject-note">Причина отклонения: ${escapeHtml(release.rejectionNote)}</div>`
+    ? `<div class="mod-reject-note">${tKey("rejection.reason")} ${escapeHtml(release.rejectionNote)}</div>`
     : '';
   const screenshots = (release.assets || []).filter((asset) => asset.kind === 'screenshot' && asset.url).length;
-  const screenshotHtml = screenshots ? `Скриншотов: ${screenshots}` : '';
+  const screenshotHtml = screenshots ? `${tKey("screenshots.2")} ${screenshots}` : '';
 
   let actions = '';
   if (release.status === 'draft') {
     actions = `
-      <button class="btn btn-ghost" type="button" data-action="upload-folder" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>Папка</button>
+      <button class="btn btn-ghost" type="button" data-action="upload-folder" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>${tKey("folder")}</button>
       <button class="btn btn-ghost" type="button" data-action="upload-archive" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>ZIP</button>
-      <button class="btn btn-ghost" type="button" data-action="upload-screenshot" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>Скриншот</button>
-      <button class="btn btn-primary" type="button" data-action="submit-release" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${(!archive || uploading) ? 'disabled' : ''}>На модерацию</button>
+      <button class="btn btn-ghost" type="button" data-action="upload-screenshot" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${uploading ? 'disabled' : ''}>${tKey("screenshot")}</button>
+      <button class="btn btn-primary" type="button" data-action="submit-release" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" ${(!archive || uploading) ? 'disabled' : ''}>${tKey("publisher.to.moderation")}</button>
       ${uploadedAction}
     `;
   } else if (release.status === 'published') {
-    actions = `<span class="hint">Опубликован ${escapeHtml(publisherDate(release.publishedAt))}</span>`;
+    actions = `<span class="hint">${tKey("published.3")} ${escapeHtml(publisherDate(release.publishedAt))}</span>`;
   } else if (release.status === 'pending') {
-    actions = '<span class="hint">Ожидает проверки модератором</span>';
+    actions = '<span class="hint">' + tKey("awaiting.moderator.review") + '</span>';
   } else if (release.status === 'rejected') {
     if (release.appealStatus === 'open') {
-      actions = '<span class="hint">Апелляция на рассмотрении</span>';
+      actions = '<span class="hint">' + tKey("appeal.under.review") + '</span>';
     } else if (release.appealStatus === 'rejected') {
-      actions = '<span class="hint">Апелляция отклонена. Исправь сборку и создай новый релиз.</span>';
+      actions = '<span class="hint">' + tKey("appeal.rejected.fix.the") + '</span>';
     } else {
-      actions = `<button class="btn btn-ghost" type="button" data-action="appeal" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" data-title="${escapeHtml(mode.title)}">Оспорить</button>`;
+      actions = `<button class="btn btn-ghost" type="button" data-action="appeal" data-mode="${escapeHtml(mode.id)}" data-release="${escapeHtml(release.id)}" data-title="${escapeHtml(mode.title)}">${tKey("appeal")}</button>`;
     }
   }
 
@@ -361,11 +370,11 @@ export async function submitPublisherMode() {
   const title = $('pub-mode-title-input').value.trim();
   const slug = $('pub-mode-slug-input').value.trim().toLowerCase();
   if (!title) {
-    showPublisherError('pub-mode-error', 'Укажи название режима');
+    showPublisherError('pub-mode-error', tKey("enter.a.mode.name"));
     return;
   }
   if (!/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug)) {
-    showPublisherError('pub-mode-error', 'Slug: 3–64 символа, строчные латинские буквы, цифры и дефис');
+    showPublisherError('pub-mode-error', tKey("slug.3.64.characters"));
     return;
   }
 
@@ -387,19 +396,19 @@ export async function submitPublisherMode() {
 
   const button = $('pub-mode-submit');
   button.disabled = true;
-  button.textContent = 'Создаём…';
+  button.textContent = tKey("creating");
   hidePublisherError('pub-mode-error');
   try {
     await api.publisherCreateMode(payload);
     $('modal-publisher-mode').hidden = true;
-    toast('Черновик создан', 'ok');
+    toast(tKey("draft.created"), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    showPublisherError('pub-mode-error', String(err || 'Не удалось создать режим'));
+    showPublisherError('pub-mode-error', String(err || tKey("failed.to.create.mode")));
   } finally {
     button.disabled = false;
-    button.textContent = 'Создать черновик';
+    button.textContent = tKey("create.draft");
   }
 }
 
@@ -409,29 +418,29 @@ export async function submitPublisherNews() {
   const title = $('pub-news-title').value.trim();
   const body = $('pub-news-body').value.trim();
   if (title.length < 3) {
-    showPublisherError('pub-news-error', 'Укажи заголовок новости');
+    showPublisherError('pub-news-error', tKey("enter.the.news.title"));
     return;
   }
   if (body.length < 3) {
-    showPublisherError('pub-news-error', 'Напиши текст новости');
+    showPublisherError('pub-news-error', tKey("write.the.news.text"));
     return;
   }
 
   const button = $('pub-news-submit');
   button.disabled = true;
-  button.textContent = 'Публикуем…';
+  button.textContent = tKey("publishing");
   hidePublisherError('pub-news-error');
   try {
     await api.newsCreateMode(mode.id, title, body);
     $('modal-publisher-news').hidden = true;
     delete S.modeNews[mode.slug];
-    toast('Новость опубликована', 'ok');
+    toast(tKey("teams.news.published"), 'ok');
     if (S.selectedId === mode.slug) loadModeNews(modeById(mode.slug));
   } catch (err) {
-    showPublisherError('pub-news-error', String(err || 'Не удалось опубликовать новость'));
+    showPublisherError('pub-news-error', String(err || tKey("failed.to.publish.news")));
   } finally {
     button.disabled = false;
-    button.textContent = 'Опубликовать';
+    button.textContent = tKey("publish");
   }
 }
 
@@ -440,7 +449,7 @@ export async function submitPublisherRelease() {
   if (!mode) return;
   const version = $('pub-release-version').value.trim();
   if (!version) {
-    showPublisherError('pub-release-error', 'Укажи версию релиза');
+    showPublisherError('pub-release-error', tKey("publisher.enter.release.version"));
     return;
   }
   const payload = {
@@ -451,19 +460,19 @@ export async function submitPublisherRelease() {
 
   const button = $('pub-release-submit');
   button.disabled = true;
-  button.textContent = 'Создаём…';
+  button.textContent = tKey("creating");
   hidePublisherError('pub-release-error');
   try {
     await api.publisherCreateRelease(mode.id, payload);
     $('modal-publisher-release').hidden = true;
-    toast(`Релиз ${version} создан`, 'ok');
+    toast(tKey("publisher.release.created", [version]), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    showPublisherError('pub-release-error', String(err || 'Не удалось создать релиз'));
+    showPublisherError('pub-release-error', String(err || tKey("publisher.failed.create.release")));
   } finally {
     button.disabled = false;
-    button.textContent = 'Создать релиз';
+    button.textContent = tKey("create.release");
   }
 }
 
@@ -473,35 +482,35 @@ export async function uploadPublisherCover(mode) {
   try {
     path = await api.publisherPickCover();
   } catch (err) {
-    toast('Не удалось выбрать обложку: ' + err, 'error');
+    toast(tKey("publisher.failed.pick.cover") + ' ' + err, 'error');
     return;
   }
   if (!path) return;
   try {
     await api.publisherUploadCover(mode.id, path);
-    toast('Обложка обновлена', 'ok');
+    toast(tKey("publisher.cover.updated"), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    toast('Не удалось загрузить обложку: ' + err, 'error');
+    toast(tKey("publisher.failed.upload.cover") + ' ' + err, 'error');
   }
 }
 
 export async function deletePublisherCover(mode) {
   if (!mode) return;
   const ok = await publisherActions.askConfirm(
-    'Убрать обложку?',
-    `У режима «${mode.title}» не будет обложки.`,
-    'Убрать'
+    tKey("publisher.confirm.remove.cover.title"),
+    tKey("publisher.confirm.remove.cover.text", [mode.title]),
+    tKey("publisher.remove")
   );
   if (!ok) return;
   try {
     await api.publisherDeleteCover(mode.id);
-    toast('Обложка удалена', 'ok');
+    toast(tKey("publisher.cover.deleted"), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    toast('Не удалось удалить обложку: ' + err, 'error');
+    toast(tKey("publisher.failed.delete.cover") + ' ' + err, 'error');
   }
 }
 
@@ -511,24 +520,24 @@ export async function uploadPublisherScreenshot(mode, release) {
   try {
     path = await api.publisherPickScreenshot();
   } catch (err) {
-    toast('Не удалось выбрать скриншот: ' + err, 'error');
+    toast(tKey("publisher.failed.pick.screenshot") + ' ' + err, 'error');
     return;
   }
   if (!path) return;
   try {
     await api.publisherUploadScreenshot(release.id, path);
-    toast('Скриншот загружен', 'ok');
+    toast(tKey("publisher.screenshot.uploaded"), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    toast('Не удалось загрузить скриншот: ' + err, 'error');
+    toast(tKey("publisher.failed.upload.screenshot") + ' ' + err, 'error');
   }
 }
 
 export async function uploadPublisherBuild(mode, release, folder) {
   if (!mode || !release) return;
   if (S.publisherUpload) {
-    toast('Дождитесь окончания текущей загрузки', 'warn');
+    toast(tKey("publisher.wait.current.upload"), 'warn');
     return;
   }
 
@@ -536,7 +545,7 @@ export async function uploadPublisherBuild(mode, release, folder) {
   try {
     source = folder ? await api.publisherPickFolder() : await api.publisherPickArchive();
   } catch (err) {
-    toast('Не удалось выбрать файл: ' + err, 'error');
+    toast(tKey("failed.to.select.file") + " " + err, 'error');
     return;
   }
   if (!source) return;
@@ -544,7 +553,7 @@ export async function uploadPublisherBuild(mode, release, folder) {
   S.publisherUpload = {
     modeId: mode.id,
     releaseId: release.id,
-    stage: 'Подготовка сборки',
+    stage: tKey("publisher.preparing.build"),
     percent: 0
   };
   updatePublisherProgress(S.publisherUpload);
@@ -552,11 +561,11 @@ export async function uploadPublisherBuild(mode, release, folder) {
 
   try {
     await api.publisherUploadBuild(mode.id, release.id, release.version, source);
-    toast('Сборка загружена', 'ok');
+    toast(tKey("publisher.build.uploaded"), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    toast('Не удалось загрузить сборку: ' + err, 'error');
+    toast(tKey("publisher.failed.upload.build") + ' ' + err, 'error');
   } finally {
     S.publisherUpload = null;
     updatePublisherProgress(null);
@@ -567,26 +576,26 @@ export async function uploadPublisherBuild(mode, release, folder) {
 export async function submitPublisherReleaseForModeration(mode, release) {
   if (!mode || !release) return;
   const confirmed = await publisherActions.askConfirm(
-    'Отправить на модерацию?',
-    `Релиз ${release.version} режима «${mode.title}» станет доступен после проверки.`,
-    'Отправить'
+    tKey("publisher.confirm.submit.title"),
+    tKey("publisher.confirm.submit.text", [release.version, mode.title]),
+    tKey("messages.send")
   );
   if (!confirmed) return;
 
   try {
     await api.publisherSubmit(release.id);
-    toast('Релиз отправлен на модерацию', 'ok');
+    toast(tKey("publisher.release.submitted"), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    toast('Не удалось отправить релиз: ' + err, 'error');
+    toast(tKey("publisher.failed.submit.release") + ' ' + err, 'error');
   }
 }
 
 export function openPublisherAppealModal(mode, release) {
   if (!mode || !release) return;
   S.publisherAppealRelease = { mode, release };
-  $('pub-appeal-info').textContent = `${mode.title} · релиз ${release.version}`;
+  $('pub-appeal-info').textContent = `${mode.title} · ${tKey("common.release.lowercase")} ${release.version}`;
   $('pub-appeal-message').value = '';
   hidePublisherError('pub-appeal-error');
   $('modal-publisher-appeal').hidden = false;
@@ -598,24 +607,24 @@ export async function submitPublisherAppeal() {
   if (!context) return;
   const message = $('pub-appeal-message').value.trim();
   if (message.length < 10) {
-    showPublisherError('pub-appeal-error', 'Опиши причину — минимум 10 символов');
+    showPublisherError('pub-appeal-error', tKey("publisher.appeal.reason.short"));
     return;
   }
   const button = $('pub-appeal-submit');
   button.disabled = true;
-  button.textContent = 'Отправляем…';
+  button.textContent = tKey("sending");
   try {
     await api.publisherAppealRelease(context.release.id, message);
     $('modal-publisher-appeal').hidden = true;
     S.publisherAppealRelease = null;
-    toast('Апелляция отправлена', 'ok');
+    toast(tKey("publisher.appeal.sent"), 'ok');
     S.publisherLoaded = false;
     await loadPublisher(true);
   } catch (err) {
-    showPublisherError('pub-appeal-error', String(err || 'Не удалось отправить апелляцию'));
+    showPublisherError('pub-appeal-error', String(err || tKey("publisher.failed.send.appeal")));
   } finally {
     button.disabled = false;
-    button.textContent = 'Отправить апелляцию';
+    button.textContent = tKey("submit.appeal");
   }
 }
 
@@ -624,7 +633,7 @@ export function onPublisherProgress(payload) {
   const percent = Math.max(0, Math.min(100, Number(payload && payload.percent) || 0));
   S.publisherUpload = {
     ...S.publisherUpload,
-    stage: (payload && payload.stage) || 'Загрузка',
+    stage: (payload && payload.stage) || tKey("loading"),
     percent
   };
   updatePublisherProgress(S.publisherUpload);
@@ -641,7 +650,7 @@ export function updatePublisherProgress(upload) {
   const stage = $('publisher-progress-stage');
   const percent = $('publisher-progress-percent');
   const bar = $('publisher-progress-bar');
-  if (stage) stage.textContent = upload.stage || 'Загрузка';
+  if (stage) stage.textContent = upload.stage || tKey("loading");
   if (percent) percent.textContent = `${Math.round(upload.percent || 0)}%`;
   if (bar) bar.style.width = `${Math.max(0, Math.min(100, upload.percent || 0))}%`;
 }

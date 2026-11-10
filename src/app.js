@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from './i18n/index.js';
+
 import { api } from './api/client.js';
 import { S } from './core/state.js';
 import { publisherAllowed, moderatorAllowed } from './core/permissions.js';
@@ -127,10 +129,27 @@ async function init() {
     renderAccountChip();
     renderStore();
     renderLibrary();
+    renderDownloads();
     if (S.section === 'detail' && S.selectedId) renderDetail();
     else renderCurrentSection();
+    if (S.section === 'messages') {
+      if (S.chatKind && S.chatTarget) {
+        if (els.chatTitle) els.chatTitle.textContent = S.chatTitle;
+        if (els.chatSubtitle) {
+          els.chatSubtitle.textContent = S.chatKind === 'team'
+            ? tKey('team.chat')
+            : tKey('pattern.direct.chat.with.x', [S.chatTarget]);
+        }
+      } else {
+        if (els.chatTitle) els.chatTitle.textContent = tKey('messages.title');
+        if (els.chatSubtitle) els.chatSubtitle.textContent = tKey('messages.chooseChat');
+      }
+    }
     if (!$('modal-account').hidden) renderLavunioPane();
     if (!$('modal-settings').hidden) fillSettingsForm();
+    if (els.notificationsPopover && !els.notificationsPopover.hidden) renderNotifications();
+    if (window.I18n) window.I18n.applyKeys(document.body);
+    syncSelectLabels();
   });
 
   if (api && api.onGameEvent) api.onGameEvent(onGameEvent);
@@ -144,7 +163,7 @@ async function init() {
   renderStore();
   renderLibrary();
   updateSidebar();
-  if (els.splashSub) els.splashSub.textContent = 'Загружаем режимы и аккаунт…';
+  if (els.splashSub) els.splashSub.textContent = tKey("loading.modes.and.account");
 
   const startupUpdate = checkLauncherUpdate();
 
@@ -199,7 +218,7 @@ async function init() {
     renderStore();
     renderLibrary();
     await finishStartup();
-    toast('Не удалось загрузить данные: ' + err, 'error');
+    toast(tKey("failed.to.load.data") + " " + err, 'error');
   }
 
   const openParam = new URLSearchParams(location.search).get('open');
@@ -308,9 +327,9 @@ function bindStore() {
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId) renderDetail();
-      toast('Список режимов обновлён', 'ok');
+      toast(tKey("mode.list.refreshed"), 'ok');
     } catch (err) {
-      toast('Не удалось обновить список: ' + err, 'error');
+      toast(tKey("failed.to.refresh.list") + " " + err, 'error');
     } finally {
       S.refreshing = false;
       els.refresh.classList.remove('spinning');
@@ -492,7 +511,7 @@ function renderStore() {
       els.storeNews.hidden = true;
       els.storeNewsList.innerHTML = '';
     }
-    els.catalogTitle.textContent = 'Загрузка';
+    els.catalogTitle.textContent = tKey("loading");
     els.modesCount.textContent = '';
     els.modesGrid.innerHTML = '';
     els.emptyState.hidden = true;
@@ -513,13 +532,13 @@ function renderStore() {
       els.storeNews.hidden = true;
     }
     const result = sortCatalog(filterModes().filter((mode) => modePassesFilter(mode, S.storeFilter)), S.storeSort);
-    els.catalogTitle.textContent = 'Результаты поиска';
+    els.catalogTitle.textContent = tKey("search.results");
     els.modesCount.textContent = String(result.length);
     renderModeGrid(els.modesGrid, result, true);
     setEmpty(
       result.length === 0,
-      'Ничего не найдено',
-      'Попробуй изменить запрос или выбрать другой фильтр'
+      tKey("nothing.found"),
+      tKey("try.changing.the.query")
     );
     return;
   }
@@ -535,19 +554,19 @@ function renderStore() {
     S.storeSort
   );
   const titles = {
-    all: 'Все режимы',
-    installed: 'Установленные',
-    following: 'Подписки',
-    development: 'В разработке',
-    crowdfunding: 'Сбор на релиз'
+    all: tKey("all.modes"),
+    installed: tKey("installed"),
+    following: tKey("following"),
+    development: tKey("in.development"),
+    crowdfunding: tKey("crowdfunding")
   };
-  els.catalogTitle.textContent = titles[S.storeFilter] || 'Все режимы';
+  els.catalogTitle.textContent = titles[S.storeFilter] || tKey("all.modes");
   els.modesCount.textContent = String(list.length);
   renderModeGrid(els.modesGrid, list, true);
   setEmpty(
     list.length === 0,
-    'Здесь пока пусто',
-    'Попробуй другой фильтр или нажми «Обновить»'
+    tKey("nothing.here.yet"),
+    tKey("try.another.filter.or")
   );
   updateSidebarCounts();
 }
@@ -555,11 +574,11 @@ function renderStore() {
 function updateAllModes() {
   const updates = S.modes.filter((mode) => isUpdate(mode));
   if (!updates.length) {
-    toast('Обновлений нет', 'info');
+    toast(tKey("no.updates"), 'info');
     return;
   }
   updates.forEach((mode) => enqueueDownload(mode, 'update', false, true));
-  toast(`В очередь добавлено обновлений: ${updates.length}`, 'ok');
+  toast(tKey("app.updates.queued", [updates.length]), 'ok');
 }
 
 let modeUpdatesNotified = false;
@@ -568,7 +587,7 @@ function notifyModeUpdates() {
   const count = S.modes.filter((mode) => isUpdate(mode)).length;
   if (!count) return;
   modeUpdatesNotified = true;
-  toast(`Доступны обновления режимов: ${count}. Открой Библиотеку.`, 'warn');
+  toast(tKey("app.mode.updates.available.open", [count]), 'warn');
 }
 
 function renderFeatured(mode) {
@@ -579,7 +598,7 @@ function renderFeatured(mode) {
   els.featured.hidden = false;
   els.featuredImg.src = imageSrc(mode);
   wireImage(els.featuredImg, mode);
-  els.featuredTitle.textContent = mode.title || 'Без названия';
+  els.featuredTitle.textContent = mode.title || tKey("untitled");
   els.featuredDesc.textContent = modeShortDescription(mode);
   els.featuredTags.innerHTML = modeTags(mode, 4)
     .map((t) => `<span>${escapeHtml(t)}</span>`)
@@ -663,7 +682,7 @@ function newsCardHtml(item) {
   return `
     <article class="news-card">
       <div class="news-head">
-        <div class="news-title">${escapeHtml(item.title || 'Новость')}</div>
+        <div class="news-title">${escapeHtml(item.title || tKey("common.news"))}</div>
         <span class="news-date">${escapeHtml(publisherDate(item.createdAt))}</span>
       </div>
       <div class="news-body">${escapeHtml(item.body || '')}</div>
@@ -756,10 +775,10 @@ async function handleCardAction(modeId, action, autoPlay = false) {
   if (action === 'stop') {
     try {
       await api.stopGame();
-      S.status = 'Закрываю игру…';
-      toast('Закрываю игру…', 'info');
+      S.status = tKey("closing.the.game");
+      toast(tKey("closing.the.game"), 'info');
     } catch (err) {
-      toast('Не удалось закрыть игру: ' + err, 'error');
+      toast(tKey("failed.to.close.the") + " " + err, 'error');
     }
     return;
   }
@@ -772,15 +791,15 @@ async function handleCardAction(modeId, action, autoPlay = false) {
   if (action === 'addlib') {
     try {
       const res = await api.setLibrary(modeId, true);
-      if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
+      if (!res || !res.ok) throw new Error((res && res.error) || tKey("error"));
       const st = S.state[modeId] || { installed: false, version: null, installedAt: 0 };
       S.state[modeId] = { ...st, library: true, hidden: false };
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
-      toast('Режим добавлен в библиотеку', 'ok');
+      toast(tKey("mode.added.to.library"), 'ok');
     } catch (err) {
-      toast('Не удалось добавить режим: ' + err, 'error');
+      toast(tKey("failed.to.add.mode") + " " + err, 'error');
     }
     return;
   }
@@ -789,7 +808,7 @@ async function handleCardAction(modeId, action, autoPlay = false) {
     try {
       await api.openModeFolder(modeId);
     } catch (err) {
-      toast('Не удалось открыть папку: ' + err, 'error');
+      toast(tKey("failed.to.open.folder") + " " + err, 'error');
     }
     return;
   }
@@ -798,15 +817,15 @@ async function handleCardAction(modeId, action, autoPlay = false) {
     const hidden = action === 'hide';
     try {
       const res = await api.setHidden(modeId, hidden);
-      if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
+      if (!res || !res.ok) throw new Error((res && res.error) || tKey("error"));
       const st = S.state[modeId] || { installed: false, version: null, installedAt: 0 };
       S.state[modeId] = { ...st, hidden, library: true };
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
-      toast(hidden ? 'Режим скрыт' : 'Режим возвращён в библиотеку', 'ok');
+      toast(hidden ? tKey("mode.hidden") : tKey("mode.restored.to.library"), 'ok');
     } catch (err) {
-      toast((hidden ? 'Не удалось скрыть режим: ' : 'Не удалось вернуть режим: ') + err, 'error');
+      toast((hidden ? tKey("app.failed.hide.mode") : tKey("app.failed.unhide.mode")) + ' ' + err, 'error');
     }
     return;
   }
@@ -814,36 +833,36 @@ async function handleCardAction(modeId, action, autoPlay = false) {
   if (action === 'removelib') {
     try {
       const res = await api.setLibrary(modeId, false);
-      if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
+      if (!res || !res.ok) throw new Error((res && res.error) || tKey("error"));
       const st = S.state[modeId] || { installed: false, version: null, installedAt: 0 };
       S.state[modeId] = { ...st, library: false, hidden: false };
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
-      toast('Режим удалён из библиотеки', 'ok');
+      toast(tKey("mode.removed.from.library.2"), 'ok');
     } catch (err) {
-      toast('Не удалось удалить режим из библиотеки: ' + err, 'error');
+      toast(tKey("app.failed.remove.library") + ' ' + err, 'error');
     }
     return;
   }
 
   if (action === 'uninstall') {
     if (!(await askConfirm(
-      'Удалить режим?',
-      `Удалить режим «${mode.title}» с устройства? Файлы сборки будут удалены.`,
-      'Удалить с устройства'
+      tKey("delete.mode"),
+      tKey("app.confirm.delete.mode.device", [mode.title]),
+      tKey("delete.from.device")
     ))) return;
     try {
       const res = await api.uninstall(modeId);
-      if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
+      if (!res || !res.ok) throw new Error((res && res.error) || tKey("error"));
       const st = S.state[modeId] || { library: true, hidden: false };
       S.state[modeId] = { ...st, installed: false, version: null, installedAt: 0 };
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
-      toast('Режим удалён с устройства', 'ok');
+      toast(tKey("mode.deleted.from.device"), 'ok');
     } catch (err) {
-      toast('Не удалось удалить режим: ' + err, 'error');
+      toast(tKey("failed.to.delete.mode") + " " + err, 'error');
     }
   }
 }
@@ -870,7 +889,7 @@ function bindDetail() {
   els.sideFolder.onclick = () => {
     if (!S.selectedId) return;
     api.openModeFolder(S.selectedId).catch((err) => {
-      toast('Не удалось открыть папку: ' + err, 'error');
+      toast(tKey("failed.to.open.folder") + " " + err, 'error');
     });
   };
   els.detailVerify.onclick = () => verifyMode(modeById(S.selectedId));
@@ -967,8 +986,8 @@ function bindDetail() {
     }
     if (S.running === mode.id) {
       await api.stopGame();
-      S.status = 'Закрываю игру…';
-      toast('Закрываю игру…', 'info');
+      S.status = tKey("closing.the.game");
+      toast(tKey("closing.the.game"), 'info');
       return;
     }
     const action = computeAction(mode);
@@ -976,21 +995,21 @@ function bindDetail() {
     if (action === 'add') {
       try {
         const res = await api.setLibrary(mode.id, true);
-        if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
+        if (!res || !res.ok) throw new Error((res && res.error) || tKey("error"));
         const st = S.state[mode.id] || { installed: false, version: null, installedAt: 0 };
         S.state[mode.id] = { ...st, library: true, hidden: false };
         renderStore();
         renderLibrary();
         renderDetail();
-        toast('Режим добавлен в библиотеку', 'ok');
+        toast(tKey("mode.added.to.library"), 'ok');
       } catch (err) {
-        toast('Не удалось добавить режим: ' + err, 'error');
+        toast(tKey("failed.to.add.mode") + " " + err, 'error');
       }
       return;
     }
     if (!lavunioLoggedIn()) {
       openModal('modal-account');
-      toast('Сначала войдите в Lavunio ID', 'warn');
+      toast(tKey("sign.in.to.lavunio.2"), 'warn');
       return;
     }
 
@@ -1004,23 +1023,23 @@ async function verifyMode(mode) {
   if (!mode || !els.detailVerify) return;
   const label = els.detailVerify.textContent;
   els.detailVerify.disabled = true;
-  els.detailVerify.textContent = 'Проверяем…';
+  els.detailVerify.textContent = tKey("checking");
   try {
     const report = await api.verify(mode.id);
-    if (!report) throw new Error('Пустой ответ проверки');
+    if (!report) throw new Error(tKey("empty.verification.response"));
     if (report.ok) {
-      toast(`Файлы в порядке · проверено ${Number(report.checked) || 0}`, 'ok');
+      toast(tKey("app.files.ok", [Number(report.checked) || 0]), 'ok');
       return;
     }
-    const message = `Отсутствует файлов: ${Number(report.missing) || 0}, повреждено: ${Number(report.corrupted) || 0}.`;
+    const message = tKey("app.files.missing.corrupted", [Number(report.missing) || 0, Number(report.corrupted) || 0]);
     const fix = await askConfirm(
-      'Файлы повреждены',
-      `${message} Исправить установку?`,
-      'Исправить'
+      tKey("files.are.corrupted"),
+      tKey("app.repair.install", [message]),
+      tKey("repair")
     );
     if (fix) await repairMode(mode);
   } catch (err) {
-    toast('Не удалось проверить файлы: ' + err, 'error');
+    toast(tKey("failed.to.verify.files") + " " + err, 'error');
   } finally {
     els.detailVerify.disabled = false;
     els.detailVerify.textContent = label;
@@ -1032,9 +1051,9 @@ async function repairMode(mode) {
   try {
     await api.prepareRepair(mode.id);
     enqueueDownload(mode, 'repair');
-    toast('Исправление добавлено в очередь', 'info');
+    toast(tKey("repair.queued"), 'info');
   } catch (err) {
-    toast('Не удалось запустить исправление: ' + err, 'error');
+    toast(tKey("failed.to.start.repair") + " " + err, 'error');
   }
 }
 
@@ -1046,20 +1065,20 @@ async function startMode(mode, autoPlay = false) {
   if (action === 'add') {
     try {
       const res = await api.setLibrary(mode.id, true);
-      if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
+      if (!res || !res.ok) throw new Error((res && res.error) || tKey("error"));
       const st = S.state[mode.id] || { installed: false, version: null, installedAt: 0 };
       S.state[mode.id] = { ...st, library: true, hidden: false };
       renderStore();
       renderLibrary();
-      toast('Режим добавлен в библиотеку', 'ok');
+      toast(tKey("mode.added.to.library"), 'ok');
     } catch (err) {
-      toast('Не удалось добавить режим: ' + err, 'error');
+      toast(tKey("failed.to.add.mode") + " " + err, 'error');
     }
     return;
   }
   if (!lavunioLoggedIn()) {
     openModal('modal-account');
-    toast('Сначала войдите в Lavunio ID', 'warn');
+    toast(tKey("sign.in.to.lavunio.2"), 'warn');
     return;
   }
 
@@ -1084,29 +1103,29 @@ function openCardContext(card, x, y, playMode) {
   const actions = [];
 
   if (action === 'running') {
-    actions.push({ action: 'stop', label: 'Закрыть игру', primary: true, danger: true });
+    actions.push({ action: 'stop', label: tKey("close.game"), primary: true, danger: true });
   } else {
     const label = action === 'update'
-      ? 'Обновить'
+      ? tKey("messages.refresh")
       : action === 'play'
-        ? 'Играть'
+        ? tKey("play")
         : action === 'add'
-          ? 'Добавить в библиотеку'
-          : 'Установить';
+          ? tKey("add.to.library")
+          : tKey("install");
     actions.push({ action: 'play', label, primary: true });
   }
 
-  if (playMode) actions.push({ action: 'page', label: 'Страница режима' });
-  if (installed) actions.push({ action: 'folder', label: 'Открыть папку' });
+  if (playMode) actions.push({ action: 'page', label: tKey("mode.page") });
+  if (installed) actions.push({ action: 'folder', label: tKey("open.folder") });
   if (isHiddenMode(mode)) {
-    actions.push({ action: 'unhide', label: 'Вернуть в библиотеку' });
-    actions.push({ action: 'removelib', label: 'Удалить из библиотеки' });
+    actions.push({ action: 'unhide', label: tKey("restore.to.library") });
+    actions.push({ action: 'removelib', label: tKey("remove.from.library.2") });
   } else if (inLib) {
-    actions.push({ action: 'removelib', label: 'Удалить из библиотеки' });
-    actions.push({ action: 'hide', label: 'Скрыть' });
+    actions.push({ action: 'removelib', label: tKey("remove.from.library.2") });
+    actions.push({ action: 'hide', label: tKey("hide") });
   }
   if (installed && action !== 'running') {
-    actions.push({ action: 'uninstall', label: 'Удалить с устройства', danger: true });
+    actions.push({ action: 'uninstall', label: tKey("delete.from.device"), danger: true });
   }
 
   els.cardContext.innerHTML = actions.map((item) => `
@@ -1149,9 +1168,9 @@ function openDetail(id) {
   els.detailView.hidden = false;
   S.view = 'detail';
   els.detailBackLabel.textContent = S.detailFrom === 'library'
-    ? 'Назад в библиотеку'
-    : S.detailFrom === 'profile' ? 'Назад в профиль'
-      : 'Назад в каталог';
+    ? tKey("back.to.library")
+    : S.detailFrom === 'profile' ? tKey("app.back.to.profile")
+      : tKey("back.to.catalog");
   renderDetail();
   $('app').scrollTop = 0;
 }
@@ -1165,20 +1184,20 @@ function showStore() {
 
 function actionLabel(action) {
   return {
-    add: 'Добавить в библиотеку',
-    install: 'Установить',
-    update: 'Обновить',
-    play: 'Играть',
-    running: 'В игре'
-  }[action] || 'Установить';
+    add: tKey("add.to.library"),
+    install: tKey("install"),
+    update: tKey("messages.refresh"),
+    play: tKey("play"),
+    running: tKey("in.game")
+  }[action] || tKey("install");
 }
 
 function defaultStatus(mode) {
-  if (S.running === mode.id) return 'Игра запущена';
-  if (!inLibrary(mode)) return 'Сначала добавь режим в библиотеку';
-  if (isUpdate(mode)) return 'Доступно обновление';
-  if (isInstalled(mode)) return 'Готов к запуску';
-  return 'Файлы ещё не скачаны';
+  if (S.running === mode.id) return tKey("game.launched");
+  if (!inLibrary(mode)) return tKey("add.mode.to.library.first");
+  if (isUpdate(mode)) return tKey("update.available");
+  if (isInstalled(mode)) return tKey("ready.to.launch");
+  return tKey("files.not.downloaded.yet");
 }
 
 function renderDetail() {
@@ -1190,7 +1209,7 @@ function renderDetail() {
 
   els.detailImg.src = imageSrc(mode);
   wireImage(els.detailImg, mode);
-  els.detailTitle.textContent = mode.title || 'Без названия';
+  els.detailTitle.textContent = mode.title || tKey("untitled");
   els.detailSub.textContent = `${modeSub(mode)} · ${mode.size || '—'}`;
   els.detailTags.innerHTML = (Array.isArray(mode.tags) ? mode.tags : [])
     .filter(Boolean)
@@ -1205,14 +1224,14 @@ function renderDetail() {
   const updated = latest && latest.date ? formatUpdateDate(latest.date) : '—';
   const released = modeReleaseDate(mode);
   els.detailMeta.innerHTML = [
-    ['Версия', 'v' + (mode.version || '—')],
+    [tKey("version"), 'v' + (mode.version || '—')],
     ['Minecraft', mode.mcVersion || '—'],
-    ['Ядро', loaderLabel(mode)],
-    ['Размер', mode.size || '—'],
-    ['Рейтинг', mode.rating ? `${Number(mode.rating).toFixed(1)} ★ (${Number(mode.reviewsCount) || 0})` : '—'],
-    ['Установки', String(Number(mode.installs) || 0)],
-    ['Вышла', released ? formatUpdateDate(released) : '—'],
-    ['Обновлено', updated]
+    [tKey("loader"), loaderLabel(mode)],
+    [tKey("size"), mode.size || '—'],
+    [tKey("rating"), mode.rating ? `${Number(mode.rating).toFixed(1)} ★ (${Number(mode.reviewsCount) || 0})` : '—'],
+    [tKey("installs"), String(Number(mode.installs) || 0)],
+    [tKey("released"), released ? formatUpdateDate(released) : '—'],
+    [tKey("updated"), updated]
   ].map(([label, value]) => `
     <div class="meta-item">
       <span class="meta-label">${label}</span>
@@ -1238,7 +1257,7 @@ function renderDetail() {
   els.detailAuthorSection.hidden = !authorName;
   if (authorName) {
     els.detailAuthorName.textContent = authorName;
-    els.detailAuthorSub.textContent = author && author.verified ? 'Проверенный автор' : 'Автор режима';
+    els.detailAuthorSub.textContent = author && author.verified ? tKey("verified.author") : tKey("mode.author");
     const avatar = els.detailAuthorAvatar;
     avatar.textContent = authorName[0].toUpperCase();
     avatar.style.backgroundImage = author && author.avatar ? `url("${author.avatar}")` : '';
@@ -1248,13 +1267,13 @@ function renderDetail() {
   if (els.detailAuthorProfile) els.detailAuthorProfile.hidden = !(author && author.username);
   if (canFollow) {
     const following = S.follows.includes(author.id);
-    els.detailAuthorFollow.textContent = following ? 'Вы подписаны' : 'Подписаться';
+    els.detailAuthorFollow.textContent = following ? tKey("following.2") : tKey("follow");
     els.detailAuthorFollow.classList.toggle('active', following);
   }
   if (els.detailTeam) {
     const team = mode.team;
     els.detailTeam.hidden = !team;
-    if (team) els.detailTeam.textContent = `Команда: ${team.title}${team.verified ? ' ✓' : ''}`;
+    if (team) els.detailTeam.textContent = tKey("app.team.with.verified", [team.title, team.verified ? ' ✓' : '']);
   }
 
   els.detailReviewsSection.hidden = !apiReady;
@@ -1285,11 +1304,11 @@ async function toggleFollowAuthor() {
   if (!author || !author.id) return;
   if (!lavunioLoggedIn()) {
     openModal('modal-account');
-    toast('Сначала войдите в Lavunio ID', 'warn');
+    toast(tKey("sign.in.to.lavunio.2"), 'warn');
     return;
   }
   if (S.lavunio.user && S.lavunio.user.username === author.id) {
-    toast('Нельзя подписаться на себя', 'warn');
+    toast(tKey("you.cannot.follow.yourself"), 'warn');
     return;
   }
   const following = S.follows.includes(author.id);
@@ -1300,9 +1319,9 @@ async function toggleFollowAuthor() {
       ? S.follows.filter((id) => id !== author.id)
       : [...S.follows, author.id];
     await loadFollows();
-    toast(following ? 'Вы отписались от автора' : 'Вы подписались на автора', 'ok');
+    toast(following ? tKey("you.unfollowed.the.author") : tKey("you.followed.the.author"), 'ok');
   } catch (err) {
-    toast('Не удалось обновить подписку: ' + err, 'error');
+    toast(tKey("failed.to.update.follow") + " " + err, 'error');
   }
 }
 
@@ -1310,7 +1329,7 @@ function openReportModal(mode) {
   if (!mode) return;
   if (!lavunioLoggedIn()) {
     openModal('modal-account');
-    toast('Сначала войдите в Lavunio ID', 'warn');
+    toast(tKey("sign.in.to.lavunio.2"), 'warn');
     return;
   }
   S.reportModeId = mode.id;
@@ -1326,7 +1345,7 @@ async function submitReport() {
   if (!mode) return;
   const reason = els.reportReason.value.trim();
   if (reason.length < 3) {
-    els.reportError.textContent = 'Опиши причину жалобы';
+    els.reportError.textContent = tKey("describe.the.reason.for");
     els.reportError.hidden = false;
     return;
   }
@@ -1336,9 +1355,9 @@ async function submitReport() {
   try {
     await api.reportMode(mode.id, reason);
     $('modal-report').hidden = true;
-    toast('Жалоба отправлена', 'ok');
+    toast(tKey("report.submitted"), 'ok');
   } catch (err) {
-    els.reportError.textContent = String(err || 'Не удалось отправить жалобу');
+    els.reportError.textContent = String(err || tKey("failed.to.submit.report"));
     els.reportError.hidden = false;
   } finally {
     button.disabled = false;
@@ -1384,11 +1403,11 @@ function renderReviews(mode) {
     ? Number(data.averageRating)
     : (mode.rating !== null && mode.rating !== undefined ? Number(mode.rating) : null);
   els.reviewsSummary.textContent = average !== null && count > 0
-    ? `${average.toFixed(1)} ★ · ${count} отзывов`
-    : 'Отзывов пока нет';
+    ? tKey("app.reviews.summary", [average.toFixed(1), count])
+    : tKey("no.reviews.yet");
 
   if (!items.length) {
-    els.reviewsList.innerHTML = '<div class="hint">Стань первым, кто оставит отзыв.</div>';
+    els.reviewsList.innerHTML = '<div class="hint">' + tKey("app.first.review") + '</div>';
   } else {
     const canReply = !!(
       S.lavunio && S.lavunio.user &&
@@ -1399,19 +1418,19 @@ function renderReviews(mode) {
       return `
         <article class="review-item">
           <div class="review-head">
-            <span class="review-author">${escapeHtml(item.authorName || item.authorUsername || 'Игрок')}</span>
+            <span class="review-author">${escapeHtml(item.authorName || item.authorUsername || tKey("player.2"))}</span>
             <span class="review-stars">${reviewStarsText(item.rating)}</span>
             <span class="review-date">${escapeHtml(publisherDate(item.createdAt))}</span>
           </div>
           ${item.text ? `<div class="review-text">${escapeHtml(item.text)}</div>` : ''}
           ${item.authorReply ? `
             <div class="review-reply">
-              <div class="review-reply-label">Ответ автора</div>
+              <div class="review-reply-label">${tKey("app.author.reply")}</div>
               <div class="review-reply-text">${escapeHtml(item.authorReply)}</div>
             </div>` : ''}
           <div class="review-actions">
-            ${canReply ? `<button class="link link-btn" type="button" data-review-reply="${escapeHtml(item.id)}">${item.authorReply ? 'Изменить ответ' : 'Ответить'}</button>` : ''}
-            ${own ? `<button class="link link-btn review-delete" type="button" data-review-delete="${escapeHtml(mode.id)}">Удалить мой отзыв</button>` : ''}
+            ${canReply ? `<button class="link link-btn" type="button" data-review-reply="${escapeHtml(item.id)}">${item.authorReply ? tKey("edit.reply") : tKey("reply.2")}</button>` : ''}
+            ${own ? `<button class="link link-btn review-delete" type="button" data-review-delete="${escapeHtml(mode.id)}">${tKey("app.delete.my.review")}</button>` : ''}
           </div>
         </article>`;
     }).join('');
@@ -1430,13 +1449,13 @@ async function submitReview() {
   if (!mode) return;
   if (!lavunioLoggedIn()) {
     openModal('modal-account');
-    toast('Сначала войдите в Lavunio ID', 'warn');
+    toast(tKey("sign.in.to.lavunio.2"), 'warn');
     return;
   }
   const text = els.reviewText.value.trim();
   const error = els.reviewError;
   if (text.length > 2000) {
-    error.textContent = 'Отзыв должен быть не длиннее 2000 символов';
+    error.textContent = tKey("review.must.be.at");
     error.hidden = false;
     return;
   }
@@ -1451,9 +1470,9 @@ async function submitReview() {
     els.reviewText.value = '';
     renderDetail();
     renderStore();
-    toast(data && data.pending ? 'Отзыв отправлен на модерацию' : 'Отзыв сохранён', 'ok');
+    toast(data && data.pending ? tKey("review.submitted.for.moderation") : tKey("review.saved"), 'ok');
   } catch (err) {
-    error.textContent = String(err || 'Не удалось сохранить отзыв');
+    error.textContent = String(err || tKey("failed.to.save.review"));
     error.hidden = false;
   } finally {
     button.disabled = false;
@@ -1469,7 +1488,7 @@ function openReviewReplyModal(reviewId) {
     : null;
   if (!item) return;
   S.reviewReplyTarget = { modeId: mode.id, reviewId };
-  $('review-reply-target').textContent = `${mode.title} · ${item.authorName || item.authorUsername || 'игрок'}`;
+  $('review-reply-target').textContent = `${mode.title} · ${item.authorName || item.authorUsername || tKey("player")}`;
   $('review-reply-text').value = item.authorReply || '';
   $('review-reply-error').hidden = true;
   openModal('modal-review-reply');
@@ -1484,33 +1503,33 @@ async function submitReviewReply() {
   const text = $('review-reply-text').value.trim();
   const error = $('review-reply-error');
   if (!text) {
-    error.textContent = 'Напиши текст ответа';
+    error.textContent = tKey("write.a.reply");
     error.hidden = false;
     return;
   }
   const button = $('review-reply-submit');
   button.disabled = true;
-  button.textContent = 'Отправляем…';
+  button.textContent = tKey("sending");
   error.hidden = true;
   try {
     await api.reviewReply(mode.id, target.reviewId, text);
     $('modal-review-reply').hidden = true;
     delete S.reviews[mode.id];
     await loadReviews(mode);
-    toast('Ответ опубликован', 'ok');
+    toast(tKey("reply.published"), 'ok');
   } catch (err) {
-    error.textContent = String(err || 'Не удалось отправить ответ');
+    error.textContent = String(err || tKey("failed.to.send.reply"));
     error.hidden = false;
   } finally {
     button.disabled = false;
-    button.textContent = 'Отправить ответ';
+    button.textContent = tKey("send.reply");
   }
 }
 
 async function deleteReview(modeId) {
   const mode = modeById(modeId);
   if (!mode) return;
-  const ok = await askConfirm('Удалить отзыв?', 'Твой отзыв будет удалён.', 'Удалить');
+  const ok = await askConfirm(tKey("delete.review"), tKey("your.review.will.be"), tKey("delete"));
   if (!ok) return;
   try {
     await api.reviewDelete(modeId);
@@ -1520,9 +1539,9 @@ async function deleteReview(modeId) {
     await loadReviews(mode);
     if (S.view === 'detail') renderDetail();
     renderStore();
-    toast('Отзыв удалён', 'ok');
+    toast(tKey("review.deleted"), 'ok');
   } catch (err) {
-    toast('Не удалось удалить отзыв: ' + err, 'error');
+    toast(tKey("failed.to.delete.review") + " " + err, 'error');
   }
 }
 
@@ -1534,18 +1553,18 @@ function updateDetailAction() {
 
   const task = downloadTaskForMode(mode.id);
   if (task && task.status === 'queued') {
-    els.detailAction.textContent = 'Отменить';
+    els.detailAction.textContent = tKey("cancel.2");
     els.detailAction.className = 'btn btn-danger btn-big btn-block';
     els.detailAction.disabled = false;
-    els.detailStatus.textContent = 'В очереди';
+    els.detailStatus.textContent = tKey("queued");
     els.detailProgress.hidden = true;
     return;
   }
   if (task && task.status === 'paused') {
-    els.detailAction.textContent = 'Продолжить';
+    els.detailAction.textContent = tKey("resume");
     els.detailAction.className = 'btn btn-primary btn-big btn-block';
     els.detailAction.disabled = false;
-    els.detailStatus.textContent = 'Загрузка на паузе';
+    els.detailStatus.textContent = tKey("download.paused");
     els.detailProgress.hidden = false;
     els.detailProgressBar.style.width = Math.max(0, Math.min(100, task.progress * 100)) + '%';
     return;
@@ -1553,10 +1572,10 @@ function updateDetailAction() {
 
   const busyHere = !!(S.busy && S.busy.modeId === mode.id);
   if (busyHere) {
-    els.detailAction.textContent = 'Отмена';
+    els.detailAction.textContent = tKey("cancel");
     els.detailAction.className = 'btn btn-danger btn-big btn-block';
     els.detailAction.disabled = false;
-    els.detailStatus.textContent = S.status || 'Подготовка…';
+    els.detailStatus.textContent = S.status || tKey("preparing.2");
     els.detailProgress.hidden = false;
     els.detailProgressBar.style.width = Math.max(0, Math.min(100, S.progress * 100)) + '%';
     return;
@@ -1564,10 +1583,10 @@ function updateDetailAction() {
 
   const action = computeAction(mode);
   if (action === 'running') {
-    els.detailAction.textContent = 'Закрыть игру';
+    els.detailAction.textContent = tKey("close.game");
     els.detailAction.className = 'btn btn-danger btn-big btn-block';
     els.detailAction.disabled = false;
-    els.detailStatus.textContent = 'Игра запущена';
+    els.detailStatus.textContent = tKey("game.launched");
   } else {
     els.detailAction.textContent = actionLabel(action);
     els.detailAction.className = 'btn btn-primary btn-big btn-block';
@@ -1584,15 +1603,15 @@ async function deferModeUpdate(mode) {
   const version = mode.version || null;
   try {
     const res = api.gameSkipUpdate ? await api.gameSkipUpdate(mode.id, version) : null;
-    if (res && res.ok === false) throw new Error(res.error || 'Ошибка');
+    if (res && res.ok === false) throw new Error(res.error || tKey("error"));
     const st = S.state[mode.id] || { installed: true, version: null, installedAt: 0 };
     S.state[mode.id] = { ...st, skippedVersion: version };
     renderStore();
     renderLibrary();
     updateDetailAction();
-    toast('Обновление отложено до следующей версии', 'ok');
+    toast(tKey("update.postponed.until.the"), 'ok');
   } catch (err) {
-    toast('Не удалось отложить обновление: ' + err, 'error');
+    toast(tKey("failed.to.postpone.update") + " " + err, 'error');
   }
 }
 
@@ -1636,13 +1655,13 @@ function onGameEvent(ev) {
       S.busy = null;
       S.stage = '';
       S.progress = 1;
-      S.status = 'Установлено';
+      S.status = tKey("sidebar.installed");
       if (mode) {
         const st = S.state[mode.id] || {};
         S.state[mode.id] = { ...st, installed: true, version: mode.version, installedAt: Date.now(), library: true, hidden: false };
       }
       if (finished) finishDownload(finished.id, 'completed');
-      toast('Режим установлен', 'ok');
+      toast(tKey("mode.installed"), 'ok');
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && isCurrent) renderDetail();
@@ -1655,7 +1674,7 @@ function onGameEvent(ev) {
       S.stage = '';
       S.running = ev.modeId;
       S.progress = 1;
-      S.status = 'Игра запущена';
+      S.status = tKey("game.launched");
       S.sessionStartedAt = Date.now();
       if (api.markLaunched) api.markLaunched(ev.modeId).catch(() => {});
       {
@@ -1663,7 +1682,7 @@ function onGameEvent(ev) {
         S.state[ev.modeId] = { ...st, lastPlayedAt: S.sessionStartedAt };
       }
       if (finished) finishDownload(finished.id, 'completed');
-      toast('Игра запущена!', 'ok');
+      toast(tKey("game.launched.2"), 'ok');
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && isCurrent) renderDetail();
@@ -1698,7 +1717,7 @@ function onGameEvent(ev) {
       S.stage = '';
       S.progress = 0;
       S.sessionStartedAt = 0;
-      S.status = ev.payload === 0 ? 'Игра закрыта' : `Игра завершилась (код ${ev.payload})`;
+      S.status = ev.payload === 0 ? tKey("game.closed") : tKey("app.game.finished.code", [ev.payload]);
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && isCurrent) renderDetail();
@@ -1712,10 +1731,10 @@ function onGameEvent(ev) {
       S.busy = null;
       S.stage = '';
       S.progress = 0;
-      S.status = wasPaused ? 'Пауза' : 'Отменено';
+      S.status = wasPaused ? tKey("pause") : tKey("cancelled");
       if (finished) {
         finished.status = wasPaused ? 'paused' : 'cancelled';
-        finished.stage = wasPaused ? 'Пауза' : 'Отменено';
+        finished.stage = wasPaused ? tKey("pause") : tKey("cancelled");
         finished.speed = 0;
         finished.eta = 0;
         finished.pauseRequested = false;
@@ -1724,7 +1743,7 @@ function onGameEvent(ev) {
         renderDownloads();
         pumpDownloads();
       }
-      toast(wasPaused ? 'Загрузка приостановлена' : 'Операция отменена', 'warn');
+      toast(wasPaused ? tKey("download.paused.2") : tKey("operation.cancelled"), 'warn');
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && isCurrent) renderDetail();
@@ -1732,16 +1751,16 @@ function onGameEvent(ev) {
     }
     case 'error': {
       const finished = active && active.modeId === ev.modeId ? active : null;
-      const message = String(ev.payload || 'Ошибка');
+      const message = String(ev.payload || tKey("error"));
       S.pendingPlay = null;
       S.busy = null;
       S.stage = '';
       S.progress = 0;
       if (S.running === ev.modeId) S.running = null;
-      S.status = 'Ошибка';
+      S.status = tKey("error");
       if (finished) {
         finished.status = 'error';
-        finished.stage = 'Ошибка';
+        finished.stage = tKey("error");
         finished.error = message;
         finished.speed = 0;
         finished.eta = 0;
@@ -1772,10 +1791,10 @@ function bindUpdateModal() {
     if (!S.updateInfo) return;
     els.updateCurrent.textContent = `v${S.updateInfo.current}`;
     els.updateLatest.textContent = `v${S.updateInfo.latest}`;
-    els.updateNotes.textContent = (S.updateInfo.notes || '').trim() || 'Список изменений появится позже.';
+    els.updateNotes.textContent = (S.updateInfo.notes || '').trim() || tKey("changelog.will.appear.later");
     els.btnUpdateDownload.textContent = S.updateInfo.installerUrl
-      ? 'Обновить и перезапустить'
-      : 'Открыть релиз';
+      ? tKey("update.and.restart")
+      : tKey("open.release");
     els.btnUpdateDownload.disabled = false;
     $('modal-update').hidden = false;
   };
@@ -1827,7 +1846,7 @@ async function checkUpdateInBackground(force = false) {
     return;
   }
   showUpdateChip(info);
-  toast(`Доступно обновление ${info.latest}`, 'info');
+  toast(tKey("app.update.available.version", [info.latest]), 'info');
 }
 
 let startupFinalized = false;
@@ -1861,7 +1880,7 @@ async function handleStartupUpdate(pending) {
 }
 
 function showUpdateChip(info) {
-  els.updateChipText.textContent = `Обновление ${info.latest}`;
+  els.updateChipText.textContent = tKey("app.update.chip", [info.latest]);
   els.updateChip.hidden = false;
 }
 
@@ -1902,7 +1921,7 @@ function showSplashUpdate(info) {
   if (els.splashUpdateBar) els.splashUpdateBar.style.width = '0%';
   if (els.splashUpdatePercent) els.splashUpdatePercent.textContent = '0%';
   if (els.splashUpdateStatus) {
-    els.splashUpdateStatus.textContent = `Скачиваю обновление ${info.latest}…`;
+    els.splashUpdateStatus.textContent = tKey("app.downloading.update.version", [info.latest]);
   }
 }
 
@@ -1926,14 +1945,13 @@ function hideSplashUpdate() {
 async function startAutoUpdate(info, options = {}) {
   if (S.autoUpdating) return;
   const manual = !!options.manual;
-  const tr = (text) => (window.I18n ? window.I18n.t(text) : text);
   const button = els.btnUpdateDownload;
   S.autoUpdating = true;
   els.updateChip.hidden = true;
   if (manual) {
     if (button) {
       button.disabled = true;
-      button.textContent = `${tr('Скачиваю…')} 0%`;
+      button.textContent = `${tKey("downloading")} 0%`;
     }
   } else {
     showSplashUpdate(info);
@@ -1947,25 +1965,25 @@ async function startAutoUpdate(info, options = {}) {
         const downloaded = Number(payload && payload.downloaded) || 0;
         const percent = total > 0 ? Math.min(100, Math.round((downloaded / total) * 100)) : 0;
         if (manual) {
-          if (button) button.textContent = `${tr('Скачиваю…')} ${percent}%`;
+          if (button) button.textContent = `${tKey("downloading")} ${percent}%`;
           return;
         }
         const status = total > 0
-          ? `Скачивание… ${formatBytes(downloaded)} из ${formatBytes(total)}`
-          : 'Скачивание обновления…';
+          ? tKey("app.downloading.progress", [formatBytes(downloaded), formatBytes(total)])
+          : tKey("downloading.update");
         setSplashProgress(percent, status);
       });
     }
 
     await api.installUpdate(info.installerUrl);
     if (manual) {
-      if (button) button.textContent = tr('Устанавливаю обновление. Лаунчер сейчас закроется…');
+      if (button) button.textContent = tKey("installing.the.update.the");
       if (els.updateNotes) {
-        els.updateNotes.textContent = tr('Обновление скачано. Лаунчер закроется и запустится заново.');
+        els.updateNotes.textContent = tKey("update.downloaded.the.launcher");
       }
     } else {
       if (els.splashUpdate) els.splashUpdate.classList.add('installing');
-      setSplashProgress(100, 'Устанавливаю обновление. Лаунчер сейчас закроется…');
+      setSplashProgress(100, tKey("installing.the.update.the"));
     }
     setTimeout(() => {
       api.close().catch(() => {});
@@ -1975,16 +1993,16 @@ async function startAutoUpdate(info, options = {}) {
     if (manual) {
       if (button) {
         button.disabled = false;
-        button.textContent = tr('Обновить и перезапустить');
+        button.textContent = tKey("update.and.restart");
       }
     } else {
       hideSplashUpdate();
-      els.updateChipText.textContent = `Обновление ${info.latest}`;
+      els.updateChipText.textContent = tKey("app.update.chip", [info.latest]);
       els.updateChip.hidden = false;
       await finishStartup();
     }
     toast(
-      (window.I18n ? window.I18n.t('Не удалось установить обновление:') : 'Не удалось установить обновление:') + ' ' + err,
+      tKey("failed.to.install.update") + ' ' + err,
       'error'
     );
   } finally {
@@ -1996,13 +2014,13 @@ async function startAutoUpdate(info, options = {}) {
 
 function renderAccountChip() {
   const user = S.lavunio && S.lavunio.user;
-  if (els.sidebarName) els.sidebarName.textContent = user ? lavunioName(user) : 'Гость';
+  if (els.sidebarName) els.sidebarName.textContent = user ? lavunioName(user) : tKey("guest");
   if (els.sidebarStatus) {
     els.sidebarStatus.textContent = user
-      ? (user.role === 'admin' ? 'Администратор'
-        : user.role === 'author' ? 'Автор'
-          : user.role === 'moderator' ? 'Модератор' : 'Игрок')
-      : 'Войти в Lavunio';
+      ? (user.role === 'admin' ? tKey("administrator")
+        : user.role === 'author' ? tKey("author")
+          : user.role === 'moderator' ? tKey("moderator.2") : tKey("player.2"))
+      : tKey("sign.in.to.lavunio.3");
   }
   applyLavunioAvatar(els.sidebarAvatar, user);
   if (els.sidebarMessages) els.sidebarMessages.hidden = !user;
@@ -2077,11 +2095,11 @@ function renderLavunioPane() {
     $('lavunio-name').textContent = lavunioName(user);
     const bits = [];
     if (user.email) bits.push(user.email);
-    bits.push(user.emailVerified ? 'почта подтверждена' : 'почта не подтверждена');
+    bits.push(user.emailVerified ? tKey("email.verified") : tKey("email.not.verified.2"));
     bits.push(
-      user.role === 'admin' ? 'администратор' :
-      user.role === 'author' ? 'автор' :
-      user.role === 'moderator' ? 'модератор' : 'игрок'
+      user.role === 'admin' ? tKey("administrator.2") :
+      user.role === 'author' ? tKey("author.2") :
+      user.role === 'moderator' ? tKey("moderator") : tKey("player")
     );
     const sub = $('lavunio-sub');
     sub.innerHTML = '';
@@ -2111,9 +2129,9 @@ function renderLavunioPane() {
     $('lavunio-username-field').hidden = !register;
     if (els.consentRow) els.consentRow.hidden = !register;
     $('lavunio-password').autocomplete = register ? 'new-password' : 'current-password';
-    $('lavunio-submit').textContent = register ? 'Создать аккаунт' : 'Войти';
-    $('lavunio-switch-text').textContent = register ? 'Уже есть аккаунт?' : 'Нет аккаунта?';
-    $('lavunio-switch').textContent = register ? 'Войти' : 'Регистрация';
+    $('lavunio-submit').textContent = register ? tKey("create.account") : tKey("sign.in");
+    $('lavunio-switch-text').textContent = register ? tKey("already.have.an.account") : tKey("no.account");
+    $('lavunio-switch').textContent = register ? tKey("sign.in") : tKey("sign.up");
     if (error) error.hidden = true;
   }
   updatePublisherNav();
@@ -2129,30 +2147,30 @@ async function submitLavunioForm() {
 
   error.hidden = true;
   if (!email || !password) {
-    error.textContent = 'Заполните email и пароль';
+    error.textContent = tKey("fill.in.email.and");
     error.hidden = false;
     return;
   }
   if (register && !username) {
-    error.textContent = 'Придумайте имя пользователя';
+    error.textContent = tKey("choose.a.username");
     error.hidden = false;
     return;
   }
   if (register && els.consent && !els.consent.checked) {
-    error.textContent = 'Подтвердите согласие с условиями и политикой конфиденциальности';
+    error.textContent = tKey("please.accept.the.terms");
     error.hidden = false;
     els.consent.focus();
     return;
   }
   if (!S.lavunio || !S.lavunio.configured) {
-    error.textContent = 'Lavunio API не настроен';
+    error.textContent = tKey("lavunio.api.is.not.2");
     error.hidden = false;
     return;
   }
 
   const button = $('lavunio-submit');
   button.disabled = true;
-  button.textContent = register ? 'Создаём…' : 'Входим…';
+  button.textContent = register ? tKey("creating") : tKey("signing.in");
   try {
     const status = register
       ? await api.lavunioRegister(email, password, username || null, !!(els.consent && els.consent.checked))
@@ -2167,9 +2185,9 @@ async function submitLavunioForm() {
     loadFriends(true);
     updateSocialNav();
     const name = status && status.user ? lavunioName(status.user) : '';
-    toast(register ? 'Аккаунт Lavunio создан' : `С возвращением, ${name || 'игрок'}!`, 'ok');
+    toast(register ? tKey("lavunio.account.created") : tKey("app.welcome.back", [name || tKey("player")]), 'ok');
     if (status && status.user && !status.user.emailVerified) {
-      toast('Почта не подтверждена', 'warn');
+      toast(tKey("email.not.verified"), 'warn');
     }
     if (status && status.user) $('modal-account').hidden = true;
     if (S.profileAfterLogin && status && status.user) {
@@ -2177,12 +2195,12 @@ async function submitLavunioForm() {
       openProfile(status.user.username);
     }
   } catch (err) {
-    error.textContent = String(err || 'Не удалось выполнить вход');
+    error.textContent = String(err || tKey("failed.to.sign.in"));
     error.hidden = false;
   } finally {
     button.disabled = false;
     if (!S.lavunio || !S.lavunio.user) {
-      button.textContent = register ? 'Создать аккаунт' : 'Войти';
+      button.textContent = register ? tKey("create.account") : tKey("sign.in");
     }
   }
 }
@@ -2210,27 +2228,27 @@ async function logoutLavunio() {
   renderLavunioPane();
   renderAccountChip();
   renderStore();
-  toast('Вы вышли из Lavunio', 'ok');
+  toast(tKey("you.signed.out.of"), 'ok');
 }
 
 async function verifyLavunioEmail() {
   const button = $('lavunio-verify-btn');
   button.disabled = true;
-  button.textContent = 'Отправляем…';
+  button.textContent = tKey("sending");
   try {
     const status = await api.lavunioResendVerification();
     S.lavunio = status;
     renderLavunioPane();
     const verified = !!(status && status.user && status.user.emailVerified);
     toast(
-      verified ? 'Почта подтверждена' : 'Письмо отправлено. Проверьте почту.',
+      verified ? tKey("email.verified.2") : tKey("email.sent.check.your"),
       verified ? 'ok' : 'warn'
     );
   } catch (err) {
-    toast('Не удалось подтвердить почту: ' + err, 'error');
+    toast(tKey("failed.to.verify.email") + " " + err, 'error');
   } finally {
     button.disabled = false;
-    button.textContent = 'Подтвердить';
+    button.textContent = tKey("confirm");
   }
 }
 
@@ -2244,18 +2262,18 @@ function renderAuthorApply(user) {
   const button = $('author-apply-btn');
   const application = S.authorApplication;
   if (!application) {
-    text.textContent = 'Хочешь публиковать свои режимы в Lavunio?';
+    text.textContent = tKey("want.to.publish.your");
     button.hidden = false;
-    button.textContent = 'Стать автором';
+    button.textContent = tKey("become.an.author");
   } else if (application.status === 'open') {
-    text.textContent = 'Заявка на рассмотрении';
+    text.textContent = tKey("application.pending");
     button.hidden = true;
   } else if (application.status === 'rejected') {
-    text.textContent = `Заявка отклонена: ${application.note || 'без причины'}`;
+    text.textContent = tKey("app.application.rejected.note", [application.note || tKey("app.without.reason")]);
     button.hidden = false;
-    button.textContent = 'Подать заново';
+    button.textContent = tKey("submit.again");
   } else {
-    text.textContent = 'Доступ автора выдан';
+    text.textContent = tKey("author.access.granted");
     button.hidden = true;
   }
 }
@@ -2288,25 +2306,25 @@ async function submitAuthorApplication() {
   const links = $('author-apply-links').value.trim();
   const error = $('author-apply-error');
   if (message.length < 20) {
-    error.textContent = 'Расскажи о себе — минимум 20 символов';
+    error.textContent = tKey("tell.us.about.yourself");
     error.hidden = false;
     return;
   }
   const button = $('author-apply-submit');
   button.disabled = true;
-  button.textContent = 'Отправляем…';
+  button.textContent = tKey("sending");
   error.hidden = true;
   try {
     S.authorApplication = await api.authorApplicationApply(message, links);
     $('modal-author-apply').hidden = true;
-    toast('Заявка отправлена на рассмотрение', 'ok');
+    toast(tKey("application.submitted.for.review"), 'ok');
     renderLavunioPane();
   } catch (err) {
-    error.textContent = String(err || 'Не удалось отправить заявку');
+    error.textContent = String(err || tKey("failed.to.submit.application"));
     error.hidden = false;
   } finally {
     button.disabled = false;
-    button.textContent = 'Отправить заявку';
+    button.textContent = tKey("submit.application");
   }
 }
 
@@ -2376,7 +2394,7 @@ function closeModals() {
 
 let confirmResolve = null;
 
-function askConfirm(title, text, okLabel = 'Удалить') {
+function askConfirm(title, text, okLabel = tKey("delete")) {
   return new Promise((resolve) => {
     confirmResolve = resolve;
     if (!openModals().length) lastFocusedElement = document.activeElement;
@@ -2590,7 +2608,7 @@ async function loadFriends(force = false) {
       ? { incoming: requests.incoming || [], outgoing: requests.outgoing || [] }
       : { incoming: [], outgoing: [] };
   } catch (err) {
-    toast('Не удалось загрузить друзей: ' + err, 'error');
+    toast(tKey("failed.to.load.friends") + " " + err, 'error');
   }
   refreshFriendSurfaces();
 }
@@ -2603,23 +2621,23 @@ function refreshFriendSurfaces() {
 async function respondFriendRequest(id, action) {
   try {
     await api.friendRespond(id, action);
-    toast(action === 'accept' ? 'Заявка принята' : 'Заявка отклонена', 'ok');
+    toast(action === 'accept' ? tKey("request.accepted") : tKey("request.declined"), 'ok');
     await loadFriends(true);
     await loadNotifications();
   } catch (err) {
-    toast('Не удалось обработать заявку: ' + err, 'error');
+    toast(tKey("failed.to.process.request") + " " + err, 'error');
   }
 }
 
 async function removeFriend(username) {
-  const confirmed = await askConfirm('Удалить друга?', `@${username} исчезнет из списка друзей.`, 'Удалить');
+  const confirmed = await askConfirm(tKey("remove.friend"), tKey("app.friend.remove.warning", [username]), tKey("delete"));
   if (!confirmed) return;
   try {
     await api.friendRemove(username);
-    toast('Друг удалён', 'ok');
+    toast(tKey("friend.removed"), 'ok');
     await loadFriends(true);
   } catch (err) {
-    toast('Не удалось удалить друга: ' + err, 'error');
+    toast(tKey("failed.to.remove.friend") + " " + err, 'error');
   }
 }
 
@@ -2667,6 +2685,7 @@ function openNotifications() {
 
 function renderNotifications() {
   if (!els.notificationsList) return;
+  const tr = (text) => (window.I18n ? window.I18n.t(text) : text);
   const items = S.notifications || [];
   els.notificationsList.innerHTML = items.length
     ? items.map((item) => `
@@ -2675,12 +2694,12 @@ function renderNotifications() {
         data-notif-kind="${escapeHtml(item.kind)}"
         data-notif-link-type="${escapeHtml(item.linkType || '')}"
         data-notif-link-id="${escapeHtml(item.linkId || '')}">
-        <div class="pub-title">${escapeHtml(item.title)}</div>
-        <div class="mod-changelog">${escapeHtml(item.body || '')}</div>
+        <div class="pub-title">${escapeHtml(tr(item.title))}</div>
+        <div class="mod-changelog">${escapeHtml(tr(item.body || ''))}</div>
         <div class="pub-meta"><span>${escapeHtml(formatDateTime(item.createdAt))}</span></div>
       </button>
     `).join('')
-    : '<div class="mod-empty">Уведомлений нет.</div>';
+    : '<div class="mod-empty">' + tKey("no.notifications") + '</div>';
 }
 
 async function readAllNotifications() {
@@ -2691,7 +2710,7 @@ async function readAllNotifications() {
     updateNotificationsBadge();
     renderNotifications();
   } catch (err) {
-    toast('Не удалось прочитать уведомления: ' + err, 'error');
+    toast(tKey("failed.to.mark.notifications") + " " + err, 'error');
   }
 }
 
@@ -2712,16 +2731,6 @@ async function openNotification(button) {
 }
 
 // ---------------------------------------------------------------- модерация
-
-const MODERATION_ACTIONS = {
-  approve: 'Одобрил релиз',
-  reject: 'Отклонил релиз',
-  hide: 'Скрыл режим',
-  unhide: 'Показал режим',
-  report_close: 'Закрыл жалобу',
-  review_approve: 'Одобрил отзыв',
-  review_reject: 'Отклонил отзыв'
-};
 
 // ---------------------------------------------------------------- debug / tests
 

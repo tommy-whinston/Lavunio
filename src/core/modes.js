@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../i18n/index.js';
+
 import { S } from './state.js';
 import { stripRichText } from './format.js';
 import { parseChangelog } from './changelog.js';
@@ -21,12 +23,14 @@ export const LOADER_LABELS = {
 };
 
 export const MODE_STATUS = {
-  development: { label: 'В разработке', cls: 'development' },
-  crowdfunding: { label: 'Сбор на релиз', cls: 'crowdfunding' }
+  development: { labelKey: 'in.development', cls: 'development' },
+  crowdfunding: { labelKey: 'crowdfunding', cls: 'crowdfunding' }
 };
 
 export function modeStatusMeta(mode) {
-  return MODE_STATUS[String((mode && mode.status) || '')] || null;
+  const meta = MODE_STATUS[String((mode && mode.status) || '')];
+  if (!meta) return null;
+  return { label: tKey(meta.labelKey), cls: meta.cls };
 }
 
 export function isInstalled(mode) {
@@ -83,8 +87,8 @@ export function modeShortDescription(mode) {
   const short = String((mode && mode.shortDescription) || '').trim();
   if (short) return short;
   const full = String((mode && mode.description) || '').trim();
-  if (!full) return 'Описание пока не заполнено.';
-  return stripRichText(full).slice(0, 260) || 'Описание пока не заполнено.';
+  if (!full) return tKey("no.description.yet");
+  return stripRichText(full).slice(0, 260) || tKey("no.description.yet");
 }
 
 export function modeFullDescription(mode) {

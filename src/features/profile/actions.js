@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $, escapeHtml } from '../../core/dom.js';
@@ -39,7 +41,7 @@ export async function openProfile(username) {
   S.profileUsername = target;
   if (S.section !== 'profile') profileActions.showView('profile');
   if (els.profileContent) {
-    els.profileContent.innerHTML = '<div class="mod-empty">Загрузка профиля…</div>';
+    els.profileContent.innerHTML = '<div class="mod-empty">' + tKey("loading.profile") + '</div>';
   }
   try {
     const profile = await api.playerProfile(target);
@@ -55,7 +57,7 @@ export async function openProfile(username) {
   } catch (err) {
     if (seq !== S.profileSeq) return;
     if (els.profileContent) {
-      els.profileContent.innerHTML = `<div class="mod-empty">Не удалось загрузить профиль: ${escapeHtml(String(err))}</div>`;
+      els.profileContent.innerHTML = `<div class="mod-empty">${tKey("failed.to.load.profile")} ${escapeHtml(String(err))}</div>`;
     }
   }
 }
@@ -95,23 +97,23 @@ export function bindProfileView() {
       button.disabled = true;
       try {
         await api.friendAdd(username);
-        toast('Заявка отправлена', 'ok');
+        toast(tKey("request.sent"), 'ok');
         await profileActions.loadFriends(true);
         await openProfile(username);
       } catch (err) {
-        toast('Не удалось добавить друга: ' + err, 'error');
+        toast(tKey("failed.to.add.friend") + " " + err, 'error');
         button.disabled = false;
       }
     } else if (action === 'remove-friend') {
-      const confirmed = await profileActions.askConfirm('Удалить друга?', `@${username} исчезнет из списка друзей.`, 'Удалить');
+      const confirmed = await profileActions.askConfirm(tKey("remove.friend"), tKey("app.friend.remove.warning", [username]), tKey("delete"));
       if (!confirmed) return;
       try {
         await api.friendRemove(username);
-        toast('Друг удалён', 'ok');
+        toast(tKey("friend.removed"), 'ok');
         await profileActions.loadFriends(true);
         if (S.playerProfile) await openProfile(S.playerProfile.username);
       } catch (err) {
-        toast('Не удалось удалить друга: ' + err, 'error');
+        toast(tKey("failed.to.remove.friend") + " " + err, 'error');
       }
     } else if (action === 'accept-request' || action === 'decline-request') {
       await profileActions.respondFriendRequest(button.dataset.id, action === 'accept-request' ? 'accept' : 'decline');
@@ -133,11 +135,11 @@ export function bindProfileView() {
       try {
         await api.friendAdd(username);
         input.value = '';
-        toast('Заявка отправлена', 'ok');
+        toast(tKey("request.sent"), 'ok');
         await profileActions.loadFriends(true);
         if (S.playerProfile) renderProfile(S.playerProfile);
       } catch (err) {
-        toast('Не удалось добавить друга: ' + err, 'error');
+        toast(tKey("failed.to.add.friend") + " " + err, 'error');
       }
       return;
     }
@@ -151,7 +153,7 @@ export async function savePlayerProfile() {
   const error = $('profile-error');
   if (!displayName) {
     if (error) {
-      error.textContent = 'Укажи отображаемое имя';
+      error.textContent = tKey("enter.a.display.name");
       error.hidden = false;
     }
     return;
@@ -166,11 +168,11 @@ export async function savePlayerProfile() {
     }
     profileActions.renderAccountChip();
     profileActions.renderLavunioPane();
-    toast('Профиль сохранён', 'ok');
+    toast(tKey("profile.saved"), 'ok');
     if (S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {
     if (error) {
-      error.textContent = String(err || 'Не удалось сохранить профиль');
+      error.textContent = String(err || tKey("failed.to.save.profile"));
       error.hidden = false;
     }
   } finally {
@@ -184,7 +186,7 @@ export async function uploadLavunioSkin() {
   try {
     path = await api.pickSkin();
   } catch (err) {
-    toast('Не удалось выбрать файл: ' + err, 'error');
+    toast(tKey("failed.to.select.file") + " " + err, 'error');
     return;
   }
   if (!path) return;
@@ -199,10 +201,10 @@ export async function uploadLavunioSkin() {
     S.lavunio = await api.uploadSkin(path, modelEl ? modelEl.value : 'classic');
     profileActions.renderLavunioPane();
     profileActions.renderAccountChip();
-    toast('Скин обновлён', 'ok');
+    toast(tKey("skin.updated"), 'ok');
     if (S.section === 'profile' && S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {
-    toast('Не удалось загрузить скин: ' + err, 'error');
+    toast(tKey("failed.to.upload.skin") + " " + err, 'error');
   } finally {
     buttons.forEach((button) => { button.disabled = false; });
   }
@@ -214,9 +216,9 @@ export async function deleteLavunioSkin() {
     S.lavunio = await api.deleteSkin();
     profileActions.renderLavunioPane();
     profileActions.renderAccountChip();
-    toast('Скин удалён', 'ok');
+    toast(tKey("skin.deleted"), 'ok');
     if (S.section === 'profile' && S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {
-    toast('Не удалось удалить скин: ' + err, 'error');
+    toast(tKey("failed.to.delete.skin") + " " + err, 'error');
   }
 }

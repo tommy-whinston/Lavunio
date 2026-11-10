@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $, escapeHtml } from '../../core/dom.js';
@@ -11,17 +13,18 @@ import { toast } from '../../ui/toast.js';
 import { growAllTextareas } from '../../ui/textarea.js';
 
 export const UPDATE_TAGS = {
-  release: { label: 'Релиз', cls: 'release' },
+  release: { labelKey: 'release', cls: 'release' },
   hotfix: { label: 'Hot-fix', cls: 'hotfix' },
-  content: { label: 'Контент', cls: 'content' },
-  balance: { label: 'Баланс', cls: 'balance' },
-  fix: { label: 'Исправление', cls: 'fix' },
-  tech: { label: 'Техническое', cls: 'tech' }
+  content: { labelKey: 'content', cls: 'content' },
+  balance: { labelKey: 'balance', cls: 'balance' },
+  fix: { labelKey: 'fix', cls: 'fix' },
+  tech: { labelKey: 'technical', cls: 'tech' }
 };
 
 export function tagPill(tag) {
   const meta = UPDATE_TAGS[tag] || { label: tag, cls: 'tech' };
-  return `<span class="tag-pill ${escapeHtml(meta.cls)}">${escapeHtml(meta.label)}</span>`;
+  const label = meta.labelKey ? tKey(meta.labelKey) : meta.label;
+  return `<span class="tag-pill ${escapeHtml(meta.cls)}">${escapeHtml(label)}</span>`;
 }
 
 export function renderSpotlight(mode) {
@@ -34,7 +37,7 @@ export function renderSpotlight(mode) {
   els.detailSpotlight.hidden = false;
   const version = latest.version ? `v${latest.version}` : '';
   const title = latest.title || '';
-  els.spotlightTitle.textContent = [version, title].filter(Boolean).join(' — ') || 'Обновление режима';
+  els.spotlightTitle.textContent = [version, title].filter(Boolean).join(' — ') || tKey("mode.update");
   els.spotlightTag.innerHTML = latest.tags && latest.tags.length ? tagPill(latest.tags[0]) : '';
   els.spotlightDate.textContent = formatHistoryStamp(latest);
 }
@@ -43,7 +46,7 @@ export function renderChangelog(mode) {
   const entries = changelogModel(mode);
 
   if (entries.length === 0) {
-    els.detailChangelog.innerHTML = '<div class="changelog-empty">Пока нет записей об обновлениях.</div>';
+    els.detailChangelog.innerHTML = '<div class="changelog-empty">' + tKey("no.update.entries.yet") + '</div>';
     els.changelogToggle.hidden = true;
     return;
   }
@@ -63,7 +66,7 @@ export function renderChangelog(mode) {
         <div class="changelog-body">
           ${entry.lines.length
             ? `<ul>${entry.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`
-            : '<p>Изменения не указаны.</p>'}
+            : '<p>' + tKey("no.changes") + '</p>'}
         </div>
       </details>`;
   }).join('');
@@ -81,7 +84,7 @@ export function updateChangelogToggle() {
     return;
   }
   const allOpen = items.every((item) => item.open);
-  els.changelogToggle.textContent = allOpen ? 'Свернуть всё' : 'Развернуть всё';
+  els.changelogToggle.textContent = allOpen ? tKey("collapse.all") : tKey("expand.all");
   els.changelogToggle.setAttribute('aria-expanded', allOpen ? 'true' : 'false');
 }
 
@@ -110,7 +113,7 @@ export function renderTrailer(mode) {
   const embed = trailerEmbed(raw);
   els.detailTrailer.innerHTML = embed.kind === 'video'
     ? `<video src="${escapeHtml(embed.src)}" controls preload="metadata"></video>`
-    : `<iframe src="${escapeHtml(embed.src)}" title="Трейлер" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    : `<iframe src="${escapeHtml(embed.src)}" title="${tKey("trailer")}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   els.detailTrailerOpen.onclick = () => {
     api.openUrl(raw).catch((err) => toast(String(err), 'error'));
   };
@@ -148,7 +151,7 @@ export function renderSessions(mode) {
     </div>`).join('');
   if (els.detailSessionsMore) {
     els.detailSessionsMore.hidden = all.length <= limit;
-    els.detailSessionsMore.textContent = S.sessionsExpanded ? 'Скрыть' : 'Показать все';
+    els.detailSessionsMore.textContent = S.sessionsExpanded ? tKey("hide") : tKey("show.all");
   }
 }
 

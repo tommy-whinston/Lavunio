@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../i18n/index.js';
+
 export function isChangelogHeading(line) {
   const text = String(line || '').trim();
   if (!text) return false;
@@ -33,7 +35,7 @@ export function parseChangelog(mode) {
 
     if (!current) {
       current = {
-        title: mode.version ? `Версия ${mode.version}` : 'Текущая версия',
+        title: mode.version ? tKey('version.with', [mode.version]) : tKey("current.version"),
         lines: []
       };
       entries.push(current);

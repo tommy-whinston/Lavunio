@@ -1,12 +1,15 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $, escapeHtml } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { moderatorAllowed } from '../../core/permissions.js';
+import { formatBytes } from '../../core/format.js';
 import { toast } from '../../ui/toast.js';
-import { publisherDate, PUBLISHER_STATUS } from '../publisher/index.js';
+import { publisherDate, publisherStatusLabel } from '../publisher/index.js';
 
 let moderationActions = {
   openModal: () => {},
@@ -17,6 +20,21 @@ let moderationActions = {
 
 export function configureModeration(actions) {
   moderationActions = { ...moderationActions, ...actions };
+}
+
+const MODERATION_ACTION_KEYS = {
+  approve: 'moderation.action.approve.release',
+  reject: 'moderation.action.reject.release',
+  hide: 'moderation.action.hide.mode',
+  unhide: 'moderation.action.unhide.mode',
+  report_close: 'moderation.action.close.report',
+  review_approve: 'moderation.action.review.approve',
+  review_reject: 'moderation.action.review.reject'
+};
+
+function moderationActionLabel(action) {
+  const key = MODERATION_ACTION_KEYS[action];
+  return key ? tKey(key) : action;
 }
 
 export function bindModeration() {
@@ -94,7 +112,7 @@ export async function loadModeration(force = false) {
     S.moderationAuthorApplications = Array.isArray(applications) ? applications : [];
     S.moderationLoaded = true;
   } catch (err) {
-    toast('Не удалось загрузить модерацию: ' + err, 'error');
+    toast(tKey("moderation.failed.load", [err]), 'error');
   } finally {
     S.moderationLoading = false;
     renderModeration();
@@ -118,7 +136,7 @@ export function renderModeration() {
   const content = $('moderation-content');
   if (!content) return;
   if (S.moderationLoading && !S.moderationLoaded) {
-    content.innerHTML = '<div class="mod-empty">Загрузка модерации…</div>';
+    content.innerHTML = '<div class="mod-empty">' + tKey("loading.moderation") + '</div>';
     return;
   }
 
@@ -153,35 +171,35 @@ export function moderationScanHtml(scan) {
   const suspicious = Array.isArray(scan.suspicious) ? scan.suspicious : [];
   if (suspicious.length) {
     const shown = suspicious.slice(0, 5).map((name) => escapeHtml(name)).join(', ');
-    const rest = suspicious.length > 5 ? ` и ещё ${suspicious.length - 5}` : '';
-    return `<div class="mod-scan warn">Подозрительные файлы: ${shown}${rest}</div>`;
+    const rest = suspicious.length > 5 ? tKey("moderation.and.more", [suspicious.length - 5]) : '';
+    return `<div class="mod-scan warn">${tKey("moderation.suspicious.files", [shown + rest])}</div>`;
   }
-  return `<div class="mod-scan ok">Архив проверен: ${Number(scan.files) || 0} файлов, ${formatBytes(Number(scan.bytes) || 0)}</div>`;
+  return `<div class="mod-scan ok">${tKey("moderation.archive.checked", [Number(scan.files) || 0, formatBytes(Number(scan.bytes) || 0)])}</div>`;
 }
 
 export function moderationQueueHtml() {
   const items = S.moderationQueue || [];
   if (!items.length) {
-    return '<div class="mod-empty">Очередь пуста. Новые релизы появятся здесь после отправки автором.</div>';
+    return '<div class="mod-empty">' + tKey("the.queue.is.empty") + '</div>';
   }
   return items.map((item) => `
     <article class="pub-card">
       <div class="pub-card-head">
         <div>
           <div class="pub-title">${escapeHtml(item.modeTitle)}</div>
-          <div class="pub-sub">${escapeHtml(item.modeSlug)} · релиз ${escapeHtml(item.version)}</div>
+          <div class="pub-sub">${escapeHtml(item.modeSlug)} · ${tKey("common.release.lowercase")} ${escapeHtml(item.version)}</div>
         </div>
-        <span class="pub-status pending">На модерации</span>
+        <span class="pub-status pending">${tKey("pending.review")}</span>
       </div>
       <div class="pub-meta">
-        <span>Автор: ${escapeHtml(item.authorName)} (@${escapeHtml(item.authorUsername)})</span>
-        <span>Отправлен ${escapeHtml(publisherDate(item.createdAt))}</span>
+        <span>${tKey("moderation.author", [escapeHtml(item.authorName) + ' (@' + escapeHtml(item.authorUsername) + ')'])}</span>
+        <span>${tKey("submitted")} ${escapeHtml(publisherDate(item.createdAt))}</span>
       </div>
-      <div class="mod-changelog">${escapeHtml(item.changelog || 'Без changelog')}</div>
+      <div class="mod-changelog">${escapeHtml(item.changelog || tKey("no.changelog"))}</div>
       ${moderationScanHtml(item.scan)}
       <div class="pub-release-actions">
-        <button class="btn btn-primary" type="button" data-action="approve" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">Одобрить</button>
-        <button class="btn btn-ghost" type="button" data-action="reject" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">Отклонить</button>
+        <button class="btn btn-primary" type="button" data-action="approve" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">${tKey("approve")}</button>
+        <button class="btn btn-ghost" type="button" data-action="reject" data-id="${escapeHtml(item.releaseId)}" data-title="${escapeHtml(item.modeTitle)}">${tKey("decline")}</button>
       </div>
     </article>
   `).join('');
@@ -190,13 +208,13 @@ export function moderationQueueHtml() {
 export function moderationModesHtml() {
   const modes = S.moderationModes || [];
   if (!modes.length) {
-    return '<div class="mod-empty">Режимов пока нет.</div>';
+    return '<div class="mod-empty">' + tKey("moderation.no.modes") + '</div>';
   }
   return modes.map((mode) => {
-    const status = PUBLISHER_STATUS[mode.status] || mode.status;
+    const status = publisherStatusLabel(mode.status);
     const action = mode.status === 'hidden'
-      ? `<button class="btn btn-primary" type="button" data-action="unhide" data-id="${escapeHtml(mode.id)}" data-title="${escapeHtml(mode.title)}">Показать</button>`
-      : `<button class="btn btn-ghost" type="button" data-action="hide" data-id="${escapeHtml(mode.id)}" data-title="${escapeHtml(mode.title)}">Скрыть</button>`;
+      ? `<button class="btn btn-primary" type="button" data-action="unhide" data-id="${escapeHtml(mode.id)}" data-title="${escapeHtml(mode.title)}">${tKey("show")}</button>`
+      : `<button class="btn btn-ghost" type="button" data-action="hide" data-id="${escapeHtml(mode.id)}" data-title="${escapeHtml(mode.title)}">${tKey("hide")}</button>`;
     return `
       <article class="pub-card">
         <div class="pub-card-head">
@@ -207,8 +225,8 @@ export function moderationModesHtml() {
           <span class="pub-status ${escapeHtml(mode.status)}">${escapeHtml(status)}</span>
         </div>
         <div class="pub-meta">
-          <span>Автор: ${escapeHtml(mode.authorName)} (@${escapeHtml(mode.authorUsername)})</span>
-          <span>Обновлён ${escapeHtml(publisherDate(mode.updatedAt))}</span>
+          <span>${tKey("moderation.author", [escapeHtml(mode.authorName) + ' (@' + escapeHtml(mode.authorUsername) + ')'])}</span>
+          <span>${tKey("pattern.updated.x", [escapeHtml(publisherDate(mode.updatedAt))])}</span>
         </div>
         <div class="pub-release-actions">${action}</div>
       </article>
@@ -219,25 +237,25 @@ export function moderationModesHtml() {
 export function moderationReviewsHtml() {
   const items = S.moderationReviews || [];
   if (!items.length) {
-    return '<div class="mod-empty">Отзывов на модерации нет.</div>';
+    return '<div class="mod-empty">' + tKey("no.reviews.pending.moderation") + '</div>';
   }
   return items.map((item) => `
     <article class="pub-card">
       <div class="pub-card-head">
         <div>
-          <div class="pub-title">${escapeHtml(item.modeTitle || 'Режим')}</div>
+          <div class="pub-title">${escapeHtml(item.modeTitle || tKey("mode"))}</div>
           <div class="pub-sub">${escapeHtml(item.modeSlug || '')} · ${Number(item.rating) || 0} ★</div>
         </div>
-        <span class="pub-status pending">На проверке</span>
+        <span class="pub-status pending">${tKey("under.review")}</span>
       </div>
       <div class="pub-meta">
-        <span>От: ${escapeHtml(item.authorName || item.authorUsername || 'Игрок')}</span>
+        <span>${tKey("moderation.from", [escapeHtml(item.authorName || item.authorUsername || tKey("player.2"))])}</span>
         <span>${escapeHtml(publisherDate(item.createdAt))}</span>
       </div>
-      <div class="mod-changelog">${escapeHtml(item.text || 'Без текста')}</div>
+      <div class="mod-changelog">${escapeHtml(item.text || tKey("no.text"))}</div>
       <div class="pub-release-actions">
-        <button class="btn btn-primary" type="button" data-action="review-approve" data-id="${escapeHtml(item.id)}">Одобрить</button>
-        <button class="btn btn-ghost" type="button" data-action="review-reject" data-id="${escapeHtml(item.id)}">Отклонить</button>
+        <button class="btn btn-primary" type="button" data-action="review-approve" data-id="${escapeHtml(item.id)}">${tKey("approve")}</button>
+        <button class="btn btn-ghost" type="button" data-action="review-reject" data-id="${escapeHtml(item.id)}">${tKey("decline")}</button>
       </div>
     </article>
   `).join('');
@@ -248,37 +266,37 @@ export async function approveModerationReview(reviewId) {
   try {
     await api.adminApproveReview(reviewId);
     if (item && item.modeSlug) delete S.reviews[item.modeSlug];
-    toast('Отзыв опубликован', 'ok');
+    toast(tKey("review.published"), 'ok');
     S.moderationLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    toast('Не удалось одобрить отзыв: ' + err, 'error');
+    toast(tKey("failed.to.approve.review") + " " + err, 'error');
   }
 }
 
 export async function rejectModerationReview(reviewId) {
   const item = (S.moderationReviews || []).find((review) => review.id === reviewId);
   const ok = await moderationActions.askConfirm(
-    'Отклонить отзыв?',
-    'Отзыв не будет опубликован. Действие попадёт в журнал.',
-    'Отклонить'
+    tKey("reject.review"),
+    tKey("the.review.will.not"),
+    tKey("decline")
   );
   if (!ok) return;
   try {
     await api.adminRejectReview(reviewId);
     if (item && item.modeSlug) delete S.reviews[item.modeSlug];
-    toast('Отзыв отклонён', 'ok');
+    toast(tKey("review.rejected"), 'ok');
     S.moderationLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    toast('Не удалось отклонить отзыв: ' + err, 'error');
+    toast(tKey("failed.to.reject.review") + " " + err, 'error');
   }
 }
 
 export function moderationAuthorApplicationsHtml() {
   const items = S.moderationAuthorApplications || [];
   if (!items.length) {
-    return '<div class="mod-empty">Заявок на автора нет.</div>';
+    return '<div class="mod-empty">' + tKey("no.author.applications") + '</div>';
   }
   return items.map((item) => `
     <article class="pub-card">
@@ -287,16 +305,16 @@ export function moderationAuthorApplicationsHtml() {
           <div class="pub-title">${escapeHtml(item.displayName || item.username)}</div>
           <div class="pub-sub">@${escapeHtml(item.username)}</div>
         </div>
-        <span class="pub-status pending">Заявка</span>
+        <span class="pub-status pending">${tKey("moderation.application")}</span>
       </div>
       <div class="pub-meta">
-        <span>Отправлена ${escapeHtml(publisherDate(item.createdAt))}</span>
+        <span>${tKey("submitted.2")} ${escapeHtml(publisherDate(item.createdAt))}</span>
       </div>
       <div class="mod-changelog">${escapeHtml(item.message)}</div>
       ${item.links ? `<div class="hint">${escapeHtml(item.links)}</div>` : ''}
       <div class="pub-release-actions">
-        <button class="btn btn-primary" type="button" data-action="author-approve" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.displayName || item.username)}">Выдать автора</button>
-        <button class="btn btn-ghost" type="button" data-action="author-reject" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.displayName || item.username)}">Отклонить</button>
+        <button class="btn btn-primary" type="button" data-action="author-approve" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.displayName || item.username)}">${tKey("moderation.grant.author")}</button>
+        <button class="btn btn-ghost" type="button" data-action="author-reject" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.displayName || item.username)}">${tKey("decline")}</button>
       </div>
     </article>
   `).join('');
@@ -304,44 +322,44 @@ export function moderationAuthorApplicationsHtml() {
 
 export async function approveAuthorApplication(id, title) {
   const confirmed = await moderationActions.askConfirm(
-    'Выдать доступ автора?',
-    `Пользователь «${title}» сможет создавать режимы и публиковать релизы.`,
-    'Выдать'
+    tKey("grant.author.access"),
+    tKey("moderation.author.application.reject", [title]),
+    tKey("grant")
   );
   if (!confirmed) return;
   try {
     await api.adminApproveAuthorApplication(id);
-    toast('Доступ автора выдан', 'ok');
+    toast(tKey("author.access.granted"), 'ok');
     S.moderationLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    toast('Не удалось выдать доступ: ' + err, 'error');
+    toast(tKey("moderation.failed.grant", [err]), 'error');
   }
 }
 
 export function moderationAppealsHtml() {
   const items = S.moderationAppeals || [];
   if (!items.length) {
-    return '<div class="mod-empty">Апелляций нет.</div>';
+    return '<div class="mod-empty">' + tKey("no.appeals") + '</div>';
   }
   return items.map((item) => `
     <article class="pub-card">
       <div class="pub-card-head">
         <div>
           <div class="pub-title">${escapeHtml(item.modeTitle)}</div>
-          <div class="pub-sub">${escapeHtml(item.modeSlug)} · релиз ${escapeHtml(item.version)}</div>
+          <div class="pub-sub">${escapeHtml(item.modeSlug)} · ${tKey("common.release.lowercase")} ${escapeHtml(item.version)}</div>
         </div>
-        <span class="pub-status pending">Апелляция</span>
+        <span class="pub-status pending">${tKey("moderation.appeal")}</span>
       </div>
       <div class="pub-meta">
-        <span>Автор: ${escapeHtml(item.authorName)} (@${escapeHtml(item.authorUsername)})</span>
-        <span>Отправлена ${escapeHtml(publisherDate(item.createdAt))}</span>
+        <span>${tKey("moderation.author", [escapeHtml(item.authorName) + ' (@' + escapeHtml(item.authorUsername) + ')'])}</span>
+        <span>${tKey("submitted.2")} ${escapeHtml(publisherDate(item.createdAt))}</span>
       </div>
-      <div class="mod-reject-note">Причина отклонения: ${escapeHtml(item.rejectionNote || '—')}</div>
+      <div class="mod-reject-note">${tKey("rejection.reason")} ${escapeHtml(item.rejectionNote || '—')}</div>
       <div class="mod-changelog">${escapeHtml(item.message)}</div>
       <div class="pub-release-actions">
-        <button class="btn btn-primary" type="button" data-action="appeal-accept" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.modeTitle)}">Принять и опубликовать</button>
-        <button class="btn btn-ghost" type="button" data-action="appeal-reject" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.modeTitle)}">Отклонить</button>
+        <button class="btn btn-primary" type="button" data-action="appeal-accept" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.modeTitle)}">${tKey("accept.and.publish")}</button>
+        <button class="btn btn-ghost" type="button" data-action="appeal-reject" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.modeTitle)}">${tKey("decline")}</button>
       </div>
     </article>
   `).join('');
@@ -350,43 +368,43 @@ export function moderationAppealsHtml() {
 export async function resolveModerationAppeal(id, action, note) {
   if (action === 'accept') {
     const confirmed = await moderationActions.askConfirm(
-      'Принять апелляцию?',
-      'Релиз будет опубликован и появится в каталоге.',
-      'Опубликовать'
+      tKey("accept.appeal"),
+      tKey("the.release.will.be"),
+      tKey("publish")
     );
     if (!confirmed) return;
   }
   try {
     await api.adminResolveAppeal(id, action, note);
-    toast(action === 'accept' ? 'Релиз опубликован' : 'Апелляция отклонена', 'ok');
+    toast(action === 'accept' ? tKey("release.published") : tKey("appeal.rejected"), 'ok');
     S.moderationLoaded = false;
     S.publisherLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    toast('Не удалось рассмотреть апелляцию: ' + err, 'error');
+    toast(tKey("failed.to.resolve.appeal") + " " + err, 'error');
   }
 }
 
 export function moderationReportsHtml() {  const items = S.moderationReports || [];
   if (!items.length) {
-    return '<div class="mod-empty">Открытых жалоб нет.</div>';
+    return '<div class="mod-empty">' + tKey("no.open.reports") + '</div>';
   }
   return items.map((item) => `
     <article class="pub-card">
       <div class="pub-card-head">
         <div>
-          <div class="pub-title">${escapeHtml(item.targetTitle || 'Режим')}</div>
+          <div class="pub-title">${escapeHtml(item.targetTitle || tKey("mode"))}</div>
           <div class="pub-sub">${escapeHtml(item.targetSlug || item.targetId || '')}</div>
         </div>
-        <span class="pub-status rejected">Жалоба</span>
+        <span class="pub-status rejected">${tKey("moderation.report")}</span>
       </div>
       <div class="pub-meta">
-        <span>От: ${escapeHtml(item.reporterName || item.reporterUsername || 'Игрок')}</span>
+        <span>${tKey("moderation.from", [escapeHtml(item.reporterName || item.reporterUsername || tKey("player.2"))])}</span>
         <span>${escapeHtml(publisherDate(item.createdAt))}</span>
       </div>
       <div class="mod-changelog">${escapeHtml(item.reason)}</div>
       <div class="pub-release-actions">
-        <button class="btn btn-primary" type="button" data-action="close-report" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.targetTitle || 'жалобу')}">Закрыть жалобу</button>
+        <button class="btn btn-primary" type="button" data-action="close-report" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.targetTitle || tKey("moderation.report"))}">${tKey("moderation.close.report")}</button>
       </div>
     </article>
   `).join('');
@@ -394,18 +412,18 @@ export function moderationReportsHtml() {  const items = S.moderationReports || 
 
 export async function closeModerationReport(reportId) {
   const ok = await moderationActions.askConfirm(
-    'Закрыть жалобу?',
-    'Жалоба будет убрана из очереди, действие попадёт в журнал.',
-    'Закрыть'
+    tKey("close.report"),
+    tKey("the.report.will.be"),
+    tKey("topbar.close")
   );
   if (!ok) return;
   try {
     await api.adminCloseReport(reportId, '');
-    toast('Жалоба закрыта', 'ok');
+    toast(tKey("report.closed"), 'ok');
     S.moderationLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    toast('Не удалось закрыть жалобу: ' + err, 'error');
+    toast(tKey("failed.to.close.report") + " " + err, 'error');
   }
 }
 
@@ -414,18 +432,18 @@ export function moderationNewsHtml() {
   return `
     <form id="mod-news-form" class="mod-news-form" autocomplete="off">
       <div class="field">
-        <label for="mod-news-title">Заголовок</label>
-        <input id="mod-news-title" type="text" maxlength="120" placeholder="Что нового в Lavunio">
+        <label for="mod-news-title">${tKey("title")}</label>
+        <input id="mod-news-title" type="text" maxlength="120" placeholder="${tKey("moderation.news.title.placeholder")}">
       </div>
       <div class="field">
-        <label for="mod-news-body">Текст</label>
-        <textarea id="mod-news-body" rows="4" placeholder="Коротко о новости"></textarea>
+        <label for="mod-news-body">${tKey("text")}</label>
+        <textarea id="mod-news-body" rows="4" placeholder="${tKey("moderation.news.body.placeholder")}"></textarea>
       </div>
       <div class="form-error" id="mod-news-error" hidden></div>
-      <button class="btn btn-primary" id="mod-news-submit" type="submit">Опубликовать</button>
+      <button class="btn btn-primary" id="mod-news-submit" type="submit">${tKey("publish")}</button>
     </form>
     <div class="mod-news-list">
-      ${items.length ? items.map(newsCardHtml).join('') : '<div class="mod-empty">Новостей магазина пока нет.</div>'}
+      ${items.length ? items.map(newsCardHtml).join('') : '<div class="mod-empty">' + tKey("no.store.news.yet") + '</div>'}
     </div>
   `;
 }
@@ -436,43 +454,43 @@ export async function submitStoreNews() {
   const error = $('mod-news-error');
   const button = $('mod-news-submit');
   if (title.length < 3) {
-    error.textContent = 'Укажи заголовок новости';
+    error.textContent = tKey("enter.the.news.title");
     error.hidden = false;
     return;
   }
   if (body.length < 3) {
-    error.textContent = 'Напиши текст новости';
+    error.textContent = tKey("write.the.news.text");
     error.hidden = false;
     return;
   }
   error.hidden = true;
   button.disabled = true;
-  button.textContent = 'Публикуем…';
+  button.textContent = tKey("publishing");
   try {
     await api.newsCreateStore(title, body);
     $('mod-news-title').value = '';
     $('mod-news-body').value = '';
-    toast('Новость магазина опубликована', 'ok');
+    toast(tKey("store.news.published"), 'ok');
     await moderationActions.loadStoreNews(true);
     renderModeration();
   } catch (err) {
-    error.textContent = String(err || 'Не удалось опубликовать новость');
+    error.textContent = String(err || tKey("failed.to.publish.news"));
     error.hidden = false;
   } finally {
     button.disabled = false;
-    button.textContent = 'Опубликовать';
+    button.textContent = tKey("publish");
   }
 }
 
 export function moderationHistoryHtml() {
   const items = S.moderationHistory || [];  if (!items.length) {
-    return '<div class="mod-empty">Журнал пока пуст.</div>';
+    return '<div class="mod-empty">' + tKey("the.log.is.empty") + '</div>';
   }
   return items.map((item) => {
-    const action = MODERATION_ACTIONS[item.action] || item.action;
+    const action = moderationActionLabel(item.action);
     const target = item.targetType === 'mode'
-      ? `режим ${String(item.targetId).slice(0, 8)}`
-      : `релиз ${String(item.targetId).slice(0, 8)}`;
+      ? `${tKey("common.mode.lowercase")} ${String(item.targetId).slice(0, 8)}`
+      : `${tKey("common.release.lowercase")} ${String(item.targetId).slice(0, 8)}`;
     return `
       <div class="mod-history-row">
         <span class="mod-history-action">${escapeHtml(action)}</span>
@@ -490,22 +508,22 @@ export function openModerationNote(kind, id, title) {
   const appeal = kind === 'appeal-reject';
   const author = kind === 'author-reject';
   $('moderation-note-title').textContent = author
-    ? 'Отклонить заявку'
+    ? tKey("reject.application")
     : appeal
-      ? 'Отклонить апелляцию'
+      ? tKey("reject.appeal")
       : reject
-        ? 'Отклонить релиз'
-        : 'Скрыть режим';
+        ? tKey("reject.release")
+        : tKey("hide.mode");
   $('moderation-note-hint').textContent = author
-    ? `Заявка пользователя «${title}» будет отклонена. Причина будет видна в лаунчере.`
+    ? tKey("moderation.author.application.reject", [title])
     : appeal
-      ? `Апелляция по режиму «${title}» будет отклонена. Автор увидит причину.`
+      ? tKey("moderation.appeal.reject", [title])
       : reject
-        ? `Релиз «${title}» будет отклонён. Автор увидит причину.`
-        : `Режим «${title}» исчезнет из каталога.`;
+        ? tKey("moderation.release.reject", [title])
+        : tKey("moderation.mode.hide", [title]);
   $('moderation-note-text').value = '';
   $('moderation-note-error').hidden = true;
-  $('moderation-note-submit').textContent = author || appeal || reject ? 'Отклонить' : 'Скрыть';
+  $('moderation-note-submit').textContent = author || appeal || reject ? tKey("decline") : tKey("hide");
   moderationActions.openModal('modal-moderation-note');
   setTimeout(() => $('moderation-note-text').focus(), 50);
 }
@@ -516,7 +534,7 @@ export async function submitModerationNote() {
   const note = $('moderation-note-text').value.trim();
   const error = $('moderation-note-error');
   if (!note) {
-    error.textContent = 'Укажи причину';
+    error.textContent = tKey("enter.a.reason");
     error.hidden = false;
     return;
   }
@@ -527,16 +545,16 @@ export async function submitModerationNote() {
   try {
     if (action.kind === 'reject') {
       await api.adminReject(action.id, note);
-      toast('Релиз отклонён', 'ok');
+      toast(tKey("release.rejected"), 'ok');
     } else if (action.kind === 'appeal-reject') {
       await api.adminResolveAppeal(action.id, 'reject', note);
-      toast('Апелляция отклонена', 'ok');
+      toast(tKey("appeal.rejected"), 'ok');
     } else if (action.kind === 'author-reject') {
       await api.adminRejectAuthorApplication(action.id, note);
-      toast('Заявка отклонена', 'ok');
+      toast(tKey("request.declined"), 'ok');
     } else {
       await api.adminHideMode(action.id, note);
-      toast('Режим скрыт', 'ok');
+      toast(tKey("mode.hidden"), 'ok');
     }
     $('modal-moderation-note').hidden = true;
     S.moderationNoteAction = null;
@@ -544,7 +562,7 @@ export async function submitModerationNote() {
     S.publisherLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    error.textContent = String(err || 'Не удалось выполнить действие');
+    error.textContent = String(err || tKey("failed.to.perform.action"));
     error.hidden = false;
   } finally {
     button.disabled = false;
@@ -553,37 +571,37 @@ export async function submitModerationNote() {
 
 export async function approveModerationRelease(id, title) {
   const ok = await moderationActions.askConfirm(
-    'Одобрить релиз?',
-    `«${title || 'Релиз'}» появится в каталоге после одобрения.`,
-    'Одобрить'
+    tKey("approve.release"),
+    tKey("moderation.release.approved", [title || tKey("release")]),
+    tKey("approve")
   );
   if (!ok) return;
   try {
     await api.adminApprove(id);
-    toast('Релиз опубликован', 'ok');
+    toast(tKey("release.published"), 'ok');
     S.moderationLoaded = false;
     S.publisherLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    toast('Не удалось одобрить релиз: ' + err, 'error');
+    toast(tKey("failed.to.approve.release") + " " + err, 'error');
   }
 }
 
 export async function unhideModerationMode(id, title) {
   const ok = await moderationActions.askConfirm(
-    'Показать режим?',
-    `«${title || 'Режим'}» снова появится в каталоге.`,
-    'Показать'
+    tKey("show.mode"),
+    tKey("moderation.mode.restored", [title || tKey("mode")]),
+    tKey("show")
   );
   if (!ok) return;
   try {
     await api.adminUnhideMode(id);
-    toast('Режим снова в каталоге', 'ok');
+    toast(tKey("mode.is.back.in"), 'ok');
     S.moderationLoaded = false;
     S.publisherLoaded = false;
     await loadModeration(true);
   } catch (err) {
-    toast('Не удалось показать режим: ' + err, 'error');
+    toast(tKey("failed.to.show.mode") + " " + err, 'error');
   }
 }
 

@@ -1,5 +1,6 @@
 'use strict';
 
+import { tKey } from '../i18n/index.js';
 import { escapeHtml } from './dom.js';
 
 export function stripRichText(value) {
@@ -15,7 +16,7 @@ export function stripRichText(value) {
 
 export function renderRichText(value) {
   const text = String(value || '').replace(/\r\n?/g, '\n').trim();
-  if (!text) return '<p>Описание пока не заполнено.</p>';
+  if (!text) return '<p>' + tKey('no.description.yet') + '</p>';
 
   const inline = (raw) => escapeHtml(raw)
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')

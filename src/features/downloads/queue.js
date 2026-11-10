@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { modeById } from '../../core/modes.js';
@@ -36,7 +38,7 @@ function enqueueDownload(mode, action, autoPlay = false, silent = false) {
   const existing = downloadTaskForMode(mode.id);
   if (existing) {
     if (!silent) {
-      toast(existing.status === 'downloading' ? 'Этот режим уже скачивается' : 'Этот режим уже в очереди', 'warn');
+      toast(existing.status === 'downloading' ? tKey("this.mode.is.already.2") : tKey("this.mode.is.already"), 'warn');
     }
     return;
   }
@@ -51,7 +53,7 @@ function enqueueDownload(mode, action, autoPlay = false, silent = false) {
     autoPlay: !!autoPlay,
     status: 'queued',
     progress: 0,
-    stage: 'В очереди',
+    stage: tKey("queued"),
     speed: 0,
     eta: 0,
     error: '',
@@ -64,7 +66,7 @@ function enqueueDownload(mode, action, autoPlay = false, silent = false) {
   renderDownloads();
   pumpDownloads();
   if (!silent) {
-    toast(action === 'update' ? 'Обновление добавлено в очередь' : 'Загрузка добавлена в очередь', 'info');
+    toast(action === 'update' ? tKey("update.queued") : tKey("download.queued"), 'info');
   }
 }
 
@@ -75,15 +77,15 @@ function pumpDownloads() {
   const mode = modeById(task.modeId);
   if (!mode) {
     task.status = 'error';
-    task.stage = 'Ошибка';
-    task.error = 'Режим не найден';
+    task.stage = tKey("error");
+    task.error = tKey("mode.not.found");
     renderDownloads();
     return pumpDownloads();
   }
 
   task.status = 'downloading';
   task.progress = 0;
-  task.stage = 'Подготовка';
+  task.stage = tKey("preparing");
   task.speed = 0;
   task.eta = 0;
   task.error = '';
@@ -94,7 +96,7 @@ function pumpDownloads() {
   S.busy = { modeId: mode.id, action: task.action };
   S.progress = 0;
   S.stage = task.stage;
-  S.status = task.action === 'play' ? 'Запускаю Minecraft…' : 'Загружаю файлы…';
+  S.status = task.action === 'play' ? tKey("launching.minecraft") : tKey("uploading.files");
   S.pendingPlay = task.autoPlay ? mode.id : null;
   downloadActions.updateCardProgress();
   renderDownloads();
@@ -104,10 +106,10 @@ function pumpDownloads() {
   Promise.resolve(request)
     .then((res) => {
       if (!res || !res.ok) {
-        const error = String((res && res.error) || 'Не удалось начать операцию');
+        const error = String((res && res.error) || tKey("failed.to.start.operation"));
         if (error.includes('Дождитесь завершения текущей операции')) {
           task.status = 'queued';
-          task.stage = 'В очереди';
+          task.stage = tKey("queued");
           task.speed = 0;
           task.eta = 0;
           S.downloadsActiveId = null;
@@ -128,7 +130,7 @@ function finishDownload(taskId, status = 'completed') {
   if (!task) return;
   task.status = status;
   task.progress = 1;
-  task.stage = status === 'completed' ? 'Готово' : task.stage;
+  task.stage = status === 'completed' ? tKey("done") : task.stage;
   task.speed = 0;
   task.eta = 0;
   task.finishedAt = Date.now();
@@ -146,8 +148,8 @@ function failDownload(taskId, error) {
   const task = S.downloads.find((item) => item.id === taskId);
   if (!task) return;
   task.status = 'error';
-  task.stage = 'Ошибка';
-  task.error = String(error || 'Не удалось выполнить загрузку');
+  task.stage = tKey("error");
+  task.error = String(error || tKey("failed.to.upload"));
   task.speed = 0;
   task.eta = 0;
   if (S.downloadsActiveId === task.id) S.downloadsActiveId = null;
@@ -167,14 +169,14 @@ function pauseDownload(id) {
   if (!task) return;
   if (task.status === 'queued') {
     task.status = 'paused';
-    task.stage = 'Пауза';
+    task.stage = tKey("pause");
     renderDownloads();
     return;
   }
   if (task.status !== 'downloading') return;
   task.pauseRequested = true;
   task.status = 'paused';
-  task.stage = 'Пауза';
+  task.stage = tKey("pause");
   task.speed = 0;
   task.eta = 0;
   renderDownloads();
@@ -185,13 +187,13 @@ function resumeDownload(id) {
   const task = S.downloads.find((item) => item.id === id);
   if (!task) return;
   if (S.downloadsActiveId === task.id) {
-    toast('Дождитесь остановки загрузки', 'warn');
+    toast(tKey("wait.for.the.download"), 'warn');
     return;
   }
   if (!['paused', 'error', 'cancelled'].includes(task.status)) return;
   task.status = 'queued';
   task.progress = 0;
-  task.stage = 'В очереди';
+  task.stage = tKey("queued");
   task.speed = 0;
   task.eta = 0;
   task.error = '';
@@ -212,7 +214,7 @@ function cancelDownload(id) {
   if (!task) return;
   if (['completed', 'cancelled'].includes(task.status)) return;
   task.status = 'cancelled';
-  task.stage = 'Отменено';
+  task.stage = tKey("cancelled");
   task.speed = 0;
   task.eta = 0;
   if (S.downloadsActiveId === task.id) {
@@ -227,7 +229,7 @@ function cancelDownload(id) {
 
 function removeDownload(id) {
   if (S.downloadsActiveId === id) {
-    toast('Сначала отмените загрузку', 'warn');
+    toast(tKey("cancel.the.download.first"), 'warn');
     return;
   }
   S.downloads = S.downloads.filter((task) => task.id !== id);

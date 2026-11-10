@@ -23,7 +23,7 @@
           </div>
         </div>
         <div class="splash-brand">Lavunio</div>
-        <div class="splash-sub" id="splash-sub">Загружаем режимы и аккаунт…</div>
+        <div class="splash-sub" id="splash-sub" data-i18n="loading.modes.and.account">Загружаем режимы и аккаунт…</div>
         <div class="splash-progress"><div id="splash-progress-bar"></div></div>
       </div>
 
@@ -49,7 +49,7 @@
         <div class="splash-brand">Lavunio</div>
         <div class="splash-update-pill">
           <span class="splash-update-pill-dot"></span>
-          <span>Обновление</span>
+          <span data-i18n="update">Обновление</span>
           <b id="splash-update-version">—</b>
         </div>
         <div class="splash-update-status" id="splash-update-status">Проверяю обновление…</div>
@@ -57,7 +57,7 @@
           <div class="splash-update-progress"><div id="splash-update-bar"></div></div>
           <div class="splash-update-percent" id="splash-update-percent">0%</div>
         </div>
-        <div class="splash-update-hint">Не закрывай лаунчер</div>
+        <div class="splash-update-hint" data-i18n="do.not.close.the">Не закрывай лаунчер</div>
       </div>
     </div>
   </div>
@@ -75,7 +75,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <circle cx="11" cy="11" r="6.5"/><path d="M16 16 L21 21"/>
       </svg>
-      <input id="search-input" type="text" placeholder="Поиск режимов" aria-label="Поиск режимов" data-i18n-placeholder="topbar.search" autocomplete="off" spellcheck="false">
+      <input id="search-input" type="text" placeholder="Поиск режимов" aria-label="Поиск режимов" data-i18n-placeholder="topbar.search" autocomplete="off" spellcheck="false" data-i18n-aria="topbar.search">
     </label>
 
     <button class="icon-btn" id="btn-refresh" title="Обновить список режимов" aria-label="Обновить список режимов" data-i18n-title="topbar.refresh">
@@ -139,7 +139,7 @@
         </button>
         </div>
 
-        <div class="side-group" id="side-group-manage" role="group" aria-label="Управление" hidden>
+        <div class="side-group" id="side-group-manage" role="group" aria-label="Управление" hidden data-i18n-aria="nav.management">
           <div class="side-group-label" data-i18n="nav.management">Управление</div>
           <button class="side-link" data-section="publisher" id="side-publisher" hidden>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -163,7 +163,7 @@
         </div>
       </nav>
       <div class="sidebar-profile" id="sidebar-profile-card">
-        <button class="sidebar-profile-main" id="sidebar-profile" type="button" aria-label="Мой профиль">
+        <button class="sidebar-profile-main" id="sidebar-profile" type="button" aria-label="Мой профиль" data-i18n-aria="my.profile">
           <span class="avatar" id="sidebar-avatar"></span>
           <span class="sidebar-profile-copy">
             <b id="sidebar-name">Гость</b>
@@ -176,7 +176,7 @@
               <path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/>
             </svg>
           </button>
-          <button class="icon-btn" id="sidebar-settings" title="Настройки" aria-label="Настройки" type="button">
+          <button class="icon-btn" id="sidebar-settings" title="Настройки" aria-label="Настройки" type="button" data-i18n-title="settings">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <circle cx="12" cy="12" r="3.2"/>
               <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/>
@@ -193,20 +193,20 @@
     <main id="app">
     <section id="store-view">
       <div class="store-intro">
-        <h1>Каталог режимов</h1>
-        <p>Выбирай режимы, ставь одной кнопкой и следи за обновлениями.</p>
+        <h1 data-i18n="mode.catalog">Каталог режимов</h1>
+        <p data-i18n="pick.modes.install.with">Выбирай режимы, ставь одной кнопкой и следи за обновлениями.</p>
       </div>
 
       <section id="featured" class="featured">
         <img id="featured-img" alt="">
         <div class="featured-shade"></div>
         <div class="featured-content">
-          <div class="eyebrow">РЕКОМЕНДУЕМ</div>
+          <div class="eyebrow" data-i18n="featured">РЕКОМЕНДУЕМ</div>
           <h1 id="featured-title"></h1>
           <div id="featured-tags" class="tags"></div>
           <p id="featured-desc"></p>
           <div class="featured-actions">
-            <button class="btn btn-primary" id="featured-open">Подробнее</button>
+            <button class="btn btn-primary" id="featured-open" data-i18n="details">Подробнее</button>
             <span class="featured-status" id="featured-status"></span>
           </div>
         </div>
@@ -217,16 +217,16 @@
           <div class="shelf-title"><h2 id="catalog-title">Все режимы</h2><span class="count" id="modes-count"></span></div>
           <div class="catalog-controls">
             <div class="filter-chips" id="store-filters">
-              <button type="button" data-store-filter="all" class="active">Все</button>
-              <button type="button" data-store-filter="installed">Установленные</button>
-              <button type="button" data-store-filter="following">Подписки</button>
-              <button type="button" data-store-filter="development">В разработке</button>
-              <button type="button" data-store-filter="crowdfunding">Сбор на релиз</button>
+              <button type="button" data-store-filter="all" class="active" data-i18n="all">Все</button>
+              <button type="button" data-store-filter="installed" data-i18n="installed">Установленные</button>
+              <button type="button" data-store-filter="following" data-i18n="following">Подписки</button>
+              <button type="button" data-store-filter="development" data-i18n="in.development">В разработке</button>
+              <button type="button" data-store-filter="crowdfunding" data-i18n="crowdfunding">Сбор на релиз</button>
             </div>
             <select id="store-sort" class="sort-select">
-              <option value="date" selected>По дате</option>
-              <option value="title">По названию</option>
-              <option value="default">По умолчанию</option>
+              <option value="date" selected data-i18n="by.date">По дате</option>
+              <option value="title" data-i18n="by.name">По названию</option>
+              <option value="default" data-i18n="default">По умолчанию</option>
             </select>
           </div>
         </div>
@@ -249,14 +249,14 @@
 
       <section id="feed" class="shelf feed-shelf" hidden>
         <div class="shelf-head">
-          <div class="shelf-title"><h2>Лента подписок</h2></div>
+          <div class="shelf-title"><h2 data-i18n="following.feed">Лента подписок</h2></div>
         </div>
         <div id="feed-list" class="feed-list"></div>
       </section>
 
       <section id="store-news" class="shelf news-shelf" hidden>
         <div class="shelf-head">
-          <div class="shelf-title"><h2>Новости магазина</h2></div>
+          <div class="shelf-title"><h2 data-i18n="store.news">Новости магазина</h2></div>
         </div>
         <div id="store-news-list" class="news-list"></div>
       </section>
@@ -267,45 +267,45 @@
       <div class="library-head">
         <div class="dashboard-copy">
           <div class="eyebrow">Lavunio</div>
-          <h1>Библиотека</h1>
-          <p>Твоя коллекция режимов. Всё, что добавлено, всегда под рукой.</p>
+          <h1 data-i18n="nav.library">Библиотека</h1>
+          <p data-i18n="your.mode.collection.everything">Твоя коллекция режимов. Всё, что добавлено, всегда под рукой.</p>
         </div>
         <div class="dashboard-stats">
-          <div class="dash-stat"><span>В библиотеке</span><b id="library-stat-total">0</b></div>
-          <div class="dash-stat"><span>Установлено</span><b id="library-stat-installed">0</b></div>
-          <div class="dash-stat"><span>Обновлений</span><b id="library-stat-updates">0</b></div>
-          <div class="dash-stat"><span>Наиграно</span><b id="library-stat-playtime">—</b></div>
+          <div class="dash-stat"><span data-i18n="sidebar.inLibrary">В библиотеке</span><b id="library-stat-total">0</b></div>
+          <div class="dash-stat"><span data-i18n="sidebar.installed">Установлено</span><b id="library-stat-installed">0</b></div>
+          <div class="dash-stat"><span data-i18n="updates">Обновлений</span><b id="library-stat-updates">0</b></div>
+          <div class="dash-stat"><span data-i18n="playtime">Наиграно</span><b id="library-stat-playtime">—</b></div>
         </div>
       </div>
 
       <div class="update-banner" id="library-update-banner" hidden>
         <div class="update-banner-copy">
-          <b>Доступны обновления режимов: <span id="library-update-count">0</span></b>
-          <span>Обнови установленные режимы до актуальных версий.</span>
+          <b><span data-i18n="mode.updates.available">Доступны обновления режимов:</span> <span id="library-update-count">0</span></b>
+          <span data-i18n="update.installed.modes.to">Обнови установленные режимы до актуальных версий.</span>
         </div>
         <div class="update-banner-actions">
-          <button class="btn btn-primary" id="library-update-all" type="button">Обновить все</button>
-          <button class="btn btn-ghost" id="library-update-later" type="button">Позже</button>
+          <button class="btn btn-primary" id="library-update-all" type="button" data-i18n="update.all">Обновить все</button>
+          <button class="btn btn-ghost" id="library-update-later" type="button" data-i18n="later">Позже</button>
         </div>
       </div>
 
       <div class="shelf-head catalog-head">
-        <div class="shelf-title"><h2>Все режимы</h2><span class="count" id="library-count"></span></div>
+        <div class="shelf-title"><h2 data-i18n="all.modes">Все режимы</h2><span class="count" id="library-count"></span></div>
         <div class="catalog-controls">
           <div class="filter-chips" id="library-filters">
-            <button type="button" data-library-filter="all" class="active">Все</button>
-            <button type="button" data-library-filter="installed">Установленные</button>
-            <button type="button" data-library-filter="hidden">Скрытые</button>
-            <button type="button" data-library-filter="development">В разработке</button>
-            <button type="button" data-library-filter="crowdfunding">Сбор на релиз</button>
+            <button type="button" data-library-filter="all" class="active" data-i18n="all">Все</button>
+            <button type="button" data-library-filter="installed" data-i18n="installed">Установленные</button>
+            <button type="button" data-library-filter="hidden" data-i18n="hidden.2">Скрытые</button>
+            <button type="button" data-library-filter="development" data-i18n="in.development">В разработке</button>
+            <button type="button" data-library-filter="crowdfunding" data-i18n="crowdfunding">Сбор на релиз</button>
           </div>
           <select id="library-sort" class="sort-select">
-            <option value="date" selected>По дате</option>
-            <option value="installed">По установке</option>
-            <option value="size">По размеру</option>
-            <option value="playtime">По времени игры</option>
-            <option value="title">По названию</option>
-            <option value="default">По умолчанию</option>
+            <option value="date" selected data-i18n="by.date">По дате</option>
+            <option value="installed" data-i18n="by.install">По установке</option>
+            <option value="size" data-i18n="by.size">По размеру</option>
+            <option value="playtime" data-i18n="by.playtime">По времени игры</option>
+            <option value="title" data-i18n="by.name">По названию</option>
+            <option value="default" data-i18n="default">По умолчанию</option>
           </select>
         </div>
       </div>
@@ -360,20 +360,20 @@
       <div class="library-head publisher-head">
         <div class="dashboard-copy">
           <div class="eyebrow">Lavunio</div>
-          <h1>Команда</h1>
-          <p>Профиль команды, участники и режимы.</p>
+          <h1 data-i18n="nav.team">Команда</h1>
+          <p data-i18n="team.profile.members.and">Профиль команды, участники и режимы.</p>
         </div>
         <div class="publisher-head-actions">
           <div class="dashboard-stats">
-            <div class="dash-stat"><span>Команд</span><b id="team-stat-count">0</b></div>
+            <div class="dash-stat"><span data-i18n="teams">Команд</span><b id="team-stat-count">0</b></div>
           </div>
-          <button class="btn btn-primary" id="team-new" type="button">Новая команда</button>
+          <button class="btn btn-primary" id="team-new" type="button" data-i18n="new.team">Новая команда</button>
         </div>
       </div>
 
       <div class="publisher-toolbar">
         <div class="hint" id="team-hint">Загрузка…</div>
-        <button class="btn btn-ghost" id="team-refresh" type="button">Обновить</button>
+        <button class="btn btn-ghost" id="team-refresh" type="button" data-i18n="messages.refresh">Обновить</button>
       </div>
 
       <div id="team-invitations" class="team-invites" hidden></div>
@@ -386,8 +386,8 @@
             <circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5c2.6.3 4.5 2.4 4.5 5.5"/>
           </svg>
         </div>
-        <h3>Команд пока нет</h3>
-        <p>Создай команду, чтобы публиковать режимы от её имени.</p>
+        <h3 data-i18n="no.teams.yet">Команд пока нет</h3>
+        <p data-i18n="create.a.team.to">Создай команду, чтобы публиковать режимы от её имени.</p>
       </div>
     </section>
 
@@ -395,26 +395,26 @@
       <div class="library-head publisher-head">
         <div class="dashboard-copy">
           <div class="eyebrow">Lavunio</div>
-          <h1>Публикация</h1>
-          <p>Черновики, релизы и статусы модерации.</p>
+          <h1 data-i18n="nav.publishing">Публикация</h1>
+          <p data-i18n="drafts.releases.and.moderation">Черновики, релизы и статусы модерации.</p>
         </div>
         <div class="publisher-head-actions">
           <div class="dashboard-stats">
-            <div class="dash-stat"><span>Мои режимы</span><b id="publisher-stat-modes">0</b></div>
-            <div class="dash-stat"><span>На модерации</span><b id="publisher-stat-pending">0</b></div>
+            <div class="dash-stat"><span data-i18n="my.modes">Мои режимы</span><b id="publisher-stat-modes">0</b></div>
+            <div class="dash-stat"><span data-i18n="pending.review">На модерации</span><b id="publisher-stat-pending">0</b></div>
           </div>
-          <button class="btn btn-primary" id="publisher-new-mode" type="button">Новый режим</button>
+          <button class="btn btn-primary" id="publisher-new-mode" type="button" data-i18n="new.mode">Новый режим</button>
         </div>
       </div>
 
       <div class="publisher-toolbar">
-        <div class="hint" id="publisher-hint">Загрузка списка…</div>
-        <button class="btn btn-ghost" id="publisher-refresh" type="button">Обновить</button>
+        <div class="hint" id="publisher-hint" data-i18n="loading.list">Загрузка списка…</div>
+        <button class="btn btn-ghost" id="publisher-refresh" type="button" data-i18n="messages.refresh">Обновить</button>
       </div>
 
       <div class="publisher-progress" id="publisher-progress" hidden>
         <div class="publisher-progress-head">
-          <span id="publisher-progress-stage">Загрузка</span>
+          <span id="publisher-progress-stage" data-i18n="loading">Загрузка</span>
           <b id="publisher-progress-percent">0%</b>
         </div>
         <div class="progress"><div class="progress-bar" id="publisher-progress-bar"></div></div>
@@ -428,8 +428,8 @@
             <path d="M12 16V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v4.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V15"/>
           </svg>
         </div>
-        <h3>Режимов пока нет</h3>
-        <p>Создай первый черновик, загрузи сборку и отправь её на модерацию.</p>
+        <h3 data-i18n="no.modes.yet">Режимов пока нет</h3>
+        <p data-i18n="create.your.first.draft">Создай первый черновик, загрузи сборку и отправь её на модерацию.</p>
       </div>
     </section>
 
@@ -437,27 +437,27 @@
       <div class="library-head publisher-head">
         <div class="dashboard-copy">
           <div class="eyebrow">Lavunio</div>
-          <h1>Модерация</h1>
-          <p>Очередь релизов, скрытие режимов и журнал действий.</p>
+          <h1 data-i18n="nav.moderation">Модерация</h1>
+          <p data-i18n="release.queue.mode.hiding">Очередь релизов, скрытие режимов и журнал действий.</p>
         </div>
         <div class="publisher-head-actions">
           <div class="dashboard-stats">
-            <div class="dash-stat"><span>На модерации</span><b id="moderation-stat-pending">0</b></div>
-            <div class="dash-stat"><span>Скрыто</span><b id="moderation-stat-hidden">0</b></div>
+            <div class="dash-stat"><span data-i18n="pending.review">На модерации</span><b id="moderation-stat-pending">0</b></div>
+            <div class="dash-stat"><span data-i18n="hidden">Скрыто</span><b id="moderation-stat-hidden">0</b></div>
           </div>
-          <button class="btn btn-ghost" id="moderation-refresh" type="button">Обновить</button>
+          <button class="btn btn-ghost" id="moderation-refresh" type="button" data-i18n="messages.refresh">Обновить</button>
         </div>
       </div>
 
       <div class="settings-tabs mod-tabs" id="moderation-tabs">
-        <button class="settings-tab active" type="button" data-mod-tab="queue">Очередь</button>
-        <button class="settings-tab" type="button" data-mod-tab="modes">Режимы</button>
-        <button class="settings-tab" type="button" data-mod-tab="reviews">Отзывы</button>
-        <button class="settings-tab" type="button" data-mod-tab="reports">Жалобы</button>
-        <button class="settings-tab" type="button" data-mod-tab="appeals">Апелляции</button>
-        <button class="settings-tab" type="button" data-mod-tab="applications">Заявки</button>
-        <button class="settings-tab" type="button" data-mod-tab="news">Новости</button>
-        <button class="settings-tab" type="button" data-mod-tab="history">Журнал</button>
+        <button class="settings-tab active" type="button" data-mod-tab="queue" data-i18n="queue">Очередь</button>
+        <button class="settings-tab" type="button" data-mod-tab="modes" data-i18n="modes">Режимы</button>
+        <button class="settings-tab" type="button" data-mod-tab="reviews" data-i18n="reviews">Отзывы</button>
+        <button class="settings-tab" type="button" data-mod-tab="reports" data-i18n="reports">Жалобы</button>
+        <button class="settings-tab" type="button" data-mod-tab="appeals" data-i18n="appeals">Апелляции</button>
+        <button class="settings-tab" type="button" data-mod-tab="applications" data-i18n="applications">Заявки</button>
+        <button class="settings-tab" type="button" data-mod-tab="news" data-i18n="news">Новости</button>
+        <button class="settings-tab" type="button" data-mod-tab="history" data-i18n="log">Журнал</button>
       </div>
 
       <div id="moderation-content" class="moderation-list"></div>
@@ -480,9 +480,9 @@
           </div>
           <div class="hero-action">
             <button class="btn btn-primary btn-block btn-big" id="detail-action">Установить</button>
-            <button class="btn btn-ghost btn-block" id="detail-defer" type="button" hidden>Отложить обновление</button>
+            <button class="btn btn-ghost btn-block" id="detail-defer" type="button" hidden data-i18n="postpone.update">Отложить обновление</button>
             <div class="hero-secondary">
-              <button class="btn btn-ghost" id="detail-report" type="button">Пожаловаться</button>
+              <button class="btn btn-ghost" id="detail-report" type="button" data-i18n="report">Пожаловаться</button>
             </div>
             <div class="status-text" id="detail-status"></div>
             <div class="progress" id="detail-progress" hidden><div class="progress-bar" id="detail-progress-bar"></div></div>
@@ -495,55 +495,55 @@
         <div class="detail-folder-actions">
           <button class="btn btn-ghost detail-folder" id="side-folder" type="button">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>
-            Открыть папку
+            <span data-i18n="open.folder">Открыть папку</span>
           </button>
           <button class="btn btn-ghost detail-folder" id="detail-verify" type="button">Проверить файлы</button>
         </div>
       </div>
 
-      <div class="detail-tabs" id="detail-tabs" role="tablist" aria-label="Разделы режима">
-        <button class="detail-tab active" type="button" role="tab" aria-selected="true" data-detail-tab="about">Об игре</button>
-        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="updates">Обновления</button>
-        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="reviews">Отзывы</button>
-        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="requirements">Требования</button>
+      <div class="detail-tabs" id="detail-tabs" role="tablist" aria-label="Разделы режима" data-i18n-aria="mode.sections">
+        <button class="detail-tab active" type="button" role="tab" aria-selected="true" data-detail-tab="about" data-i18n="about.the.game">Об игре</button>
+        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="updates" data-i18n="updates.2">Обновления</button>
+        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="reviews" data-i18n="reviews">Отзывы</button>
+        <button class="detail-tab" type="button" role="tab" aria-selected="false" data-detail-tab="requirements" data-i18n="requirements">Требования</button>
       </div>
 
       <div class="detail-content">
         <section class="release-spotlight" id="detail-spotlight" data-detail-tab="updates" hidden>
           <div class="spotlight-left">
-            <span class="spotlight-label">Последнее обновление</span>
+            <span class="spotlight-label" data-i18n="latest.update">Последнее обновление</span>
             <div class="spotlight-title" id="spotlight-title">—</div>
           </div>
           <div class="spotlight-right">
             <span id="spotlight-tag"></span>
             <span class="spotlight-date" id="spotlight-date"></span>
-            <button class="spotlight-link" id="spotlight-link" type="button">Вся история →</button>
+            <button class="spotlight-link" id="spotlight-link" type="button" data-i18n="full.history">Вся история →</button>
           </div>
         </section>
 
         <section class="detail-section about-section" data-detail-tab="about">
-          <h2>Об игре</h2>
+          <h2 data-i18n="about.the.game">Об игре</h2>
           <div id="detail-desc" class="detail-desc"></div>
         </section>
 
         <section class="detail-section" id="detail-gallery-section" data-detail-tab="about" hidden>
-          <h2>Скриншоты</h2>
+          <h2 data-i18n="screenshots">Скриншоты</h2>
           <div id="detail-gallery" class="detail-gallery"></div>
         </section>
 
         <section class="detail-section" id="detail-trailer-section" data-detail-tab="about" hidden>
-          <h2>Трейлер</h2>
+          <h2 data-i18n="trailer">Трейлер</h2>
           <div id="detail-trailer" class="trailer-frame"></div>
-          <button class="btn btn-ghost trailer-open" id="detail-trailer-open" type="button">Открыть в браузере</button>
+          <button class="btn btn-ghost trailer-open" id="detail-trailer-open" type="button" data-i18n="open.in.browser">Открыть в браузере</button>
         </section>
 
         <section class="detail-section" id="detail-news-section" data-detail-tab="about" hidden>
-          <h2>Новости режима</h2>
+          <h2 data-i18n="mode.news">Новости режима</h2>
           <div id="detail-news-list" class="news-list"></div>
         </section>
 
         <section class="detail-section" id="detail-author-section" data-detail-tab="about" hidden>
-          <h2>Автор</h2>
+          <h2 data-i18n="author">Автор</h2>
           <div class="author-card">
             <span class="avatar" id="detail-author-avatar"></span>
             <div class="author-info">
@@ -551,62 +551,62 @@
               <div class="author-sub" id="detail-author-sub"></div>
             </div>
             <button class="btn btn-ghost" id="detail-author-follow" type="button">Подписаться</button>
-            <button class="btn btn-ghost" id="detail-author-modes" type="button">Все режимы автора</button>
-            <button class="btn btn-ghost" id="detail-author-profile" type="button">Профиль</button>
+            <button class="btn btn-ghost" id="detail-author-modes" type="button" data-i18n="all.author.modes">Все режимы автора</button>
+            <button class="btn btn-ghost" id="detail-author-profile" type="button" data-i18n="profile">Профиль</button>
             <button class="btn btn-ghost" id="detail-team" type="button" hidden>Команда</button>
           </div>
         </section>
 
         <section class="detail-section" id="detail-sessions-section" data-detail-tab="about" hidden>
-          <h2>История сессий</h2>
+          <h2 data-i18n="session.history">История сессий</h2>
           <div id="detail-sessions" class="session-list"></div>
           <button class="btn btn-ghost btn-small" id="detail-sessions-more" type="button" hidden>Показать все</button>
         </section>
 
         <section class="detail-section reviews-section" id="detail-reviews-section" data-detail-tab="reviews" hidden>
           <div class="reviews-head">
-            <h2>Отзывы</h2>
+            <h2 data-i18n="reviews">Отзывы</h2>
             <span id="reviews-summary"></span>
           </div>
           <div id="reviews-list" class="reviews-list"></div>
           <form id="review-form" hidden>
             <div class="review-rating" id="review-stars">
-              <button type="button" data-star="1" aria-label="1 звезда">★</button>
-              <button type="button" data-star="2" aria-label="2 звезды">★</button>
-              <button type="button" data-star="3" aria-label="3 звезды">★</button>
-              <button type="button" data-star="4" aria-label="4 звезды">★</button>
-              <button type="button" data-star="5" aria-label="5 звёзд">★</button>
+              <button type="button" data-star="1" aria-label="1 звезда" data-i18n-aria="rating.1.star">★</button>
+              <button type="button" data-star="2" aria-label="2 звезды" data-i18n-aria="rating.2.stars">★</button>
+              <button type="button" data-star="3" aria-label="3 звезды" data-i18n-aria="rating.3.stars">★</button>
+              <button type="button" data-star="4" aria-label="4 звезды" data-i18n-aria="rating.4.stars">★</button>
+              <button type="button" data-star="5" aria-label="5 звёзд" data-i18n-aria="rating.5.stars">★</button>
             </div>
-            <textarea id="review-text" rows="3" placeholder="Поделись впечатлением о режиме"></textarea>
+            <textarea id="review-text" rows="3" placeholder="Поделись впечатлением о режиме" data-i18n-placeholder="share.your.impressions.of"></textarea>
             <div class="form-error" id="review-error" hidden></div>
-            <button class="btn btn-primary" id="review-submit" type="submit">Отправить отзыв</button>
+            <button class="btn btn-primary" id="review-submit" type="submit" data-i18n="submit.review">Отправить отзыв</button>
           </form>
-          <div class="hint">Отзывы публикуются после проверки модератором.</div>
-          <div class="hint" id="review-login-hint">Войдите в Lavunio ID, чтобы оставить отзыв.</div>
+          <div class="hint" data-i18n="reviews.are.published.after">Отзывы публикуются после проверки модератором.</div>
+          <div class="hint" id="review-login-hint" data-i18n="sign.in.to.lavunio">Войдите в Lavunio ID, чтобы оставить отзыв.</div>
         </section>
 
         <section class="detail-section" id="detail-requirements-section" data-detail-tab="requirements">
-          <h2>Системные требования</h2>
+          <h2 data-i18n="system.requirements">Системные требования</h2>
           <div class="req-grid">
-            <div class="req-item"><span>Процессор</span><b>Intel Core i5-9400F / AMD Ryzen 5 2600</b></div>
-            <div class="req-item"><span>ОЗУ</span><b>8 ГБ</b></div>
-            <div class="req-item"><span>Видеокарта</span><b>NVIDIA GeForce GTX 1650 / AMD Radeon RX 570 (4 ГБ)</b></div>
+            <div class="req-item"><span data-i18n="cpu">Процессор</span><b>Intel Core i5-9400F / AMD Ryzen 5 2600</b></div>
+            <div class="req-item"><span data-i18n="ram">ОЗУ</span><b data-i18n="n.8.gb">8 ГБ</b></div>
+            <div class="req-item"><span data-i18n="gpu">Видеокарта</span><b data-i18n="nvidia.geforce.gtx.1650">NVIDIA GeForce GTX 1650 / AMD Radeon RX 570 (4 ГБ)</b></div>
             <div class="req-item"><span>Windows</span><b>10/11 (64-bit)</b></div>
             <div class="req-item"><span>Java</span><b>17+</b></div>
-            <div class="req-item"><span>Место на диске</span><b id="req-size">—</b></div>
+            <div class="req-item"><span data-i18n="disk.space">Место на диске</span><b id="req-size">—</b></div>
           </div>
         </section>
 
         <section class="detail-section changelog-section" id="detail-changelog-section" data-detail-tab="updates">
           <div class="changelog-head">
-            <h2>История обновлений</h2>
+            <h2 data-i18n="update.history">История обновлений</h2>
             <button class="changelog-toggle" id="changelog-toggle" type="button" aria-expanded="false" hidden>Развернуть всё</button>
           </div>
           <div id="detail-changelog" class="changelog-list"></div>
         </section>
 
         <section class="shelf" id="more-section" data-detail-tab="about" hidden>
-          <div class="shelf-head"><h2>Другие режимы</h2></div>
+          <div class="shelf-head"><h2 data-i18n="other.modes">Другие режимы</h2></div>
           <div id="more-grid" class="grid"></div>
         </section>
       </div>
@@ -618,79 +618,79 @@
   <div class="modal-overlay" id="modal-settings" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <div class="modal">
       <div class="modal-head">
-        <h2 id="settings-title">Настройки</h2>
+        <h2 id="settings-title" data-i18n="settings">Настройки</h2>
         <button class="modal-close" data-close="modal-settings">✕</button>
       </div>
 
       <div id="settings-minecraft" class="settings-pane">
         <div class="field">
-          <label for="set-lang">Язык</label>
+          <label for="set-lang" data-i18n="language">Язык</label>
           <select id="set-lang">
-            <option value="ru">Русский</option>
+            <option value="ru" data-i18n="russian">Русский</option>
             <option value="en">English</option>
           </select>
-          <div class="hint">Язык интерфейса</div>
+          <div class="hint" data-i18n="launcher.interface.language">Язык интерфейса</div>
         </div>
 
         <div class="field">
-          <label>Оперативная память: <output id="ram-out">4 ГБ</output></label>
+          <label><span data-i18n="memory">Оперативная память:</span> <output id="ram-out">4 ГБ</output></label>
           <input type="range" id="set-ram" min="2" max="32" step="1" value="4">
-          <div class="hint">Сколько ОЗУ отдать игре. 4–8 ГБ — нормально для сборок</div>
+          <div class="hint" data-i18n="how.much.ram.to">Сколько ОЗУ отдать игре. 4–8 ГБ — нормально для сборок</div>
         </div>
 
         <div class="field">
-          <label>Папка игры</label>
+          <label data-i18n="game.folder">Папка игры</label>
           <select id="set-dir-select"></select>
           <div class="row">
             <input type="text" id="set-dir" readonly>
-            <button class="btn btn-ghost" id="btn-choose-dir">Другая папка</button>
-            <button class="btn btn-ghost" id="btn-open-dir">Открыть</button>
+            <button class="btn btn-ghost" id="btn-choose-dir" data-i18n="another.folder">Другая папка</button>
+            <button class="btn btn-ghost" id="btn-open-dir" data-i18n="open">Открыть</button>
           </div>
           <div class="hint" id="settings-disk-info">Свободно: — · Библиотека: —</div>
         </div>
 
         <div class="field">
-          <label>Окно игры</label>
+          <label data-i18n="game.window">Окно игры</label>
           <div class="row">
             <input type="number" id="set-width" min="400" max="3840" placeholder="925">
             <span class="times">×</span>
             <input type="number" id="set-height" min="300" max="2160" placeholder="530">
-            <label class="check"><input type="checkbox" id="set-fullscreen"> Полный экран</label>
+            <label class="check"><input type="checkbox" id="set-fullscreen"> <span data-i18n="fullscreen">Полный экран</span></label>
           </div>
         </div>
 
         <details class="settings-advanced">
-          <summary>Дополнительно</summary>
+          <summary data-i18n="advanced">Дополнительно</summary>
           <div class="field">
-            <label>Путь к Java</label>
-            <input type="text" id="set-java" placeholder="Автоматически">
-            <div class="hint">Оставь пустым — лаунчер найдёт подходящую Java сам. Указывай путь, только если нужно выбрать конкретную версию.</div>
+            <label data-i18n="java.path">Путь к Java</label>
+            <input type="text" id="set-java" placeholder="Автоматически" data-i18n-placeholder="automatic">
+            <div class="hint" data-i18n="leave.empty.and.the">Оставь пустым — лаунчер найдёт подходящую Java сам. Указывай путь, только если нужно выбрать конкретную версию.</div>
           </div>
           <div class="field">
-            <label class="check standalone"><input type="checkbox" id="set-jvm-flags" checked> Оптимизированные JVM-флаги (G1GC)</label>
-            <div class="hint">Меньше лагов и стабильнее запуск. Отключи, если Java не стартует или сборка несовместима.</div>
+            <label class="check standalone"><input type="checkbox" id="set-jvm-flags" checked> <span data-i18n="optimized.jvm.flags.g1gc">Оптимизированные JVM-флаги (G1GC)</span></label>
+            <div class="hint" data-i18n="fewer.stutters.and.more">Меньше лагов и стабильнее запуск. Отключи, если Java не стартует или сборка несовместима.</div>
           </div>
           <div class="field">
-            <label>Логи</label>
+            <label data-i18n="logs">Логи</label>
             <div class="row">
               <input type="text" id="set-logs-path" readonly>
-              <button class="btn btn-ghost" id="btn-open-logs" type="button">Открыть папку</button>
+              <button class="btn btn-ghost" id="btn-open-logs" type="button" data-i18n="open.folder">Открыть папку</button>
             </div>
-            <div class="hint">Логи хранятся локально и помогают найти причину ошибки.</div>
+            <div class="hint" data-i18n="logs.are.stored.locally">Логи хранятся локально и помогают найти причину ошибки.</div>
           </div>
         </details>
       </div>
 
       <div class="settings-legal">
-        <a href="#" data-legal="terms">Условия</a>
+        <a href="#" data-legal="terms" data-i18n="terms">Условия</a>
         <span>·</span>
-        <a href="#" data-legal="privacy">Конфиденциальность</a>
+        <a href="#" data-legal="privacy" data-i18n="privacy">Конфиденциальность</a>
         <span>·</span>
-        <a href="#" data-legal="rules">Правила</a>
+        <a href="#" data-legal="rules" data-i18n="rules">Правила</a>
       </div>
 
       <div class="modal-foot">
-        <button class="btn btn-primary" id="btn-save-settings">Сохранить</button>
+        <button class="btn btn-primary" id="btn-save-settings" data-i18n="save">Сохранить</button>
       </div>
     </div>
   </div>
@@ -713,8 +713,8 @@
         </div>
 
         <div class="lavunio-verify" id="lavunio-verify" hidden>
-          <span id="lavunio-verify-text">Почта не подтверждена</span>
-          <button class="link link-btn" type="button" id="lavunio-verify-btn">Подтвердить</button>
+          <span id="lavunio-verify-text" data-i18n="email.not.verified">Почта не подтверждена</span>
+          <button class="link link-btn" type="button" id="lavunio-verify-btn" data-i18n="confirm">Подтвердить</button>
         </div>
 
         <form class="acc-form" id="lavunio-form" autocomplete="on">
@@ -723,20 +723,20 @@
             <input id="lavunio-email" type="email" autocomplete="email" placeholder="you@example.com">
           </div>
           <div class="field">
-            <label for="lavunio-password">Пароль</label>
-            <input id="lavunio-password" type="password" autocomplete="current-password" placeholder="Минимум 8 символов">
+            <label for="lavunio-password" data-i18n="password">Пароль</label>
+            <input id="lavunio-password" type="password" autocomplete="current-password" placeholder="Минимум 8 символов" data-i18n-placeholder="at.least.8.characters">
           </div>
           <div class="field" id="lavunio-username-field" hidden>
-            <label for="lavunio-username">Имя пользователя</label>
+            <label for="lavunio-username" data-i18n="username">Имя пользователя</label>
             <input id="lavunio-username" type="text" autocomplete="username" placeholder="steve">
           </div>
           <div class="consent-row" id="lavunio-consent-row" hidden>
             <input id="lavunio-consent" type="checkbox">
             <span>
-              <span>Я принимаю</span>
-              <button class="link link-btn" type="button" data-legal="terms">Условия использования</button>
-              <span>и</span>
-              <button class="link link-btn" type="button" data-legal="privacy">Политику конфиденциальности</button>
+              <span data-i18n="i.accept.the">Я принимаю</span>
+              <button class="link link-btn" type="button" data-legal="terms" data-i18n="terms.of.use">Условия использования</button>
+              <span data-i18n="and">и</span>
+              <button class="link link-btn" type="button" data-legal="privacy" data-i18n="privacy.policy">Политику конфиденциальности</button>
             </span>
           </div>
           <div class="form-error" id="lavunio-error" hidden></div>
@@ -750,36 +750,36 @@
         <div id="lavunio-signed" hidden>
           <div class="author-apply" id="author-apply" hidden>
             <div class="author-apply-copy">
-              <b>Публикация режимов</b>
-              <span id="author-apply-text">Хочешь публиковать свои режимы в Lavunio?</span>
+              <b data-i18n="mode.publishing">Публикация режимов</b>
+              <span id="author-apply-text" data-i18n="want.to.publish.your">Хочешь публиковать свои режимы в Lavunio?</span>
             </div>
-            <button class="btn btn-ghost" id="author-apply-btn" type="button">Стать автором</button>
+            <button class="btn btn-ghost" id="author-apply-btn" type="button" data-i18n="become.an.author">Стать автором</button>
           </div>
           <div class="skin-panel">
-            <div class="skin-preview"><img id="lavunio-skin-img" alt="Скин" hidden></div>
+            <div class="skin-preview"><img id="lavunio-skin-img" alt="Скин" hidden data-i18n-alt="skin"></div>
             <div class="skin-controls">
               <div class="field">
-                <label for="lavunio-skin-model">Модель скина</label>
+                <label for="lavunio-skin-model" data-i18n="skin.model">Модель скина</label>
                 <select id="lavunio-skin-model">
                   <option value="classic">Classic</option>
                   <option value="slim">Slim</option>
                 </select>
               </div>
               <div class="skin-actions">
-                <button class="btn btn-ghost" id="lavunio-skin-upload" type="button">Загрузить скин</button>
-                <button class="btn btn-ghost" id="lavunio-skin-delete" type="button">Удалить скин</button>
+                <button class="btn btn-ghost" id="lavunio-skin-upload" type="button" data-i18n="upload.skin">Загрузить скин</button>
+                <button class="btn btn-ghost" id="lavunio-skin-delete" type="button" data-i18n="delete.skin">Удалить скин</button>
               </div>
             </div>
           </div>
 
-          <button class="btn btn-ghost btn-block" id="lavunio-profile" type="button">Мой профиль</button>
-          <button class="btn btn-ghost btn-block" id="lavunio-logout" type="button">Выйти из Lavunio</button>
+          <button class="btn btn-ghost btn-block" id="lavunio-profile" type="button" data-i18n="my.profile">Мой профиль</button>
+          <button class="btn btn-ghost btn-block" id="lavunio-logout" type="button" data-i18n="sign.out.of.lavunio">Выйти из Lavunio</button>
         </div>
 
         <div class="hint center" id="lavunio-api-hint" hidden>
-          Lavunio API не настроен. Задайте <b>LAVUNIO_API_URL</b> при запуске лаунчера.
+          <span data-i18n="lavunio.api.is.not">Lavunio API не настроен. Задайте</span> <b>LAVUNIO_API_URL</b> <span data-i18n="when.launching.the.launcher">при запуске лаунчера.</span>
         </div>
-        <div class="hint center">Lavunio ID — это игровой аккаунт, скины и публикация режимов. Пароль хранится только на сервере Lavunio.</div>
+        <div class="hint center" data-i18n="lavunio.id.is.your">Lavunio ID — это игровой аккаунт, скины и публикация режимов. Пароль хранится только на сервере Lavunio.</div>
       </section>
     </div>
   </div>
@@ -794,8 +794,8 @@
       <form id="team-form" autocomplete="off">
         <div class="pub-grid">
           <div class="field">
-            <label for="team-title">Название</label>
-            <input id="team-title" type="text" maxlength="100" placeholder="Например, Night Studio">
+            <label for="team-title" data-i18n="name">Название</label>
+            <input id="team-title" type="text" maxlength="100" placeholder="Например, Night Studio" data-i18n-placeholder="for.example.night.studio">
           </div>
           <div class="field">
             <label for="team-slug">Slug</label>
@@ -803,28 +803,28 @@
           </div>
         </div>
         <div class="field">
-          <label for="team-description">Описание</label>
-          <textarea id="team-description" rows="4" maxlength="5000" placeholder="Чем занимается команда"></textarea>
+          <label for="team-description" data-i18n="description">Описание</label>
+          <textarea id="team-description" rows="4" maxlength="5000" placeholder="Чем занимается команда" data-i18n-placeholder="what.the.team.does"></textarea>
         </div>
         <div class="field">
-          <label for="team-links">Ссылки</label>
-          <input id="team-links" type="text" maxlength="1000" placeholder="Сайт, Discord, YouTube">
+          <label for="team-links" data-i18n="links">Ссылки</label>
+          <input id="team-links" type="text" maxlength="1000" placeholder="Сайт, Discord, YouTube" data-i18n-placeholder="website.discord.youtube">
         </div>
         <div class="field">
-          <label for="team-join-mode">Вступление</label>
+          <label for="team-join-mode" data-i18n="joining">Вступление</label>
           <select id="team-join-mode">
-            <option value="invite">Только по приглашению</option>
-            <option value="request">По заявке</option>
-            <option value="open">Свободное</option>
+            <option value="invite" data-i18n="invite.only">Только по приглашению</option>
+            <option value="request" data-i18n="by.application">По заявке</option>
+            <option value="open" data-i18n="open.2">Свободное</option>
           </select>
         </div>
         <div class="pub-grid">
           <div class="field">
-            <label for="team-avatar">Аватар (URL)</label>
+            <label for="team-avatar" data-i18n="avatar.url">Аватар (URL)</label>
             <input id="team-avatar" type="text" maxlength="500" placeholder="https://...">
           </div>
           <div class="field">
-            <label for="team-banner">Баннер (URL)</label>
+            <label for="team-banner" data-i18n="banner.url">Баннер (URL)</label>
             <input id="team-banner" type="text" maxlength="500" placeholder="https://...">
           </div>
         </div>
@@ -850,17 +850,17 @@
             <input id="team-invite-username" type="text" maxlength="20" placeholder="steve">
           </div>
           <div class="field">
-            <label for="team-invite-role">Роль</label>
+            <label for="team-invite-role" data-i18n="role">Роль</label>
             <select id="team-invite-role">
-              <option value="publisher">Публикатор</option>
-              <option value="designer">Дизайнер</option>
-              <option value="member" selected>Участник</option>
-              <option value="admin">Администратор</option>
+              <option value="publisher" data-i18n="publisher">Публикатор</option>
+              <option value="designer" data-i18n="designer">Дизайнер</option>
+              <option value="member" selected data-i18n="member">Участник</option>
+              <option value="admin" data-i18n="administrator">Администратор</option>
             </select>
           </div>
         </div>
         <div class="form-error" id="team-invite-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit">Пригласить</button>
+        <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit" data-i18n="invite">Пригласить</button>
       </form>
     </div>
   </div>
@@ -880,17 +880,17 @@
   <div class="modal-overlay" id="modal-team-join" hidden role="dialog" aria-modal="true" aria-labelledby="team-join-title">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="team-join-title">Заявка в команду</h2>
+        <h2 id="team-join-title" data-i18n="team.application">Заявка в команду</h2>
         <button class="modal-close" data-close="modal-team-join">✕</button>
       </div>
       <div class="hint" id="team-join-info"></div>
       <form id="team-join-form">
         <div class="field">
-          <label for="team-join-message">Сообщение</label>
-          <textarea id="team-join-message" rows="4" maxlength="1000" placeholder="Расскажи, чем можешь помочь команде"></textarea>
+          <label for="team-join-message" data-i18n="messages.placeholder">Сообщение</label>
+          <textarea id="team-join-message" rows="4" maxlength="1000" placeholder="Расскажи, чем можешь помочь команде" data-i18n-placeholder="tell.us.how.you"></textarea>
         </div>
         <div class="form-error" id="team-join-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="team-join-submit" type="submit">Отправить заявку</button>
+        <button class="btn btn-primary btn-block" id="team-join-submit" type="submit" data-i18n="submit.application">Отправить заявку</button>
       </form>
     </div>
   </div>
@@ -899,20 +899,20 @@
   <div class="modal-overlay" id="modal-team-news" hidden role="dialog" aria-modal="true" aria-labelledby="team-news-title-label">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="team-news-title-label">Новость команды</h2>
+        <h2 id="team-news-title-label" data-i18n="team.news">Новость команды</h2>
         <button class="modal-close" data-close="modal-team-news">✕</button>
       </div>
       <form id="team-news-form">
         <div class="field">
-          <label for="team-news-title">Заголовок</label>
+          <label for="team-news-title" data-i18n="title">Заголовок</label>
           <input id="team-news-title" type="text" maxlength="120">
         </div>
         <div class="field">
-          <label for="team-news-body">Текст</label>
+          <label for="team-news-body" data-i18n="text">Текст</label>
           <textarea id="team-news-body" rows="5" maxlength="5000"></textarea>
         </div>
         <div class="form-error" id="team-news-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="team-news-submit" type="submit">Опубликовать</button>
+        <button class="btn btn-primary btn-block" id="team-news-submit" type="submit" data-i18n="publish">Опубликовать</button>
       </form>
     </div>
   </div>
@@ -921,17 +921,17 @@
   <div class="modal-overlay" id="modal-team-transfer" hidden role="dialog" aria-modal="true" aria-labelledby="team-transfer-title">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="team-transfer-title">Передать владение</h2>
+        <h2 id="team-transfer-title" data-i18n="transfer.ownership">Передать владение</h2>
         <button class="modal-close" data-close="modal-team-transfer">✕</button>
       </div>
-      <div class="hint">Новый владелец должен состоять в команде. Ты станешь администратором.</div>
+      <div class="hint" data-i18n="the.new.owner.must">Новый владелец должен состоять в команде. Ты станешь администратором.</div>
       <form id="team-transfer-form">
         <div class="field">
           <label for="team-transfer-username">Username</label>
           <input id="team-transfer-username" type="text" maxlength="20">
         </div>
         <div class="form-error" id="team-transfer-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="team-transfer-submit" type="submit">Передать</button>
+        <button class="btn btn-primary btn-block" id="team-transfer-submit" type="submit" data-i18n="transfer">Передать</button>
       </form>
     </div>
   </div>
@@ -940,14 +940,14 @@
   <div class="modal-overlay" id="modal-publisher-mode" hidden role="dialog" aria-modal="true" aria-labelledby="pub-mode-title">
     <div class="modal">
       <div class="modal-head">
-        <h2 id="pub-mode-title">Новый режим</h2>
+        <h2 id="pub-mode-title" data-i18n="new.mode">Новый режим</h2>
         <button class="modal-close" data-close="modal-publisher-mode">✕</button>
       </div>
       <form id="publisher-mode-form" autocomplete="off">
         <div class="pub-grid">
           <div class="field">
-            <label for="pub-mode-title-input">Название</label>
-            <input id="pub-mode-title-input" type="text" placeholder="Например, Night Demon">
+            <label for="pub-mode-title-input" data-i18n="name">Название</label>
+            <input id="pub-mode-title-input" type="text" placeholder="Например, Night Demon" data-i18n-placeholder="for.example.night.demon">
           </div>
           <div class="field">
             <label for="pub-mode-slug-input">Slug</label>
@@ -955,20 +955,20 @@
           </div>
         </div>
         <div class="field">
-          <label for="pub-mode-short">Короткое описание</label>
-          <input id="pub-mode-short" type="text" placeholder="Одна строка для карточки">
+          <label for="pub-mode-short" data-i18n="short.description">Короткое описание</label>
+          <input id="pub-mode-short" type="text" placeholder="Одна строка для карточки" data-i18n-placeholder="one.line.for.the">
         </div>
         <div class="field">
-          <label for="pub-mode-description">Описание</label>
-          <textarea id="pub-mode-description" rows="5" placeholder="Подробно о режиме"></textarea>
+          <label for="pub-mode-description" data-i18n="description">Описание</label>
+          <textarea id="pub-mode-description" rows="5" placeholder="Подробно о режиме" data-i18n-placeholder="details.about.the.mode"></textarea>
         </div>
         <div class="pub-grid">
           <div class="field">
-            <label for="pub-mode-mc">Версия Minecraft</label>
+            <label for="pub-mode-mc" data-i18n="minecraft.version">Версия Minecraft</label>
             <input id="pub-mode-mc" type="text" placeholder="1.12.2">
           </div>
           <div class="field">
-            <label for="pub-mode-loader">Ядро</label>
+            <label for="pub-mode-loader" data-i18n="loader">Ядро</label>
             <select id="pub-mode-loader">
               <option value="vanilla">Vanilla</option>
               <option value="forge">Forge</option>
@@ -980,40 +980,40 @@
         </div>
         <div class="pub-grid">
           <div class="field">
-            <label for="pub-mode-loader-version">Версия ядра</label>
+            <label for="pub-mode-loader-version" data-i18n="loader.version">Версия ядра</label>
             <input id="pub-mode-loader-version" type="text" placeholder="14.23.5.2860">
           </div>
           <div class="field">
-            <label for="pub-mode-size">Размер</label>
-            <input id="pub-mode-size" type="text" placeholder="58 МБ">
+            <label for="pub-mode-size" data-i18n="size">Размер</label>
+            <input id="pub-mode-size" type="text" placeholder="58 МБ" data-i18n-placeholder="size.placeholder">
           </div>
         </div>
         <div class="pub-grid">
           <div class="field">
-            <label for="pub-mode-team">Команда</label>
+            <label for="pub-mode-team" data-i18n="nav.team">Команда</label>
             <select id="pub-mode-team">
-              <option value="">Без команды</option>
+              <option value="" data-i18n="no.team">Без команды</option>
             </select>
           </div>
           <div class="field">
-            <label for="pub-mode-coauthors">Соавторы</label>
+            <label for="pub-mode-coauthors" data-i18n="co.authors">Соавторы</label>
             <input id="pub-mode-coauthors" type="text" placeholder="username1, username2">
           </div>
         </div>
         <div class="field">
-          <label for="pub-mode-tags">Теги</label>
-          <input id="pub-mode-tags" type="text" placeholder="pvp, хоррор, ролевой">
+          <label for="pub-mode-tags" data-i18n="tags">Теги</label>
+          <input id="pub-mode-tags" type="text" placeholder="pvp, хоррор, ролевой" data-i18n-placeholder="pvp.horror.roleplay">
         </div>
         <div class="field">
-          <label for="pub-mode-cover">Обложка (URL)</label>
+          <label for="pub-mode-cover" data-i18n="cover.url">Обложка (URL)</label>
           <input id="pub-mode-cover" type="text" placeholder="https://...">
         </div>
         <div class="field">
-          <label for="pub-mode-trailer">Трейлер (URL)</label>
+          <label for="pub-mode-trailer" data-i18n="trailer.url">Трейлер (URL)</label>
           <input id="pub-mode-trailer" type="text" placeholder="https://www.youtube.com/watch?v=...">
         </div>
         <div class="form-error" id="pub-mode-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="pub-mode-submit" type="submit">Создать черновик</button>
+        <button class="btn btn-primary btn-block" id="pub-mode-submit" type="submit" data-i18n="create.draft">Создать черновик</button>
       </form>
     </div>
   </div>
@@ -1022,17 +1022,17 @@
   <div class="modal-overlay" id="modal-publisher-appeal" hidden role="dialog" aria-modal="true" aria-labelledby="pub-appeal-title">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="pub-appeal-title">Оспорить отклонение</h2>
+        <h2 id="pub-appeal-title" data-i18n="appeal.rejection">Оспорить отклонение</h2>
         <button class="modal-close" data-close="modal-publisher-appeal">✕</button>
       </div>
       <div class="hint" id="pub-appeal-info"></div>
       <form id="publisher-appeal-form" autocomplete="off">
         <div class="field">
-          <label for="pub-appeal-message">Почему релиз стоит пересмотреть</label>
-          <textarea id="pub-appeal-message" rows="5" maxlength="2000" placeholder="Опиши, что было исправлено или почему отклонение ошибочно"></textarea>
+          <label for="pub-appeal-message" data-i18n="why.the.release.should">Почему релиз стоит пересмотреть</label>
+          <textarea id="pub-appeal-message" rows="5" maxlength="2000" placeholder="Опиши, что было исправлено или почему отклонение ошибочно" data-i18n-placeholder="describe.what.was.fixed"></textarea>
         </div>
         <div class="form-error" id="pub-appeal-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="pub-appeal-submit" type="submit">Отправить апелляцию</button>
+        <button class="btn btn-primary btn-block" id="pub-appeal-submit" type="submit" data-i18n="submit.appeal">Отправить апелляцию</button>
       </form>
     </div>
   </div>
@@ -1041,21 +1041,21 @@
   <div class="modal-overlay" id="modal-author-apply" hidden role="dialog" aria-modal="true" aria-labelledby="author-apply-title">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="author-apply-title">Стать автором</h2>
+        <h2 id="author-apply-title" data-i18n="become.an.author">Стать автором</h2>
         <button class="modal-close" data-close="modal-author-apply">✕</button>
       </div>
-      <div class="hint">Расскажи, что планируешь публиковать, и приложи ссылки на портфолио или сборки.</div>
+      <div class="hint" data-i18n="tell.us.what.you">Расскажи, что планируешь публиковать, и приложи ссылки на портфолио или сборки.</div>
       <form id="author-apply-form" autocomplete="off">
         <div class="field">
-          <label for="author-apply-message">О себе</label>
-          <textarea id="author-apply-message" rows="5" maxlength="2000" placeholder="Опыт, режимы, команда, планы"></textarea>
+          <label for="author-apply-message" data-i18n="about">О себе</label>
+          <textarea id="author-apply-message" rows="5" maxlength="2000" placeholder="Опыт, режимы, команда, планы" data-i18n-placeholder="experience.modes.team.plans"></textarea>
         </div>
         <div class="field">
-          <label for="author-apply-links">Ссылки</label>
-          <input id="author-apply-links" type="text" maxlength="500" placeholder="Портфолио, GitHub, Discord, примеры сборок">
+          <label for="author-apply-links" data-i18n="links">Ссылки</label>
+          <input id="author-apply-links" type="text" maxlength="500" placeholder="Портфолио, GitHub, Discord, примеры сборок" data-i18n-placeholder="portfolio.github.discord.build">
         </div>
         <div class="form-error" id="author-apply-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="author-apply-submit" type="submit">Отправить заявку</button>
+        <button class="btn btn-primary btn-block" id="author-apply-submit" type="submit" data-i18n="submit.application">Отправить заявку</button>
       </form>
     </div>
   </div>
@@ -1064,21 +1064,21 @@
   <div class="modal-overlay" id="modal-publisher-news" hidden role="dialog" aria-modal="true" aria-labelledby="pub-news-title-label">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="pub-news-title-label">Новость режима</h2>
+        <h2 id="pub-news-title-label" data-i18n="mode.news.2">Новость режима</h2>
         <button class="modal-close" data-close="modal-publisher-news">✕</button>
       </div>
       <div class="hint" id="pub-news-mode"></div>
       <form id="publisher-news-form" autocomplete="off">
         <div class="field">
-          <label for="pub-news-title">Заголовок</label>
-          <input id="pub-news-title" type="text" maxlength="120" placeholder="Что нового">
+          <label for="pub-news-title" data-i18n="title">Заголовок</label>
+          <input id="pub-news-title" type="text" maxlength="120" placeholder="Что нового" data-i18n-placeholder="what.is.new">
         </div>
         <div class="field">
-          <label for="pub-news-body">Текст</label>
-          <textarea id="pub-news-body" rows="5" placeholder="Расскажи игрокам о новости"></textarea>
+          <label for="pub-news-body" data-i18n="text">Текст</label>
+          <textarea id="pub-news-body" rows="5" placeholder="Расскажи игрокам о новости" data-i18n-placeholder="tell.players.about.the"></textarea>
         </div>
         <div class="form-error" id="pub-news-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="pub-news-submit" type="submit">Опубликовать</button>
+        <button class="btn btn-primary btn-block" id="pub-news-submit" type="submit" data-i18n="publish">Опубликовать</button>
       </form>
     </div>
   </div>
@@ -1087,18 +1087,18 @@
   <div class="modal-overlay" id="modal-publisher-release" hidden role="dialog" aria-modal="true" aria-labelledby="pub-release-title">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="pub-release-title">Новый релиз</h2>
+        <h2 id="pub-release-title" data-i18n="new.release">Новый релиз</h2>
         <button class="modal-close" data-close="modal-publisher-release">✕</button>
       </div>
       <div class="hint" id="pub-release-mode">—</div>
       <form id="publisher-release-form" autocomplete="off">
         <div class="pub-grid">
           <div class="field">
-            <label for="pub-release-version">Версия</label>
+            <label for="pub-release-version" data-i18n="version">Версия</label>
             <input id="pub-release-version" type="text" placeholder="1.0.0">
           </div>
           <div class="field">
-            <label for="pub-release-channel">Канал</label>
+            <label for="pub-release-channel" data-i18n="channel">Канал</label>
             <select id="pub-release-channel">
               <option value="stable">stable</option>
               <option value="beta">beta</option>
@@ -1107,10 +1107,10 @@
         </div>
         <div class="field">
           <label for="pub-release-changelog">Changelog</label>
-          <textarea id="pub-release-changelog" rows="5" placeholder="Что изменилось в этом релизе"></textarea>
+          <textarea id="pub-release-changelog" rows="5" placeholder="Что изменилось в этом релизе" data-i18n-placeholder="what.changed.in.this"></textarea>
         </div>
         <div class="form-error" id="pub-release-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="pub-release-submit" type="submit">Создать релиз</button>
+        <button class="btn btn-primary btn-block" id="pub-release-submit" type="submit" data-i18n="create.release">Создать релиз</button>
       </form>
     </div>
   </div>
@@ -1120,17 +1120,17 @@
   <div class="modal-overlay" id="modal-report" hidden role="dialog" aria-modal="true" aria-labelledby="report-title">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="report-title">Пожаловаться</h2>
+        <h2 id="report-title" data-i18n="report">Пожаловаться</h2>
         <button class="modal-close" data-close="modal-report">✕</button>
       </div>
       <div class="hint" id="report-target"></div>
       <form id="report-form" autocomplete="off">
         <div class="field">
-          <label for="report-reason">Причина</label>
-          <textarea id="report-reason" rows="4" placeholder="Что не так с режимом"></textarea>
+          <label for="report-reason" data-i18n="reason">Причина</label>
+          <textarea id="report-reason" rows="4" placeholder="Что не так с режимом" data-i18n-placeholder="what.is.wrong.with"></textarea>
         </div>
         <div class="form-error" id="report-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="report-submit" type="submit">Отправить жалобу</button>
+        <button class="btn btn-primary btn-block" id="report-submit" type="submit" data-i18n="submit.report">Отправить жалобу</button>
       </form>
     </div>
   </div>
@@ -1139,17 +1139,17 @@
   <div class="modal-overlay" id="modal-review-reply" hidden role="dialog" aria-modal="true" aria-labelledby="review-reply-title">
     <div class="modal modal-login">
       <div class="modal-head">
-        <h2 id="review-reply-title">Ответ на отзыв</h2>
+        <h2 id="review-reply-title" data-i18n="reply.to.review">Ответ на отзыв</h2>
         <button class="modal-close" data-close="modal-review-reply">✕</button>
       </div>
       <div class="hint" id="review-reply-target"></div>
       <form id="review-reply-form" autocomplete="off">
         <div class="field">
-          <label for="review-reply-text">Ответ</label>
-          <textarea id="review-reply-text" rows="4" placeholder="Ответь игроку"></textarea>
+          <label for="review-reply-text" data-i18n="reply">Ответ</label>
+          <textarea id="review-reply-text" rows="4" placeholder="Ответь игроку" data-i18n-placeholder="reply.to.the.player"></textarea>
         </div>
         <div class="form-error" id="review-reply-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="review-reply-submit" type="submit">Отправить ответ</button>
+        <button class="btn btn-primary btn-block" id="review-reply-submit" type="submit" data-i18n="send.reply">Отправить ответ</button>
       </form>
     </div>
   </div>
@@ -1164,8 +1164,8 @@
       <div class="hint" id="moderation-note-hint"></div>
       <form id="moderation-note-form" autocomplete="off">
         <div class="field">
-          <label for="moderation-note-text">Причина</label>
-          <textarea id="moderation-note-text" rows="4" placeholder="Что нужно исправить"></textarea>
+          <label for="moderation-note-text" data-i18n="reason">Причина</label>
+          <textarea id="moderation-note-text" rows="4" placeholder="Что нужно исправить" data-i18n-placeholder="what.needs.to.be"></textarea>
         </div>
         <div class="form-error" id="moderation-note-error" hidden></div>
         <button class="btn btn-primary btn-block" id="moderation-note-submit" type="submit">Отклонить</button>
@@ -1174,25 +1174,25 @@
   </div>
 
   <!-- Просмотр скриншота -->
-  <div class="modal-overlay gallery-overlay" id="modal-gallery" hidden role="dialog" aria-modal="true" aria-label="Скриншот">
+  <div class="modal-overlay gallery-overlay" id="modal-gallery" hidden role="dialog" aria-modal="true" aria-label="Скриншот" data-i18n-aria="screenshot">
     <button class="gallery-close" data-close="modal-gallery" type="button">✕</button>
-    <img id="gallery-image" alt="Скриншот режима">
+    <img id="gallery-image" alt="Скриншот режима" data-i18n-alt="mode.screenshot">
   </div>
 
   <div class="modal-overlay" id="modal-update" hidden role="dialog" aria-modal="true" aria-labelledby="update-title">
     <div class="modal modal-update">
       <div class="modal-head">
-        <h2 id="update-title">Доступно обновление</h2>
+        <h2 id="update-title" data-i18n="update.available">Доступно обновление</h2>
         <button class="modal-close" id="btn-update-later-x" type="button">✕</button>
       </div>
       <div class="update-versions">
-        <div><span>Сейчас</span><b id="update-current">—</b></div>
+        <div><span data-i18n="current">Сейчас</span><b id="update-current">—</b></div>
         <div class="update-arrow">→</div>
-        <div><span>Новая версия</span><b id="update-latest">—</b></div>
+        <div><span data-i18n="new.version">Новая версия</span><b id="update-latest">—</b></div>
       </div>
       <pre class="update-notes" id="update-notes"></pre>
       <div class="modal-actions">
-        <button class="btn btn-ghost" id="btn-update-later" type="button">Позже</button>
+        <button class="btn btn-ghost" id="btn-update-later" type="button" data-i18n="later">Позже</button>
         <button class="btn btn-primary" id="btn-update-download" type="button">Скачать обновление</button>
       </div>
     </div>
@@ -1202,11 +1202,11 @@
     <div class="modal confirm-modal">
       <div class="modal-head">
         <h2 id="confirm-title">Удалить режим?</h2>
-        <button class="modal-close" id="btn-confirm-x" type="button" aria-label="Закрыть">×</button>
+        <button class="modal-close" id="btn-confirm-x" type="button" aria-label="Закрыть" data-i18n-aria="topbar.close">×</button>
       </div>
       <p class="modal-sub" id="confirm-text">Режим и его файлы будут удалены.</p>
       <div class="modal-actions">
-        <button class="btn btn-ghost" id="btn-confirm-cancel" type="button">Отмена</button>
+        <button class="btn btn-ghost" id="btn-confirm-cancel" type="button" data-i18n="cancel">Отмена</button>
         <button class="btn btn-danger" id="btn-confirm-ok" type="button">Удалить</button>
       </div>
     </div>

@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { S } from '../../core/state.js';
 import { escapeHtml } from '../../core/dom.js';
 import { formatUpdateDate } from '../../core/format.js';
@@ -9,11 +11,11 @@ export const ART_CACHE = new Map();
 export const DEFAULT_ACCENT = '#e5322b';
 
 export function cardStatus(mode) {
-  if (S.running === mode.id) return { cls: 'playing', text: 'В игре' };
-  if (isUpdate(mode)) return { cls: 'update', text: 'Обновление' };
-  if (isInstalled(mode)) return { cls: 'installed', text: 'Установлено' };
-  if (inLibrary(mode)) return { cls: 'library', text: 'Не установлено' };
-  return { cls: 'new', text: 'Доступно' };
+  if (S.running === mode.id) return { cls: 'playing', text: tKey("in.game") };
+  if (isUpdate(mode)) return { cls: 'update', text: tKey("update") };
+  if (isInstalled(mode)) return { cls: 'installed', text: tKey("sidebar.installed") };
+  if (inLibrary(mode)) return { cls: 'library', text: tKey("not.installed") };
+  return { cls: 'new', text: tKey("available") };
 }
 
 export function libraryStateMeta(mode) {
@@ -21,7 +23,7 @@ export function libraryStateMeta(mode) {
     const percent = Math.max(0, Math.min(100, Math.round((Number(S.progress) || 0) * 100)));
     const kind = S.busy.action === 'update' ? 'update' : S.busy.action === 'play' ? 'ready' : 'install';
     const stage = String(S.stage || '').trim();
-    const prefix = stage || (kind === 'update' ? 'Обновление' : kind === 'ready' ? 'Запуск' : 'Установка');
+    const prefix = stage || (kind === 'update' ? tKey("update") : kind === 'ready' ? tKey("launch") : tKey("install.2"));
     return {
       cls: kind,
       label: `${prefix} ${percent}%`,
@@ -31,10 +33,10 @@ export function libraryStateMeta(mode) {
     };
   }
   const action = computeAction(mode);
-  if (action === 'running') return { cls: 'running', label: 'Запущено', icon: 'stop', action: 'stop' };
-  if (action === 'update') return { cls: 'update', label: 'Обновить', icon: 'update', action: 'play' };
-  if (action === 'play') return { cls: 'ready', label: 'Готово к игре', icon: 'play', action: 'play' };
-  return { cls: 'install', label: 'Установить', icon: 'install', action: 'play' };
+  if (action === 'running') return { cls: 'running', label: tKey("launched"), icon: 'stop', action: 'stop' };
+  if (action === 'update') return { cls: 'update', label: tKey("messages.refresh"), icon: 'update', action: 'play' };
+  if (action === 'play') return { cls: 'ready', label: tKey("ready.to.play"), icon: 'play', action: 'play' };
+  return { cls: 'install', label: tKey("install"), icon: 'install', action: 'play' };
 }
 
 export function cardPlayIcon(kind) {
@@ -66,13 +68,13 @@ export function modeCardHtml(mode, withMenu = false, playMode = false) {
     <article class="mode-card ${installed ? 'installed' : ''}" data-id="${escapeHtml(mode.id)}">
       <div class="card-media">
         <img src="${escapeHtml(imageSrc(mode))}" alt="" loading="lazy" data-fallback>
-        ${playMode ? `<button class="card-play state-${stateMeta.cls}" data-card-action="${stateMeta.action}" type="button" aria-label="${escapeHtml(stateMeta.action === 'stop' ? 'Закрыть игру' : stateMeta.label)}: ${escapeHtml(mode.title || 'режим')}" ${stateMeta.busy ? 'disabled' : ''}>${cardPlayIcon(stateMeta.icon)}</button>` : ''}
+        ${playMode ? `<button class="card-play state-${stateMeta.cls}" data-card-action="${stateMeta.action}" type="button" aria-label="${escapeHtml(stateMeta.action === 'stop' ? tKey("close.game") : stateMeta.label)}: ${escapeHtml(mode.title || tKey("common.mode.lowercase"))}" ${stateMeta.busy ? 'disabled' : ''}>${cardPlayIcon(stateMeta.icon)}</button>` : ''}
         <div class="card-badge ${st.cls}">${st.text}</div>
-        ${playMode ? `<div class="card-progress" data-card-progress role="progressbar" aria-label="Прогресс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><span></span></div>` : ''}
-        ${withMenu ? `<button class="card-menu-btn" type="button" title="Действия" aria-label="Действия">⋯</button>` : ''}
+        ${playMode ? `<div class="card-progress" data-card-progress role="progressbar" aria-label="${tKey("progress")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><span></span></div>` : ''}
+        ${withMenu ? `<button class="card-menu-btn" type="button" title="${tKey("actions")}" aria-label="${tKey("actions")}">⋯</button>` : ''}
       </div>
       <div class="card-body">
-        <div class="card-title">${escapeHtml(mode.title || 'Без названия')}</div>
+        <div class="card-title">${escapeHtml(mode.title || tKey("untitled"))}</div>
         <div class="card-sub">${escapeHtml(cardSub(mode))}</div>
         ${modeAuthors(mode).length ? `<div class="card-author">${escapeHtml(modeAuthors(mode).join(', '))}</div>` : ''}
         ${screenshots.length ? `
@@ -80,16 +82,16 @@ export function modeCardHtml(mode, withMenu = false, playMode = false) {
             ${screenshots.map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy">`).join('')}
           </div>` : ''}
         ${status ? `<div class="card-status-row"><span class="mode-status ${status.cls}">${status.label}</span></div>` : ''}
-        ${updated ? `<div class="card-release">Обновлено ${escapeHtml(formatUpdateDate(updated))}</div>` : ''}
+        ${updated ? `<div class="card-release">${tKey("card.updated", [escapeHtml(formatUpdateDate(updated))])}</div>` : ''}
         <div class="card-desc">${escapeHtml(modeShortDescription(mode))}</div>
         ${tags ? `<div class="tags">${tags}</div>` : ''}
         <div class="card-foot">
-          <span class="card-installs">${Number(mode.installs) ? `${Number(mode.installs)} установок` : ''}</span>
+          <span class="card-installs">${Number(mode.installs) ? tKey("pattern.x.installs", [Number(mode.installs)]) : ''}</span>
           ${mode.rating ? `<span class="card-installs">★ ${Number(mode.rating).toFixed(1)}</span>` : ''}
           <span class="card-size">${escapeHtml(mode.size || '-')}</span>
           ${playMode
             ? `<span class="card-state state-${stateMeta.cls}" data-card-state>${escapeHtml(stateMeta.label)}</span>`
-            : `<button class="btn btn-small btn-ghost" type="button" aria-label="Подробнее: ${escapeHtml(mode.title || 'режим')}">Подробнее</button>`}
+            : `<button class="btn btn-small btn-ghost" type="button" aria-label="${tKey("details")}: ${escapeHtml(mode.title || tKey("common.mode.lowercase"))}">${tKey("details")}</button>`}
         </div>
       </div>
     </article>`;

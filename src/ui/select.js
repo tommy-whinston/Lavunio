@@ -70,6 +70,8 @@ function syncSelectLabel(select) {
   const value = option ? option.textContent.trim() : '—';
   const target = trigger.querySelector('.select-value');
   if (target && target.textContent !== value) target.textContent = value;
+  const label = labelForSelect(select);
+  if (label) trigger.setAttribute('aria-label', label);
   trigger.disabled = !!select.disabled;
 }
 

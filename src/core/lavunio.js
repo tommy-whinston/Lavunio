@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../i18n/index.js';
+
 import { S } from './state.js';
 
 export function lavunioLoggedIn() {
@@ -7,8 +9,8 @@ export function lavunioLoggedIn() {
 }
 
 export function lavunioName(user) {
-  if (!user) return 'Гость';
-  return user.displayName || user.username || 'Игрок';
+  if (!user) return tKey("guest");
+  return user.displayName || user.username || tKey("player.2");
 }
 
 export function lavunioLetter(user) {

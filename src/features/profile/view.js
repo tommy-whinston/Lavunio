@@ -1,5 +1,7 @@
 'use strict';
 
+import { tKey } from '../../i18n/index.js';
+
 import { S } from '../../core/state.js';
 import { escapeHtml } from '../../core/dom.js';
 import { formatDateTime } from '../../core/format.js';
@@ -9,32 +11,31 @@ import { isOwnUsername, friendByUsername } from '../../core/social.js';
 import { applyLavunioAvatar } from '../../core/lavunio.js';
 
 export function profileRoleLabel(role) {
-  return role === 'admin' ? 'Администратор'
-    : role === 'author' ? 'Автор'
-      : role === 'moderator' ? 'Модератор' : 'Игрок';
+  return role === 'admin' ? tKey("administrator")
+    : role === 'author' ? tKey("author")
+      : role === 'moderator' ? tKey("moderator.2") : tKey("player.2");
 }
 
 export function profileOnlineLabel(profile) {
-  const tr = (text) => (window.I18n ? window.I18n.t(text) : text);
-  if (profile.online) return tr('в сети');
+  if (profile.online) return tKey("online.2");
   const seen = formatDateTime(profile.lastSeenAt);
-  return seen === '—' ? tr('не в сети') : `${tr('был(а)')} ${seen}`;
+  return seen === '—' ? tKey("offline.2") : `${tKey("last.seen")} ${seen}`;
 }
 
 export function profileModesHtml(profile) {
   const modes = profile.modes || [];
-  if (!modes.length) return '<div class="profile-empty">Опубликованных режимов нет</div>';
+  if (!modes.length) return '<div class="profile-empty">' + tKey("no.published.modes.yet") + '</div>';
   return modes.map((mode) => `
     <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.slug)}">
       <span>${escapeHtml(mode.title)}</span>
-      <b>${Number(mode.installs) || 0} установок</b>
+      <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
     </button>
   `).join('');
 }
 
 export function profileTeamsHtml(profile) {
   const teams = profile.teams || [];
-  if (!teams.length) return '<div class="profile-empty">Не состоит в командах</div>';
+  if (!teams.length) return '<div class="profile-empty">' + tKey("not.a.member.of") + '</div>';
   return teams.map((team) => `
     <button class="profile-mode-row" type="button" data-profile-team="${escapeHtml(team.slug)}" data-profile-team-title="${escapeHtml(team.title)}">
       <span>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</span>
@@ -45,22 +46,22 @@ export function profileTeamsHtml(profile) {
 
 export function profileFriendsHtml() {
   const friends = S.friends || [];
-  if (!friends.length) return '<div class="profile-empty">Друзей пока нет</div>';
+  if (!friends.length) return '<div class="profile-empty">' + tKey("no.friends.yet") + '</div>';
   return friends.map((friend) => `
     <div class="profile-friend">
       <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
       <div class="profile-friend-copy">
         <b>${escapeHtml(friend.displayName || friend.username)}</b>
-        <span>@${escapeHtml(friend.username)} · <span>${friend.online ? 'в сети' : 'не в сети'}</span></span>
+        <span>@${escapeHtml(friend.username)} · <span>${friend.online ? tKey("online.2") : tKey("offline.2")}</span></span>
       </div>
       <div class="profile-friend-actions">
-        <button class="icon-btn" type="button" title="Профиль" data-profile-action="friend-profile" data-username="${escapeHtml(friend.username)}">
+        <button class="icon-btn" type="button" title="${tKey("profile")}" data-profile-action="friend-profile" data-username="${escapeHtml(friend.username)}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/></svg>
         </button>
-        <button class="icon-btn" type="button" title="Написать" data-profile-action="chat" data-username="${escapeHtml(friend.username)}" data-name="${escapeHtml(friend.displayName || friend.username)}">
+        <button class="icon-btn" type="button" title="${tKey("message")}" data-profile-action="chat" data-username="${escapeHtml(friend.username)}" data-name="${escapeHtml(friend.displayName || friend.username)}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>
         </button>
-        <button class="icon-btn" type="button" title="Удалить" data-profile-action="remove-friend" data-username="${escapeHtml(friend.username)}">
+        <button class="icon-btn" type="button" title="${tKey("delete")}" data-profile-action="remove-friend" data-username="${escapeHtml(friend.username)}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7v12h10V7"/></svg>
         </button>
       </div>
@@ -73,13 +74,13 @@ export function profileRequestsHtml() {
   if (!incoming.length) return '';
   return `
     <section class="profile-panel">
-      <h2>Заявки в друзья</h2>
+      <h2>${tKey("friend.requests")}</h2>
       ${incoming.map((item) => `
         <div class="profile-request">
           <span>@${escapeHtml(item.username)}</span>
           <span class="profile-request-actions">
-            <button class="btn btn-primary btn-small" type="button" data-profile-action="accept-request" data-id="${escapeHtml(item.id)}">Принять</button>
-            <button class="btn btn-ghost btn-small" type="button" data-profile-action="decline-request" data-id="${escapeHtml(item.id)}">Отклонить</button>
+            <button class="btn btn-primary btn-small" type="button" data-profile-action="accept-request" data-id="${escapeHtml(item.id)}">${tKey("accept")}</button>
+            <button class="btn btn-ghost btn-small" type="button" data-profile-action="decline-request" data-id="${escapeHtml(item.id)}">${tKey("decline")}</button>
           </span>
         </div>
       `).join('')}
@@ -91,20 +92,20 @@ export function profileSkinHtml(profile) {
   return `
     <div class="profile-skin">
       <div class="skin-preview">
-        ${profile.skinUrl ? `<img id="profile-skin-img" src="${escapeHtml(profile.skinUrl)}" alt="Скин">` : ''}
-        ${profile.skinUrl ? '' : '<span class="skin-empty">Нет скина</span>'}
+        ${profile.skinUrl ? `<img id="profile-skin-img" src="${escapeHtml(profile.skinUrl)}" alt="${tKey("skin")}">` : ''}
+        ${profile.skinUrl ? '' : '<span class="skin-empty">' + tKey("no.skin") + '</span>'}
       </div>
       <div class="skin-controls">
         <div class="field">
-          <label for="profile-skin-model">Модель скина</label>
+          <label for="profile-skin-model">${tKey("skin.model")}</label>
           <select id="profile-skin-model">
             <option value="classic"${profile.skinModel === 'slim' ? '' : ' selected'}>Classic</option>
             <option value="slim"${profile.skinModel === 'slim' ? ' selected' : ''}>Slim</option>
           </select>
         </div>
         <div class="skin-actions">
-          <button class="btn btn-ghost" type="button" data-profile-action="skin-upload">Загрузить скин</button>
-          <button class="btn btn-ghost" type="button" data-profile-action="skin-delete" ${profile.skinUrl ? '' : 'hidden'}>Удалить скин</button>
+          <button class="btn btn-ghost" type="button" data-profile-action="skin-upload">${tKey("upload.skin")}</button>
+          <button class="btn btn-ghost" type="button" data-profile-action="skin-delete" ${profile.skinUrl ? '' : 'hidden'}>${tKey("delete.skin")}</button>
         </div>
       </div>
     </div>
@@ -114,23 +115,23 @@ export function profileSkinHtml(profile) {
 export function profileEditHtml(profile) {
   return `
     <section class="profile-panel" id="profile-edit">
-      <h2>Настройки профиля</h2>
+      <h2>${tKey("profile.settings")}</h2>
       <form class="profile-edit" data-profile-form="edit" autocomplete="off">
         <div class="field">
-          <label for="profile-display-name">Отображаемое имя</label>
+          <label for="profile-display-name">${tKey("display.name")}</label>
           <input id="profile-display-name" type="text" maxlength="40" value="${escapeHtml(profile.displayName || profile.username)}">
         </div>
         <div class="field">
-          <label for="profile-bio">О себе</label>
-          <textarea id="profile-bio" rows="3" maxlength="500" placeholder="Пара слов о себе">${escapeHtml(profile.bio || '')}</textarea>
+          <label for="profile-bio">${tKey("about")}</label>
+          <textarea id="profile-bio" rows="3" maxlength="500" placeholder="${tKey("a.few.words.about")}">${escapeHtml(profile.bio || '')}</textarea>
         </div>
         <div class="form-error" id="profile-error" hidden></div>
-        <button class="btn btn-primary" id="profile-save" type="submit">Сохранить</button>
+        <button class="btn btn-primary" id="profile-save" type="submit">${tKey("save")}</button>
       </form>
       ${profileSkinHtml(profile)}
       <div class="profile-account-row">
-        <button class="btn btn-ghost" type="button" data-profile-action="settings">Настройки лаунчера</button>
-        <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти из Lavunio</button>
+        <button class="btn btn-ghost" type="button" data-profile-action="settings">${tKey("launcher.settings")}</button>
+        <button class="btn btn-ghost" type="button" data-profile-action="logout">${tKey("sign.out.of.lavunio")}</button>
       </div>
     </section>
   `;
@@ -148,21 +149,21 @@ export function renderProfile(profile) {
 
   const actions = own
     ? `
-      <button class="icon-btn" type="button" title="Настройки" data-profile-action="settings">
+      <button class="icon-btn" type="button" title="${tKey("settings")}" data-profile-action="settings">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.3 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
       </button>
-      <button class="btn btn-primary" type="button" data-profile-action="messages">Сообщения</button>
-      <button class="btn btn-ghost" type="button" data-profile-action="edit">Редактировать</button>
-      <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти</button>
+      <button class="btn btn-primary" type="button" data-profile-action="messages">${tKey("messages.title")}</button>
+      <button class="btn btn-ghost" type="button" data-profile-action="edit">${tKey("edit")}</button>
+      <button class="btn btn-ghost" type="button" data-profile-action="logout">${tKey("sign.out")}</button>
     `
     : `
       ${friend
-        ? `<button class="btn btn-primary" type="button" data-profile-action="chat" data-username="${escapeHtml(profile.username)}" data-name="${escapeHtml(display)}">Написать</button>
-           <button class="btn btn-ghost" type="button" data-profile-action="remove-friend" data-username="${escapeHtml(profile.username)}">Удалить из друзей</button>`
+        ? `<button class="btn btn-primary" type="button" data-profile-action="chat" data-username="${escapeHtml(profile.username)}" data-name="${escapeHtml(display)}">${tKey("message")}</button>
+           <button class="btn btn-ghost" type="button" data-profile-action="remove-friend" data-username="${escapeHtml(profile.username)}">${tKey("remove.friend.2")}</button>`
         : outgoing
-          ? '<button class="btn btn-ghost" type="button" disabled>Заявка отправлена</button>'
-          : `<button class="btn btn-primary" type="button" data-profile-action="add-friend" data-username="${escapeHtml(profile.username)}">Добавить в друзья</button>`}
-      <button class="btn btn-ghost" type="button" data-profile-action="messages">Сообщения</button>
+          ? '<button class="btn btn-ghost" type="button" disabled>' + tKey("request.sent") + '</button>'
+          : `<button class="btn btn-primary" type="button" data-profile-action="add-friend" data-username="${escapeHtml(profile.username)}">${tKey("add.friend")}</button>`}
+      <button class="btn btn-ghost" type="button" data-profile-action="messages">${tKey("messages.title")}</button>
     `;
 
   els.profileContent.innerHTML = `
@@ -174,61 +175,61 @@ export function renderProfile(profile) {
         <div class="profile-badges">
           <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>
           <span class="profile-badge ${profile.online ? 'online' : ''}">${escapeHtml(profileOnlineLabel(profile))}</span>
-          ${friend ? '<span class="profile-badge">друг</span>' : ''}
-          ${own ? '<span class="profile-badge">это вы</span>' : ''}
+          ${friend ? '<span class="profile-badge">' + tKey("friend") + '</span>' : ''}
+          ${own ? '<span class="profile-badge">' + tKey("you") + '</span>' : ''}
         </div>
-        <div class="profile-bio">${escapeHtml(profile.bio || 'Без описания')}</div>
+        <div class="profile-bio">${escapeHtml(profile.bio || tKey("no.description"))}</div>
       </div>
       <div class="profile-actions">${actions}</div>
     </div>
 
     <div class="profile-stats">
-      <div class="profile-stat"><span>Режимы</span><b>${Number(stats.modes) || 0}</b></div>
-      <div class="profile-stat"><span>Скачивания</span><b>${Number(stats.downloads) || 0}</b></div>
-      <div class="profile-stat"><span>Установки</span><b>${Number(stats.installs) || 0}</b></div>
-      <div class="profile-stat"><span>Команды</span><b>${(profile.teams || []).length}</b></div>
+      <div class="profile-stat"><span>${tKey("modes")}</span><b>${Number(stats.modes) || 0}</b></div>
+      <div class="profile-stat"><span>${tKey("downloads.2")}</span><b>${Number(stats.downloads) || 0}</b></div>
+      <div class="profile-stat"><span>${tKey("installs")}</span><b>${Number(stats.installs) || 0}</b></div>
+      <div class="profile-stat"><span>${tKey("teams.2")}</span><b>${(profile.teams || []).length}</b></div>
     </div>
 
     <div class="profile-layout">
       <div class="profile-main">
         <section class="profile-panel">
-          <h2>Режимы</h2>
+          <h2>${tKey("modes")}</h2>
           ${profileModesHtml(profile)}
         </section>
         ${own ? `
           <section class="profile-panel">
-            <h2>Библиотека</h2>
+            <h2>${tKey("nav.library")}</h2>
             ${S.modes.filter((mode) => isVisibleInLibrary(mode)).slice(0, 20).map((mode) => `
               <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
                 <span>${escapeHtml(mode.title)}</span>
-                <b>${isInstalled(mode) ? 'Установлено' : 'В библиотеке'}</b>
+                <b>${isInstalled(mode) ? tKey("sidebar.installed") : tKey("sidebar.inLibrary")}</b>
               </button>
-            `).join('') || '<div class="profile-empty">Библиотека пуста</div>'}
+            `).join('') || '<div class="profile-empty">' + tKey("library.is.empty") + '</div>'}
           </section>
           ${profileEditHtml(profile)}
         ` : ''}
       </div>
       <aside class="profile-side">
         <section class="profile-panel">
-          <h2>Команды</h2>
+          <h2>${tKey("teams.2")}</h2>
           ${profileTeamsHtml(profile)}
         </section>
         ${own ? `
           ${profileRequestsHtml()}
           <section class="profile-panel">
-            <h2>Друзья</h2>
+            <h2>${tKey("friends")}</h2>
             <form class="profile-add-friend" data-profile-form="friend" autocomplete="off">
               <input id="profile-friend-name" type="text" maxlength="20" placeholder="username">
-              <button class="btn btn-ghost" type="submit">Добавить</button>
+              <button class="btn btn-ghost" type="submit">${tKey("add")}</button>
             </form>
             ${profileFriendsHtml()}
           </section>
         ` : `
           <section class="profile-panel">
-            <h2>Информация</h2>
-            <div class="profile-info-row"><span>Роль</span><b>${escapeHtml(profileRoleLabel(profile.role))}</b></div>
-            <div class="profile-info-row"><span>Статус</span><b>${profile.online ? 'в сети' : 'не в сети'}</b></div>
-            <div class="profile-info-row"><span>В Lavunio с</span><b>${escapeHtml(formatDateTime(profile.createdAt))}</b></div>
+            <h2>${tKey("information")}</h2>
+            <div class="profile-info-row"><span>${tKey("role")}</span><b>${escapeHtml(profileRoleLabel(profile.role))}</b></div>
+            <div class="profile-info-row"><span>${tKey("status")}</span><b>${profile.online ? tKey("online.2") : tKey("offline.2")}</b></div>
+            <div class="profile-info-row"><span>${tKey("on.lavunio.since")}</span><b>${escapeHtml(formatDateTime(profile.createdAt))}</b></div>
           </section>
         `}
       </aside>
