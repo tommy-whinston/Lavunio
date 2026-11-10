@@ -8,9 +8,10 @@ import { $, escapeHtml } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { publisherAllowed } from '../../core/permissions.js';
 import { LOADER_LABELS } from '../../core/modes.js';
-import { formatBytes } from '../../core/format.js';
+import { formatBytes, publisherDate } from '../../core/format.js';
 import { toast } from '../../ui/toast.js';
 import { loadTeams } from '../teams/index.js';
+import { loadModeNews } from '../news/index.js';
 
 let publisherActions = {
   openModal: () => {},
@@ -358,12 +359,6 @@ export function publisherReleaseCard(mode, release) {
       <div class="pub-release-actions">${actions}</div>
     </div>
   `;
-}
-
-export function publisherDate(value) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(window.I18n ? window.I18n.locale() : 'ru-RU');
 }
 
 export async function submitPublisherMode() {

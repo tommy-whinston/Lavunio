@@ -103,6 +103,12 @@ export function formatUpdateDate(value) {
   return date.toLocaleDateString(window.I18n ? window.I18n.locale() : 'ru-RU');
 }
 
+export function publisherDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(window.I18n ? window.I18n.locale() : 'ru-RU');
+}
+
 export function formatDateTime(value) {
   let ms = Number(value);
   if (!Number.isFinite(ms) || !ms) {

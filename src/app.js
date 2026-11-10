@@ -9,7 +9,7 @@ import { lavunioLoggedIn, lavunioName, applyLavunioAvatar } from './core/lavunio
 import { ownUsername, isOwnUsername, friendByUsername } from './core/social.js';
 import { teamRoleLabel } from './core/labels.js';
 import { els } from './core/elements.js';
-import { formatBytes, formatDateTime, formatDuration, formatPlaytime, formatUpdateDate, renderRichText, stripRichText } from './core/format.js';
+import { formatBytes, formatDateTime, formatDuration, formatPlaytime, formatUpdateDate, publisherDate, renderRichText, stripRichText } from './core/format.js';
 import { cardStatus, libraryStateMeta, modeCardHtml, imageSrc, wireImage } from './features/catalog/cards.js';
 import { configureCatalogGrid, renderModeGrid } from './features/catalog/grid.js';
 import { syncFilterButtons, modePassesFilter, sortCatalog, matchesSearch, filterModes } from './features/catalog/query.js';
@@ -25,6 +25,7 @@ import { configureUpdates, bindUpdateModal, checkLauncherUpdate, checkUpdateInBa
 import { configureNotifications, bindNotifications, loadNotifications, updateNotificationsBadge, closeNotifications, renderNotifications } from './features/notifications/index.js';
 import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderAccountModal, renderLavunioPane, logoutLavunio } from './features/account/index.js';
 import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
+import { newsCardHtml, loadModeNews, renderModeNews } from './features/news/index.js';
 import { configureDownloads, activeDownloadTask, downloadTaskForMode, enqueueDownload, pumpDownloads, finishDownload, failDownload, pauseDownload, resumeDownload, retryDownload, cancelDownload, removeDownload, clearDownloads, updateDownloadProgress, renderDownloads } from './features/downloads/queue.js';
 import { tagPill, renderSpotlight, renderChangelog, updateChangelogToggle, renderTrailer, selectDetailTab, renderSessions } from './features/detail/view.js';
 import { LOADER_LABELS, modeStatusMeta, isInstalled, inLibrary, isHiddenMode, isVisibleInLibrary, isUpdate, loaderLabel, modeSub, modeAuthors, cardSub, modeShortDescription, modeFullDescription, modeTags, sortByTitle, sortModes, modeById, modeInstalledAt, modePlaytime, modeReleaseDate, latestUpdateEntry, modeUpdatedAt, computeAction } from './core/modes.js';
@@ -699,18 +700,6 @@ async function loadStoreNews(force = false) {
   if (S.moderationTab === 'news' && moderatorAllowed()) renderModeration();
 }
 
-function newsCardHtml(item) {
-  return `
-    <article class="news-card">
-      <div class="news-head">
-        <div class="news-title">${escapeHtml(item.title || tKey("common.news"))}</div>
-        <span class="news-date">${escapeHtml(publisherDate(item.createdAt))}</span>
-      </div>
-      <div class="news-body">${escapeHtml(item.body || '')}</div>
-      <div class="news-author">${escapeHtml(item.authorName || item.authorUsername || 'Lavunio')}</div>
-    </article>`;
-}
-
 function renderStoreNews() {
   if (!els.storeNews || !els.storeNewsList) return;
   if (S.loading || S.search || !S.storeNews.length) {
@@ -720,32 +709,6 @@ function renderStoreNews() {
   }
   els.storeNews.hidden = false;
   els.storeNewsList.innerHTML = S.storeNews.slice(0, 5).map(newsCardHtml).join('');
-}
-
-async function loadModeNews(mode) {
-  if (!mode || !api.newsMode) return;
-  const key = mode.id;
-  if (S.modeNews[key] || S.modeNewsLoading[key]) {
-    renderModeNews(mode);
-    return;
-  }
-  S.modeNewsLoading[key] = true;
-  try {
-    const items = await api.newsMode(key);
-    S.modeNews[key] = Array.isArray(items) ? items : [];
-  } catch (_) {
-    S.modeNews[key] = [];
-  } finally {
-    delete S.modeNewsLoading[key];
-    if (S.selectedId === key) renderModeNews(mode);
-  }
-}
-
-function renderModeNews(mode) {
-  if (!els.detailNewsSection || !els.detailNewsList) return;
-  const items = (S.modeNews[mode.id] || []).slice(0, 6);
-  els.detailNewsSection.hidden = items.length === 0;
-  els.detailNewsList.innerHTML = items.map(newsCardHtml).join('');
 }
 
 function updateCardProgress() {

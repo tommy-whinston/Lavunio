@@ -9,7 +9,9 @@ import { els } from '../../core/elements.js';
 import { moderatorAllowed } from '../../core/permissions.js';
 import { formatBytes } from '../../core/format.js';
 import { toast } from '../../ui/toast.js';
-import { publisherDate, publisherStatusLabel } from '../publisher/index.js';
+import { publisherDate } from '../../core/format.js';
+import { publisherStatusLabel } from '../publisher/index.js';
+import { newsCardHtml } from '../news/index.js';
 
 let moderationActions = {
   openModal: () => {},
