@@ -1,30 +1,18 @@
 'use strict';
 
+import { api } from './api/client.js';
 import { S } from './core/state.js';
+import { els } from './core/elements.js';
+import { formatBytes, formatDateTime, formatDuration, formatHistoryStamp, formatPlaytime, formatUpdateDate, renderRichText, stripRichText } from './core/format.js';
+import { LOADER_LABELS, modeStatusMeta, isInstalled, inLibrary, isHiddenMode, isVisibleInLibrary, isUpdate, loaderLabel, modeSub, modeAuthors, cardSub, modeShortDescription, modeFullDescription, modeTags, sortByTitle, sortModes, modeById, modeInstalledAt, modePlaytime, modeReleaseDate } from './core/modes.js';
+
 import { $, escapeHtml } from './core/dom.js';
 import { toast } from './ui/toast.js';
 import { initCustomSelects, closeSelectMenu, syncSelectLabels } from './ui/select.js';
 import { initAutoGrowTextareas, growAllTextareas } from './ui/textarea.js';
 
-const api = window.tm;
 // WebView2 показывает своё меню (назад, сохранить как, печать) — в лаунчере оно не нужно.
 document.addEventListener('contextmenu', (event) => event.preventDefault());
-
-const LOADER_LABELS = {
-  vanilla: 'Vanilla',
-  forge: 'Forge',
-  fabric: 'Fabric',
-  quilt: 'Quilt',
-  neoforge: 'NeoForge',
-  paper: 'Paper',
-  purpur: 'Purpur',
-  spigot: 'Spigot',
-  bukkit: 'Bukkit',
-  folia: 'Folia',
-  velocity: 'Velocity',
-  bungeecord: 'BungeeCord',
-  waterfall: 'Waterfall'
-};
 
 const UPDATE_TAGS = {
   release: { label: 'Релиз', cls: 'release' },
@@ -35,196 +23,12 @@ const UPDATE_TAGS = {
   tech: { label: 'Техническое', cls: 'tech' }
 };
 
-const MODE_STATUS = {
-  development: { label: 'В разработке', cls: 'development' },
-  crowdfunding: { label: 'Сбор на релиз', cls: 'crowdfunding' }
-};
-
-function modeStatusMeta(mode) {
-  return MODE_STATUS[String((mode && mode.status) || '')] || null;
-}
-
 const ART_CACHE = new Map();
 const DEFAULT_ACCENT = '#e5322b';
 const SPLASH_START = performance.now();
 let lastUpdateCheckAt = 0;
 
 
-
-const els = {
-  splash: $('splash'),
-  splashSub: $('splash-sub'),
-  splashBar: $('splash-progress-bar'),
-  splashNormal: $('splash-normal'),
-  splashUpdate: $('splash-update'),
-  splashUpdateVersion: $('splash-update-version'),
-  splashUpdateStatus: $('splash-update-status'),
-  splashUpdateBar: $('splash-update-bar'),
-  splashUpdatePercent: $('splash-update-percent'),
-  splashUpdateRing: $('splash-update-ring'),
-  sideLibCount: $('side-lib-count'),
-  sideInstalledCount: $('side-installed-count'),
-  storeFilters: $('store-filters'),
-  storeSort: $('store-sort'),
-  storeView: $('store-view'),
-  libraryView: $('library-view'),
-  profileView: $('profile-view'),
-  profileContent: $('profile-content'),
-  messagesView: $('messages-view'),
-  messagesList: $('messages-list'),
-  messagesRefresh: $('messages-refresh'),
-  publisherView: $('publisher-view'),
-  teamView: $('team-view'),
-  teamList: $('team-list'),
-  teamEmpty: $('team-empty'),
-  teamHint: $('team-hint'),
-  teamStatCount: $('team-stat-count'),
-  teamInvitations: $('team-invitations'),
-  teamMembersList: $('team-members-list'),
-  teamMembersHint: $('team-members-hint'),
-  teamPageContent: $('team-page-content'),
-  chatTitle: $('chat-title'),
-  chatSubtitle: $('chat-subtitle'),
-  chatEmpty: $('chat-empty'),
-  chatMessages: $('chat-messages'),
-  chatForm: $('chat-form'),
-  chatInput: $('chat-input'),
-  notificationsList: $('notifications-list'),
-  notificationsPopover: $('notifications-popover'),
-  notificationsReadAll: $('notifications-read-all'),
-  notifBadge: $('notif-badge'),
-  sidebarProfile: $('sidebar-profile'),
-  sidebarAvatar: $('sidebar-avatar'),
-  sidebarName: $('sidebar-name'),
-  sidebarStatus: $('sidebar-status'),
-  sidebarMessages: $('sidebar-messages'),
-  sidebarSettings: $('sidebar-settings'),
-  moderationView: $('moderation-view'),
-  libraryGrid: $('library-grid'),
-  libraryCount: $('library-count'),
-  libraryStatTotal: $('library-stat-total'),
-  libraryStatInstalled: $('library-stat-installed'),
-  libraryStatUpdates: $('library-stat-updates'),
-  libraryStatPlaytime: $('library-stat-playtime'),
-  libraryFilters: $('library-filters'),
-  librarySort: $('library-sort'),
-  libraryEmpty: $('library-empty'),
-  libraryEmptyTitle: $('library-empty-title'),
-  libraryEmptySub: $('library-empty-sub'),
-  libraryUpdateBanner: $('library-update-banner'),
-  libraryUpdateCount: $('library-update-count'),
-  libraryUpdateAll: $('library-update-all'),
-  libraryUpdateLater: $('library-update-later'),
-  detailDefer: $('detail-defer'),
-  detailView: $('detail-view'),
-  detailBackLabel: $('detail-back-label'),
-  featured: $('featured'),
-  featuredImg: $('featured-img'),
-  featuredTitle: $('featured-title'),
-  featuredTags: $('featured-tags'),
-  featuredDesc: $('featured-desc'),
-  featuredStatus: $('featured-status'),
-  featuredOpen: $('featured-open'),
-  modesGrid: $('modes-grid'),
-  modesCount: $('modes-count'),
-  catalogTitle: $('catalog-title'),
-  emptyState: $('empty-state'),
-  emptyTitle: $('empty-title'),
-  emptySub: $('empty-sub'),
-  loadingState: $('loading-state'),
-  search: $('search-input'),
-  refresh: $('btn-refresh'),
-  updateChip: $('update-chip'),
-  updateChipText: $('update-chip-text'),
-  updateCurrent: $('update-current'),
-  updateLatest: $('update-latest'),
-  updateNotes: $('update-notes'),
-  btnUpdateDownload: $('btn-update-download'),
-  toast: $('toast'),
-  confirmModal: $('modal-confirm'),
-  confirmTitle: $('confirm-title'),
-  confirmText: $('confirm-text'),
-  btnConfirmOk: $('btn-confirm-ok'),
-  btnConfirmCancel: $('btn-confirm-cancel'),
-  btnConfirmX: $('btn-confirm-x'),
-  detailBack: $('detail-back'),
-  detailImg: $('detail-img'),
-  detailTitle: $('detail-title'),
-  detailTags: $('detail-tags'),
-  detailSub: $('detail-sub'),
-  detailAction: $('detail-action'),
-  detailReport: $('detail-report'),
-  detailStatus: $('detail-status'),
-  detailProgress: $('detail-progress'),
-  detailProgressBar: $('detail-progress-bar'),
-  detailMeta: $('detail-meta'),
-  detailDesc: $('detail-desc'),
-  detailChangelogSection: $('detail-changelog-section'),
-  detailChangelog: $('detail-changelog'),
-  changelogToggle: $('changelog-toggle'),
-  reqSize: $('req-size'),
-  sideFolder: $('side-folder'),
-  detailVerify: $('detail-verify'),
-  detailSpotlight: $('detail-spotlight'),
-  spotlightTitle: $('spotlight-title'),
-  spotlightTag: $('spotlight-tag'),
-  spotlightDate: $('spotlight-date'),
-  spotlightLink: $('spotlight-link'),
-  detailGallerySection: $('detail-gallery-section'),
-  detailGallery: $('detail-gallery'),
-  detailSessionsSection: $('detail-sessions-section'),
-  detailSessions: $('detail-sessions'),
-  detailSessionsMore: $('detail-sessions-more'),
-  detailAuthorSection: $('detail-author-section'),
-  detailAuthorAvatar: $('detail-author-avatar'),
-  detailAuthorName: $('detail-author-name'),
-  detailAuthorSub: $('detail-author-sub'),
-  detailAuthorModes: $('detail-author-modes'),
-  detailAuthorFollow: $('detail-author-follow'),
-  detailAuthorProfile: $('detail-author-profile'),
-  detailTeam: $('detail-team'),
-  feed: $('feed'),
-  feedList: $('feed-list'),
-  storeNews: $('store-news'),
-  storeNewsList: $('store-news-list'),
-  galleryImage: $('gallery-image'),
-  detailTrailerSection: $('detail-trailer-section'),
-  detailTrailer: $('detail-trailer'),
-  detailTrailerOpen: $('detail-trailer-open'),
-  detailNewsSection: $('detail-news-section'),
-  detailNewsList: $('detail-news-list'),
-  detailReviewsSection: $('detail-reviews-section'),
-  reviewsSummary: $('reviews-summary'),
-  reviewsList: $('reviews-list'),
-  reviewForm: $('review-form'),
-  reviewStars: $('review-stars'),
-  reviewText: $('review-text'),
-  reviewError: $('review-error'),
-  reviewSubmit: $('review-submit'),
-  reviewLoginHint: $('review-login-hint'),
-  reportForm: $('report-form'),
-  reportTarget: $('report-target'),
-  reportReason: $('report-reason'),
-  reportError: $('report-error'),
-  reportSubmit: $('report-submit'),
-  moreSection: $('more-section'),
-  moreGrid: $('more-grid'),
-  cardContext: $('card-context'),
-  ram: $('set-ram'),
-  ramOut: $('ram-out'),
-  setDir: $('set-dir'),
-  setDirSelect: $('set-dir-select'),
-  settingsDiskInfo: $('settings-disk-info'),
-  setJava: $('set-java'),
-  setWidth: $('set-width'),
-  setHeight: $('set-height'),
-  setFullscreen: $('set-fullscreen'),
-  setJvmFlags: $('set-jvm-flags'),
-  setLogsPath: $('set-logs-path'),
-  setLang: $('set-lang'),
-  consentRow: $('lavunio-consent-row'),
-  consent: $('lavunio-consent'),
-};
 
 // ---------------------------------------------------------------- init
 
@@ -463,16 +267,6 @@ function sortCatalog(list, sort) {
   return sortModes(list);
 }
 
-function modeInstalledAt(mode) {
-  const st = S.state[mode.id];
-  return Number(st && st.installedAt) || 0;
-}
-
-function modePlaytime(mode) {
-  const st = S.state[mode.id];
-  return Number(st && st.playtimeSecs) || 0;
-}
-
 function updateDashboardStats() {
   const modes = S.modes.filter((mode) => isVisibleInLibrary(mode));
   if (els.libraryStatTotal) els.libraryStatTotal.textContent = String(modes.length);
@@ -679,170 +473,12 @@ function renderCurrentSection() {
   else renderStore();
 }
 
-function isInstalled(mode) {
-  const st = S.state[mode.id];
-  return !!(st && st.installed);
-}
-
-function inLibrary(mode) {
-  const st = S.state[mode.id];
-  if (!st) return false;
-  if (typeof st.library === 'boolean') return st.library;
-  return !!st.installed;
-}
-
-function isHiddenMode(mode) {
-  const st = S.state[mode.id];
-  return !!(st && st.hidden);
-}
-
-function isVisibleInLibrary(mode) {
-  return inLibrary(mode) && !isHiddenMode(mode);
-}
-
-function isUpdate(mode) {
-  const st = S.state[mode.id];
-  return !!(
-    st &&
-    st.installed &&
-    st.version !== mode.version &&
-    st.skippedVersion !== mode.version
-  );
-}
-
 function cardStatus(mode) {
   if (S.running === mode.id) return { cls: 'playing', text: 'В игре' };
   if (isUpdate(mode)) return { cls: 'update', text: 'Обновление' };
   if (isInstalled(mode)) return { cls: 'installed', text: 'Установлено' };
   if (inLibrary(mode)) return { cls: 'library', text: 'Не установлено' };
   return { cls: 'new', text: 'Доступно' };
-}
-
-function loaderLabel(mode) {
-  return LOADER_LABELS[mode.loader] || mode.loader || 'Vanilla';
-}
-
-function modeSub(mode) {
-  return `MC ${mode.mcVersion || '—'} · ${loaderLabel(mode)}`;
-}
-
-function modeAuthors(mode) {
-  const list = Array.isArray(mode.authors) && mode.authors.length
-    ? mode.authors
-    : (mode.author ? [mode.author] : []);
-  return [...new Set(list.filter((author) => author && author.name).map((author) => author.name))];
-}
-
-function cardSub(mode) {
-  return `${modeSub(mode)}${mode.version ? ` · v${mode.version}` : ''}`;
-}
-
-function modeShortDescription(mode) {
-  const short = String((mode && mode.shortDescription) || '').trim();
-  if (short) return short;
-  const full = String((mode && mode.description) || '').trim();
-  if (!full) return 'Описание пока не заполнено.';
-  return stripRichText(full).slice(0, 260) || 'Описание пока не заполнено.';
-}
-
-function modeFullDescription(mode) {
-  return String((mode && mode.description) || '').trim() || modeShortDescription(mode);
-}
-
-function stripRichText(value) {
-  return String(value || '')
-    .replace(/\r\n?/g, '\n')
-    .replace(/^#{1,6}\s+.*$/gm, '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/^\s*[-*]\s+/gm, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function renderRichText(value) {
-  const text = String(value || '').replace(/\r\n?/g, '\n').trim();
-  if (!text) return '<p>Описание пока не заполнено.</p>';
-
-  const inline = (raw) => escapeHtml(raw)
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
-  const lines = text.split('\n');
-  const blocks = [];
-  let index = 0;
-  while (index < lines.length) {
-    const line = lines[index];
-    if (!line.trim()) {
-      index += 1;
-      continue;
-    }
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      const tag = heading[1].length === 1 ? 'h2' : heading[1].length === 2 ? 'h3' : 'h4';
-      blocks.push(`<${tag}>${inline(heading[2].replace(/\*\*/g, ''))}</${tag}>`);
-      index += 1;
-      continue;
-    }
-    if (/^[-*]\s+/.test(line)) {
-      const items = [];
-      while (index < lines.length && /^[-*]\s+/.test(lines[index])) {
-        items.push(`<li>${inline(lines[index].replace(/^[-*]\s+/, ''))}</li>`);
-        index += 1;
-      }
-      blocks.push(`<ul>${items.join('')}</ul>`);
-      continue;
-    }
-    if (/^\d+[.)]\s+/.test(line)) {
-      const items = [];
-      while (index < lines.length && /^\d+[.)]\s+/.test(lines[index])) {
-        items.push(`<li>${inline(lines[index].replace(/^\d+[.)]\s+/, ''))}</li>`);
-        index += 1;
-      }
-      blocks.push(`<ol>${items.join('')}</ol>`);
-      continue;
-    }
-    if (/^>\s?/.test(line)) {
-      const quote = [];
-      while (index < lines.length && /^>\s?/.test(lines[index])) {
-        quote.push(inline(lines[index].replace(/^>\s?/, '')));
-        index += 1;
-      }
-      blocks.push(`<blockquote>${quote.join('<br>')}</blockquote>`);
-      continue;
-    }
-    const paragraph = [];
-    while (index < lines.length && lines[index].trim()
-      && !/^(#{1,3}\s|[-*]\s|\d+[.)]\s|>\s?)/.test(lines[index])) {
-      paragraph.push(inline(lines[index]));
-      index += 1;
-    }
-    if (paragraph.length) blocks.push(`<p>${paragraph.join('<br>')}</p>`);
-  }
-  return blocks.join('');
-}
-
-function modeTags(mode, limit = 3) {
-  const tags = Array.isArray(mode.tags) ? mode.tags.filter(Boolean) : [];
-  return tags.slice(0, limit);
-}
-
-function sortByTitle(list) {
-  return [...list].sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'ru'));
-}
-
-function sortModes(list) {
-  return [...list].sort((a, b) => {
-    const ar = S.running === a.id ? 0 : 1;
-    const br = S.running === b.id ? 0 : 1;
-    if (ar !== br) return ar - br;
-    const ai = isInstalled(a) ? 0 : 1;
-    const bi = isInstalled(b) ? 0 : 1;
-    if (ai !== bi) return ai - bi;
-    return String(a.title || '').localeCompare(String(b.title || ''), 'ru');
-  });
 }
 
 function matchesSearch(mode) {
@@ -1412,80 +1048,9 @@ function accentColor(mode) {
   return /^#[0-9a-f]{6}$/i.test(raw) ? raw : DEFAULT_ACCENT;
 }
 
-function formatBytes(bytes) {
-  const value = Number(bytes || 0);
-  const en = window.I18n && window.I18n.lang() === 'en';
-  const units = en ? ['GB', 'MB', 'KB', 'B'] : ['ГБ', 'МБ', 'КБ', 'Б'];
-  if (value >= 1024 * 1024 * 1024) return `${(value / 1024 / 1024 / 1024).toFixed(1)} ${units[0]}`;
-  if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} ${units[1]}`;
-  if (value >= 1024) return `${(value / 1024).toFixed(0)} ${units[2]}`;
-  return `${value} ${units[3]}`;
-}
-
 function tagPill(tag) {
   const meta = UPDATE_TAGS[tag] || { label: tag, cls: 'tech' };
   return `<span class="tag-pill ${escapeHtml(meta.cls)}">${escapeHtml(meta.label)}</span>`;
-}
-
-function formatPlaytime(seconds) {
-  const total = Math.max(0, Math.floor(Number(seconds) || 0));
-  if (total <= 0) return '—';
-  const unit = window.I18n && window.I18n.lang() === 'en' ? 'h' : 'ч';
-  return `${(total / 3600).toFixed(1)} ${unit}`;
-}
-
-function formatUpdateDate(value) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
-  if (!match) return String(value || '');
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  if (Number.isNaN(date.getTime())) return String(value || '');
-  return date.toLocaleDateString(window.I18n ? window.I18n.locale() : 'ru-RU');
-}
-
-function formatDateTime(value) {
-  let ms = Number(value);
-  if (!Number.isFinite(ms) || !ms) {
-    const parsed = Date.parse(String(value || ''));
-    ms = Number.isFinite(parsed) ? parsed : 0;
-  }
-  if (!ms) return '—';
-  return new Date(ms).toLocaleString(window.I18n ? window.I18n.locale() : 'ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-function formatDuration(seconds) {
-  const total = Math.max(0, Math.floor(Number(seconds) || 0));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const en = window.I18n && window.I18n.lang() === 'en';
-  const h = en ? 'h' : 'ч';
-  const m = en ? 'min' : 'мин';
-  const s = en ? 's' : 'сек';
-  if (hours > 0) return `${hours} ${h} ${minutes} ${m}`;
-  if (minutes > 0) return `${minutes} ${m}`;
-  return `${total} ${s}`;
-}
-
-function modeReleaseDate(mode) {
-  const direct = String((mode && mode.releaseDate) || '').trim();
-  if (direct) return direct;
-  const history = Array.isArray(mode && mode.history) ? mode.history : [];
-  for (let index = history.length - 1; index >= 0; index -= 1) {
-    const date = String((history[index] && history[index].date) || '').trim();
-    if (date) return date;
-  }
-  return '';
-}
-
-function formatHistoryStamp(entry) {
-  const date = entry && entry.date ? formatUpdateDate(entry.date) : '';
-  const time = String((entry && entry.time) || '').slice(0, 5);
-  return [date, time].filter(Boolean).join(' ');
 }
 
 function latestUpdateEntry(mode) {
@@ -2166,10 +1731,6 @@ function showStore() {
   const section = S.detailFrom || S.section || 'store';
   S.detailFrom = null;
   showSection(section);
-}
-
-function modeById(id) {
-  return S.modes.find((m) => m.id === id) || null;
 }
 
 function computeAction(mode) {
