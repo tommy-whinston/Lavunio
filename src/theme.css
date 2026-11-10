@@ -1638,6 +1638,16 @@ html[lang="en"] .btn-small { min-height: 32px; }
 html[lang="en"] .btn-big { min-height: 46px; }
 html[lang="en"] .filter-chips button { white-space: normal; }
 
+select { color-scheme: dark; }
+select option {
+  background-color: #111111;
+  color: #f4efe9;
+}
+select option:checked {
+  background-color: #e5322b;
+  color: #ffffff;
+}
+
 /* ============ STORE INTRO / DETAIL TABS ============ */
 .store-intro { padding: 2px 2px 16px; }
 .store-intro h1 {

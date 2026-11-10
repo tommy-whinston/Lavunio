@@ -12,6 +12,8 @@
   window.tm = {
     // окно
     minimize: () => invoke("win_minimize"),
+    toggleMaximize: () => invoke("win_toggle_maximize"),
+    toggleFullscreen: () => invoke("win_toggle_fullscreen"),
     isWindowVisible: () => invoke("win_is_visible"),
     hide: () => invoke("win_hide"),
     close: () => invoke("win_close"),
@@ -54,9 +56,6 @@
     pickSkin: () => invoke("lavunio_pick_skin"),
     uploadSkin: (path, model) => invoke("lavunio_upload_skin", { path, model }),
     deleteSkin: () => invoke("lavunio_delete_skin"),
-    pickCape: () => invoke("lavunio_pick_cape"),
-    uploadCape: (path) => invoke("lavunio_upload_cape", { path }),
-    deleteCape: () => invoke("lavunio_delete_cape"),
 
     // публикатор
     publisherMyModes: () => invoke("publisher_my_modes"),

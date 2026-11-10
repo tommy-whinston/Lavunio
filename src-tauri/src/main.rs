@@ -53,7 +53,12 @@ fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => show_main(app),
-            "quit" => app.exit(0),
+            "quit" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    commands::save_window_size_for_event(&window, app);
+                }
+                app.exit(0);
+            }
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
@@ -83,6 +88,8 @@ fn main() {
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::win_minimize,
+            commands::win_toggle_maximize,
+            commands::win_toggle_fullscreen,
             commands::win_is_visible,
             commands::win_hide,
             commands::win_close,
@@ -114,9 +121,6 @@ fn main() {
             commands::lavunio_pick_skin,
             commands::lavunio_upload_skin,
             commands::lavunio_delete_skin,
-            commands::lavunio_pick_cape,
-            commands::lavunio_upload_cape,
-            commands::lavunio_delete_cape,
             commands::publisher_my_modes,
             commands::publisher_create_mode,
             commands::publisher_create_release,

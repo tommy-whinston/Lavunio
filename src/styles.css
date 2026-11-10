@@ -1361,19 +1361,10 @@ select option { background: var(--panel); color: var(--text); }
   height: 64px;
   image-rendering: pixelated;
 }
-.skin-preview.cape img { width: 64px; height: 32px; }
 .skin-controls { flex: 1; min-width: 0; }
 .skin-controls .field { margin-bottom: 10px; }
 .skin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .skin-actions .btn { padding: 6px 10px; font-size: 11.5px; }
-.skin-cape-label {
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 1.4px;
-  color: var(--muted);
-  font-weight: 700;
-  margin-bottom: 10px;
-}
 
 .link { color: var(--accent-2); cursor: pointer; }
 .link:hover { text-decoration: underline; }

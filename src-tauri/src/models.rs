@@ -18,7 +18,6 @@ pub struct LavunioUser {
     pub minecraft_uuid: Option<String>,
     pub skin_url: Option<String>,
     pub skin_model: Option<String>,
-    pub cape_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

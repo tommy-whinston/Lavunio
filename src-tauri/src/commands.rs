@@ -72,7 +72,7 @@ async fn load_modes(state: &AppState) -> Vec<Mode> {
 }
 
 fn save_window_size(window: &Window, state: &AppState) {
-    if window.is_maximized().unwrap_or(false) {
+    if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
         return;
     }
     let Ok(size) = window.inner_size() else {
@@ -95,6 +95,26 @@ fn save_window_size(window: &Window, state: &AppState) {
 #[tauri::command]
 pub fn win_minimize(window: Window) -> Result<(), String> {
     window.minimize().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn win_toggle_maximize(window: Window) -> Result<bool, String> {
+    let maximized = window.is_maximized().unwrap_or(false);
+    if maximized {
+        window.unmaximize().map_err(|e| e.to_string())?;
+    } else {
+        window.maximize().map_err(|e| e.to_string())?;
+    }
+    Ok(!maximized)
+}
+
+#[tauri::command]
+pub fn win_toggle_fullscreen(window: Window) -> Result<bool, String> {
+    let fullscreen = window.is_fullscreen().unwrap_or(false);
+    window
+        .set_fullscreen(!fullscreen)
+        .map_err(|e| e.to_string())?;
+    Ok(!fullscreen)
 }
 
 #[tauri::command]
@@ -129,20 +149,24 @@ pub fn win_splash(window: Window) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn win_ready(window: Window) -> Result<(), String> {
-    const WIDTH: f64 = 1280.0;
-    const HEIGHT: f64 = 800.0;
+pub fn win_ready(window: Window, state: State<'_, AppState>) -> Result<(), String> {
+    let (saved_width, saved_height) = {
+        let store = state.store.lock().unwrap();
+        (
+            store.settings.launcher_width,
+            store.settings.launcher_height,
+        )
+    };
+    let width = saved_width.clamp(980.0, 3840.0);
+    let height = saved_height.clamp(640.0, 2160.0);
     window
-        .set_size(tauri::LogicalSize::new(WIDTH, HEIGHT))
+        .set_size(tauri::LogicalSize::new(width, height))
         .map_err(|e| e.to_string())?;
     window
-        .set_min_size(Some(tauri::LogicalSize::new(WIDTH, HEIGHT)))
+        .set_min_size(Some(tauri::LogicalSize::new(980.0, 640.0)))
         .map_err(|e| e.to_string())?;
-    window
-        .set_max_size(Some(tauri::LogicalSize::new(WIDTH, HEIGHT)))
-        .map_err(|e| e.to_string())?;
-    window.set_resizable(false).map_err(|e| e.to_string())?;
-    window.set_maximizable(false).map_err(|e| e.to_string())?;
+    window.set_resizable(true).map_err(|e| e.to_string())?;
+    window.set_maximizable(true).map_err(|e| e.to_string())?;
     window.center().map_err(|e| e.to_string())?;
     let _ = window.set_focus();
     Ok(())
@@ -2017,17 +2041,6 @@ pub async fn lavunio_pick_skin() -> Result<Option<String>, String> {
     Ok(picked.map(|path| path_string(&path)))
 }
 
-#[tauri::command]
-pub async fn lavunio_pick_cape() -> Result<Option<String>, String> {
-    let picked = blocking(|| {
-        rfd::FileDialog::new()
-            .add_filter("PNG-плащ", &["png"])
-            .pick_file()
-    })
-    .await?;
-    Ok(picked.map(|path| path_string(&path)))
-}
-
 async fn lavunio_upload_image(
     state: &AppState,
     path: String,
@@ -2064,20 +2077,6 @@ pub async fn lavunio_upload_skin(
 #[tauri::command]
 pub async fn lavunio_delete_skin(state: State<'_, AppState>) -> Result<Value, String> {
     let data = publisher_request(state.inner(), "DELETE", "/v1/me/skin".to_string(), None).await?;
-    save_lavunio_account(state.inner(), data)
-}
-
-#[tauri::command]
-pub async fn lavunio_upload_cape(
-    state: State<'_, AppState>,
-    path: String,
-) -> Result<Value, String> {
-    lavunio_upload_image(state.inner(), path, "/v1/me/cape".to_string()).await
-}
-
-#[tauri::command]
-pub async fn lavunio_delete_cape(state: State<'_, AppState>) -> Result<Value, String> {
-    let data = publisher_request(state.inner(), "DELETE", "/v1/me/cape".to_string(), None).await?;
     save_lavunio_account(state.inner(), data)
 }
 
@@ -2224,7 +2223,7 @@ pub fn game_cancel(state: State<'_, AppState>) {
 // ---------------------------------------------------------------- утилиты
 
 pub fn save_window_size_for_event(window: &tauri::WebviewWindow, app: &AppHandle) {
-    if window.is_maximized().unwrap_or(false) {
+    if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
         return;
     }
     let Ok(size) = window.inner_size() else {

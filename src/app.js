@@ -460,8 +460,14 @@ setTimeout(() => {
 
 function bindWindowButtons() {
   $('btn-min').onclick = () => api.minimize();
+  $('btn-max').onclick = () => api.toggleMaximize().catch(() => {});
   $('btn-settings').onclick = () => openModal('modal-settings');
   $('btn-close').onclick = () => api.hide();
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'F11') return;
+    event.preventDefault();
+    api.toggleFullscreen().catch(() => {});
+  });
 }
 
 // ---------------------------------------------------------------- store
@@ -3543,8 +3549,6 @@ function bindAccountModal() {
   $('lavunio-verify-btn').onclick = () => verifyLavunioEmail();
   $('lavunio-skin-upload').onclick = () => uploadLavunioSkin();
   $('lavunio-skin-delete').onclick = () => deleteLavunioSkin();
-  $('lavunio-cape-upload').onclick = () => uploadLavunioCape();
-  $('lavunio-cape-delete').onclick = () => deleteLavunioCape();
   const applyBtn = $('author-apply-btn');
   if (applyBtn) applyBtn.onclick = () => openAuthorApplyModal();
   const applyForm = $('author-apply-form');
@@ -3622,16 +3626,6 @@ function renderLavunioPane() {
     }
     $('lavunio-skin-model').value = user.skinModel || 'classic';
     $('lavunio-skin-delete').hidden = !user.skinUrl;
-
-    const capeImg = $('lavunio-cape-img');
-    if (user.capeUrl) {
-      capeImg.src = user.capeUrl;
-      capeImg.hidden = false;
-    } else {
-      capeImg.removeAttribute('src');
-      capeImg.hidden = true;
-    }
-    $('lavunio-cape-delete').hidden = !user.capeUrl;
   } else {
     const register = !!S.lavunioRegisterMode;
     $('lavunio-username-field').hidden = !register;
@@ -3970,41 +3964,6 @@ async function deleteLavunioSkin() {
     toast('Скин удалён', 'ok');
   } catch (err) {
     toast('Не удалось удалить скин: ' + err, 'error');
-  }
-}
-
-async function uploadLavunioCape() {
-  if (!lavunioLoggedIn()) return;
-  let path;
-  try {
-    path = await api.pickCape();
-  } catch (err) {
-    toast('Не удалось выбрать файл: ' + err, 'error');
-    return;
-  }
-  if (!path) return;
-
-  const button = $('lavunio-cape-upload');
-  button.disabled = true;
-  try {
-    S.lavunio = await api.uploadCape(path);
-    renderLavunioPane();
-    toast('Плащ обновлён', 'ok');
-  } catch (err) {
-    toast('Не удалось загрузить плащ: ' + err, 'error');
-  } finally {
-    button.disabled = false;
-  }
-}
-
-async function deleteLavunioCape() {
-  if (!lavunioLoggedIn()) return;
-  try {
-    S.lavunio = await api.deleteCape();
-    renderLavunioPane();
-    toast('Плащ удалён', 'ok');
-  } catch (err) {
-    toast('Не удалось удалить плащ: ' + err, 'error');
   }
 }
 
