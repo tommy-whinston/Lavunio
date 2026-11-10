@@ -890,7 +890,12 @@
     "Скачиваю…": "Downloading…",
     "Обновление скачано. Лаунчер закроется и запустится заново.":
       "Update downloaded. The launcher will close and start again.",
-    "Не удалось установить обновление:": "Failed to install update:"
+    "Не удалось установить обновление:": "Failed to install update:",
+    "Удалить из библиотеки": "Remove from library",
+    "Вернуть в библиотеку": "Restore to library",
+    "Режим удалён из библиотеки": "Mode removed from library",
+    "Режим возвращён в библиотеку": "Mode restored to library",
+    "Не удалось сохранить язык:": "Failed to save language:"
   };
 
   // Patterns with * wildcards, applied after exact matches.

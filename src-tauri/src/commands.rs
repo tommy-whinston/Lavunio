@@ -420,6 +420,15 @@ pub fn game_set_library(state: State<'_, AppState>, mode_id: String, library: bo
 }
 
 #[tauri::command]
+pub fn game_set_hidden(state: State<'_, AppState>, mode_id: String, hidden: bool) -> Value {
+    let mut store = state.store.lock().unwrap();
+    match store.set_mode_hidden(&mode_id, hidden) {
+        Ok(()) => json!({ "ok": true }),
+        Err(err) => json!({ "ok": false, "error": err }),
+    }
+}
+
+#[tauri::command]
 pub fn game_skip_update(
     state: State<'_, AppState>,
     mode_id: String,

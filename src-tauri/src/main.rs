@@ -214,6 +214,7 @@ fn main() {
             commands::game_verify,
             commands::game_prepare_repair,
             commands::game_set_library,
+            commands::game_set_hidden,
             commands::game_skip_update,
             commands::game_add_playtime,
             commands::game_mark_launched,

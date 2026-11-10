@@ -173,7 +173,23 @@ impl Store {
             .entry(mode_id.to_string())
             .or_insert_with(ModeState::default);
         state.library = Some(library);
-        state.hidden = !library;
+        state.hidden = false;
+        self.save_state()
+    }
+
+    pub fn set_mode_hidden(&mut self, mode_id: &str, hidden: bool) -> Result<(), String> {
+        let state = self
+            .state
+            .entry(mode_id.to_string())
+            .or_insert_with(ModeState::default);
+        state.hidden = hidden;
+        if hidden {
+            if state.library.is_none() {
+                state.library = Some(state.installed);
+            }
+        } else {
+            state.library = Some(true);
+        }
         self.save_state()
     }
 

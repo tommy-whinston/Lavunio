@@ -158,6 +158,7 @@
     verify: (modeId) => invoke("game_verify", { modeId }),
     prepareRepair: (modeId) => invoke("game_prepare_repair", { modeId }),
     setLibrary: (modeId, library) => invoke("game_set_library", { modeId, library }),
+    setHidden: (modeId, hidden) => invoke("game_set_hidden", { modeId, hidden }),
     gameSkipUpdate: (modeId, version) => invoke("game_skip_update", { modeId, version }),
     addPlaytime: (modeId, seconds, startedAt) => invoke("game_add_playtime", { modeId, seconds, startedAt }),
     markLaunched: (modeId) => invoke("game_mark_launched", { modeId }),

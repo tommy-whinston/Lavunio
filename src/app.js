@@ -561,7 +561,7 @@ function modePlaytime(mode) {
 }
 
 function updateDashboardStats() {
-  const modes = S.modes.filter((mode) => inLibrary(mode));
+  const modes = S.modes.filter((mode) => isVisibleInLibrary(mode));
   if (els.libraryStatTotal) els.libraryStatTotal.textContent = String(modes.length);
   if (els.libraryStatInstalled) els.libraryStatInstalled.textContent = String(modes.filter((mode) => isInstalled(mode)).length);
   if (els.libraryStatUpdates) els.libraryStatUpdates.textContent = String(modes.filter((mode) => isUpdate(mode)).length);
@@ -775,7 +775,16 @@ function inLibrary(mode) {
   const st = S.state[mode.id];
   if (!st) return false;
   if (typeof st.library === 'boolean') return st.library;
-  return !!(st.installed && !st.hidden);
+  return !!st.installed;
+}
+
+function isHiddenMode(mode) {
+  const st = S.state[mode.id];
+  return !!(st && st.hidden);
+}
+
+function isVisibleInLibrary(mode) {
+  return inLibrary(mode) && !isHiddenMode(mode);
 }
 
 function isUpdate(mode) {
@@ -943,7 +952,7 @@ function filterModes() {
 
 function updateSidebarCounts() {
   if (!els.sideLibCount) return;
-  els.sideLibCount.textContent = String(S.modes.filter((mode) => inLibrary(mode)).length);
+  els.sideLibCount.textContent = String(S.modes.filter((mode) => isVisibleInLibrary(mode)).length);
   els.sideInstalledCount.textContent = String(S.modes.filter((mode) => isInstalled(mode)).length);
 }
 
@@ -1036,7 +1045,7 @@ function renderLibrary() {
         const st = S.state[mode.id];
         return !!(st && st.hidden);
       })
-    : S.modes.filter((mode) => inLibrary(mode));
+    : S.modes.filter((mode) => isVisibleInLibrary(mode));
   const list = sortCatalog(
     source.filter((mode) => matchesSearch(mode) && modePassesFilter(mode, S.libraryFilter)),
     S.librarySort
@@ -1051,7 +1060,7 @@ function renderLibrary() {
       els.libraryEmptySub.textContent = 'Попробуй изменить запрос или выбрать другой фильтр';
     } else if (S.libraryFilter === 'hidden') {
       els.libraryEmptyTitle.textContent = 'Скрытых режимов нет';
-      els.libraryEmptySub.textContent = 'Режимы, убранные из библиотеки, появятся здесь';
+      els.libraryEmptySub.textContent = 'Скрытые режимы появятся здесь';
     } else {
       els.libraryEmptyTitle.textContent = 'Библиотека пуста';
       els.libraryEmptySub.textContent = 'Добавь режим в библиотеку, чтобы он появился здесь';
@@ -1344,18 +1353,35 @@ async function handleCardAction(modeId, action, autoPlay = false) {
     return;
   }
 
-  if (action === 'hide') {
+  if (action === 'hide' || action === 'unhide') {
+    const hidden = action === 'hide';
+    try {
+      const res = await api.setHidden(modeId, hidden);
+      if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
+      const st = S.state[modeId] || { installed: false, version: null, installedAt: 0 };
+      S.state[modeId] = { ...st, hidden, library: true };
+      renderStore();
+      renderLibrary();
+      if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
+      toast(hidden ? 'Режим скрыт' : 'Режим возвращён в библиотеку', 'ok');
+    } catch (err) {
+      toast((hidden ? 'Не удалось скрыть режим: ' : 'Не удалось вернуть режим: ') + err, 'error');
+    }
+    return;
+  }
+
+  if (action === 'removelib') {
     try {
       const res = await api.setLibrary(modeId, false);
       if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка');
       const st = S.state[modeId] || { installed: false, version: null, installedAt: 0 };
-      S.state[modeId] = { ...st, library: false, hidden: true };
+      S.state[modeId] = { ...st, library: false, hidden: false };
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
-      toast('Режим скрыт', 'ok');
+      toast('Режим удалён из библиотеки', 'ok');
     } catch (err) {
-      toast('Не удалось убрать режим: ' + err, 'error');
+      toast('Не удалось удалить режим из библиотеки: ' + err, 'error');
     }
     return;
   }
@@ -2164,7 +2190,13 @@ function openCardContext(card, x, y, playMode) {
 
   if (playMode) actions.push({ action: 'page', label: 'Страница режима' });
   if (installed) actions.push({ action: 'folder', label: 'Открыть папку' });
-  if (inLib) actions.push({ action: 'hide', label: 'Скрыть' });
+  if (isHiddenMode(mode)) {
+    actions.push({ action: 'unhide', label: 'Вернуть в библиотеку' });
+    actions.push({ action: 'removelib', label: 'Удалить из библиотеки' });
+  } else if (inLib) {
+    actions.push({ action: 'removelib', label: 'Удалить из библиотеки' });
+    actions.push({ action: 'hide', label: 'Скрыть' });
+  }
   if (installed && action !== 'running') {
     actions.push({ action: 'uninstall', label: 'Удалить с устройства', danger: true });
   }
@@ -3797,7 +3829,7 @@ function renderProfile(profile) {
         ${own ? `
           <section class="profile-panel">
             <h2>Библиотека</h2>
-            ${S.modes.filter((mode) => inLibrary(mode)).slice(0, 20).map((mode) => `
+            ${S.modes.filter((mode) => isVisibleInLibrary(mode)).slice(0, 20).map((mode) => `
               <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
                 <span>${escapeHtml(mode.title)}</span>
                 <b>${isInstalled(mode) ? 'Установлено' : 'В библиотеке'}</b>
@@ -4055,12 +4087,18 @@ function bindSettings() {
   if (els.setLang) {
     els.setLang.onchange = async () => {
       const lang = els.setLang.value === 'en' ? 'en' : 'ru';
+      const previous = (S.settings && S.settings.lang) || 'ru';
+      S.settings = { ...(S.settings || {}), lang };
       if (window.I18n) window.I18n.setLang(lang);
       try {
         const saved = await api.saveSettings({ lang });
         S.settings = saved;
-      } catch (_) {}
-      toast(window.I18n ? window.I18n.t('Язык изменён') : 'Язык изменён', 'ok');
+        toast(window.I18n ? window.I18n.t('Язык изменён') : 'Язык изменён', 'ok');
+      } catch (err) {
+        S.settings = { ...(S.settings || {}), lang: previous };
+        if (window.I18n) window.I18n.setLang(previous);
+        toast('Не удалось сохранить язык: ' + err, 'error');
+      }
     };
   }
   els.ram.addEventListener('input', () => {
