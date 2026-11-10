@@ -159,6 +159,8 @@ pub fn win_ready(window: Window, state: State<'_, AppState>) -> Result<(), Strin
     };
     let width = saved_width.clamp(980.0, 3840.0);
     let height = saved_height.clamp(640.0, 2160.0);
+    let minimized = window.is_minimized().unwrap_or(false);
+    let visible = window.is_visible().unwrap_or(true);
     window
         .set_size(tauri::LogicalSize::new(width, height))
         .map_err(|e| e.to_string())?;
@@ -167,8 +169,10 @@ pub fn win_ready(window: Window, state: State<'_, AppState>) -> Result<(), Strin
         .map_err(|e| e.to_string())?;
     window.set_resizable(true).map_err(|e| e.to_string())?;
     window.set_maximizable(true).map_err(|e| e.to_string())?;
-    window.center().map_err(|e| e.to_string())?;
-    let _ = window.set_focus();
+    if !minimized && visible {
+        window.center().map_err(|e| e.to_string())?;
+        let _ = window.set_focus();
+    }
     Ok(())
 }
 

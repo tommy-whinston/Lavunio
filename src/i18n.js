@@ -884,7 +884,8 @@
     "Добавь друга, чтобы начать переписку": "Add a friend to start chatting",
     "Выбери друга или команду слева": "Choose a friend or team on the left",
     "Игрок": "Player",
-    "Скин": "Skin"
+    "Скин": "Skin",
+    "Показать все": "Show all"
   };
 
   // Patterns with * wildcards, applied after exact matches.

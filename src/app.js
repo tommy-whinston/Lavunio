@@ -47,12 +47,12 @@ let lastUpdateCheckAt = 0;
 
 const S = {
   modes: [],
-  collections: [],
   state: {},
   settings: null,
   systemRamGb: 0,
   selectedId: null,
   detailTab: 'about',
+  sessionsExpanded: false,
   featuredId: null,
   view: 'store',
   busy: null,
@@ -76,7 +76,6 @@ const S = {
   lavunio: null,
   lavunioRegisterMode: false,
   authorApplication: null,
-  wishlist: [],
   follows: [],
   feed: [],
   storeNews: [],
@@ -127,7 +126,6 @@ const S = {
   moderationAppeals: [],
   moderationAuthorApplications: [],
   moderationReviews: [],
-  moderationCollections: [],
   moderationHistory: [],
   moderationLoaded: false,
   moderationLoading: false,
@@ -153,7 +151,6 @@ const els = {
   storeFilters: $('store-filters'),
   storeSort: $('store-sort'),
   storeView: $('store-view'),
-  collections: $('collections'),
   libraryView: $('library-view'),
   profileView: $('profile-view'),
   profileContent: $('profile-content'),
@@ -240,7 +237,7 @@ const els = {
   detailTags: $('detail-tags'),
   detailSub: $('detail-sub'),
   detailAction: $('detail-action'),
-  detailWishlist: $('detail-wishlist'),
+  detailLibrary: $('detail-library'),
   detailReport: $('detail-report'),
   detailStatus: $('detail-status'),
   detailProgress: $('detail-progress'),
@@ -262,6 +259,7 @@ const els = {
   detailGallery: $('detail-gallery'),
   detailSessionsSection: $('detail-sessions-section'),
   detailSessions: $('detail-sessions'),
+  detailSessionsMore: $('detail-sessions-more'),
   detailAuthorSection: $('detail-author-section'),
   detailAuthorAvatar: $('detail-author-avatar'),
   detailAuthorName: $('detail-author-name'),
@@ -387,9 +385,7 @@ async function init() {
     S.loading = false;
     renderAccountChip();
     updatePublisherNav();
-    loadWishlist();
     loadFollows();
-    loadCollections();
     loadStoreNews();
     renderStore();
     renderLibrary();
@@ -402,7 +398,6 @@ async function init() {
       api.refreshModes().then((fresh) => {
         if (!Array.isArray(fresh) || !fresh.length) return;
         S.modes = fresh;
-        loadCollections();
         renderStore();
         renderLibrary();
         updateSidebar();
@@ -508,26 +503,14 @@ function syncFilterButtons(container, attr, active) {
 
 function modePassesFilter(mode, filter) {
   if (filter === 'installed') return isInstalled(mode);
-  if (filter === 'wishlist' || filter === 'favorites') return S.wishlist.includes(mode.id);
   if (filter === 'following') return modeAuthorIds(mode).some((id) => S.follows.includes(id));
   if (filter === 'hidden') {
     const st = S.state[mode.id];
     return !!(st && st.hidden);
   }
-  if (filter === 'collections') return modeInCollections(mode);
   if (filter === 'development') return mode.status === 'development';
   if (filter === 'crowdfunding') return mode.status === 'crowdfunding';
   return true;
-}
-
-function modeInCollections(mode) {
-  if (!mode || !Array.isArray(S.collections)) return false;
-  const automatic = new Set(['featured', 'popular', 'new', 'updated']);
-  return S.collections
-    .filter((section) => section && !automatic.has(section.id))
-    .some((section) =>
-      collectionModes(section).some((item) => item && item.id === mode.id)
-    );
 }
 
 function modeAuthorIds(mode) {
@@ -607,7 +590,6 @@ function bindStore() {
       const modes = await api.refreshModes();
       S.modes = Array.isArray(modes) ? modes : [];
       S.state = (await api.getState()) || {};
-      loadCollections();
       renderStore();
       renderLibrary();
       if (S.view === 'detail' && S.selectedId) renderDetail();
@@ -973,10 +955,6 @@ function renderStore() {
 
   if (S.loading) {
     els.featured.hidden = true;
-    if (els.collections) {
-      els.collections.hidden = true;
-      els.collections.innerHTML = '';
-    }
     if (els.feed) {
       els.feed.hidden = true;
       els.feedList.innerHTML = '';
@@ -999,10 +977,6 @@ function renderStore() {
 
   if (searchActive) {
     els.featured.hidden = true;
-    if (els.collections) {
-      els.collections.hidden = true;
-      els.collections.innerHTML = '';
-    }
     if (els.feed) {
       els.feed.hidden = true;
     }
@@ -1021,13 +995,9 @@ function renderStore() {
     return;
   }
 
-  const recommended = collectionModes(
-    (S.collections || []).find((section) => section.id === 'featured')
-  ).filter((mode) => mode.imageUrl || mode.image);
-  const featured = recommended[0] || S.modes.find((m) => m.imageUrl || m.image) || S.modes[0] || null;
+  const featured = S.modes.find((m) => m.imageUrl || m.image) || S.modes[0] || null;
   S.featuredId = featured ? featured.id : null;
   renderFeatured(featured);
-  renderCollections();
   renderFeed();
   renderStoreNews();
 
@@ -1038,7 +1008,6 @@ function renderStore() {
   const titles = {
     all: 'Все режимы',
     installed: 'Установленные',
-    wishlist: 'Желаемое',
     following: 'Подписки',
     development: 'В разработке',
     crowdfunding: 'Сбор на релиз'
@@ -1084,12 +1053,6 @@ function renderLibrary() {
     } else if (S.libraryFilter === 'hidden') {
       els.libraryEmptyTitle.textContent = 'Скрытых режимов нет';
       els.libraryEmptySub.textContent = 'Режимы, убранные из библиотеки, появятся здесь';
-    } else if (S.libraryFilter === 'favorites') {
-      els.libraryEmptyTitle.textContent = 'В избранном пусто';
-      els.libraryEmptySub.textContent = 'Добавляй режимы в список желаемого, чтобы они появились здесь';
-    } else if (S.libraryFilter === 'collections') {
-      els.libraryEmptyTitle.textContent = 'В коллекциях пусто';
-      els.libraryEmptySub.textContent = 'Режимы из подборок появятся здесь';
     } else {
       els.libraryEmptyTitle.textContent = 'Библиотека пуста';
       els.libraryEmptySub.textContent = 'Добавь режим в библиотеку, чтобы он появился здесь';
@@ -1132,101 +1095,6 @@ function renderFeatured(mode) {
     .join('');
   const st = cardStatus(mode);
   els.featuredStatus.textContent = st.text;
-}
-
-function collectionMode(item) {
-  if (!item) return null;
-  if (typeof item === 'string') return modeById(item);
-  return modeById(item.slug || item.id);
-}
-
-function collectionModes(section) {
-  if (!section || !Array.isArray(section.modes)) return [];
-  const seen = new Set();
-  const modes = [];
-  for (const item of section.modes) {
-    const mode = collectionMode(item);
-    if (mode && !seen.has(mode.id)) {
-      seen.add(mode.id);
-      modes.push(mode);
-    }
-  }
-  return modes;
-}
-
-function localCollections() {
-  if (!S.modes.length) return [];
-  const byInstalls = [...S.modes].sort(
-    (a, b) => (Number(b.installs) || 0) - (Number(a.installs) || 0)
-  );
-  const byDate = [...S.modes].sort((a, b) =>
-    String(modeReleaseDate(b) || '').localeCompare(String(modeReleaseDate(a) || ''))
-  );
-  const rated = S.modes
-    .filter((mode) => Number(mode.rating) > 0)
-    .sort((a, b) => Number(b.rating) - Number(a.rating));
-  return [
-    { id: 'featured', title: 'Рекомендуем', modes: rated.length ? rated : byInstalls },
-    { id: 'popular', title: 'Популярное', modes: byInstalls },
-    { id: 'new', title: 'Новинки', modes: byDate },
-    { id: 'updated', title: 'Обновления', modes: byDate }
-  ];
-}
-
-async function loadCollections() {
-  if (!api.collectionsGet) return;
-  try {
-    const sections = await api.collectionsGet();
-    S.collections = Array.isArray(sections) ? sections : [];
-  } catch (_) {
-    S.collections = [];
-  }
-  if (S.view === 'store' && !S.search) renderStore();
-  if (S.section === 'library') renderLibrary();
-}
-
-function renderCollections() {
-  const container = els.collections;
-  if (!container) return;
-  if (S.loading || S.search || S.storeFilter !== 'all') {
-    container.hidden = true;
-    container.innerHTML = '';
-    return;
-  }
-  const source = Array.isArray(S.collections) && S.collections.length
-    ? S.collections
-    : localCollections();
-  const sections = source
-    .filter((section) => String((section && section.id) || '') !== 'featured')
-    .map((section) => ({
-      id: String((section && section.id) || ''),
-      title: String((section && section.title) || ''),
-      modes: collectionModes(section)
-    }))
-    .filter((section) => section.id && section.title && section.modes.length)
-    .slice(0, 8);
-
-  if (!sections.length) {
-    container.hidden = true;
-    container.innerHTML = '';
-    return;
-  }
-
-  container.hidden = false;
-  container.innerHTML = sections.map((section) => `
-    <section class="shelf collection-shelf">
-      <div class="shelf-head">
-        <div class="shelf-title"><h2>${escapeHtml(section.title)}</h2></div>
-        <span class="count">${section.modes.length}</span>
-      </div>
-      <div class="collection-row" data-collection-row></div>
-    </section>
-  `).join('');
-
-  const rows = container.querySelectorAll('[data-collection-row]');
-  sections.forEach((section, index) => {
-    if (rows[index]) renderModeGrid(rows[index], section.modes.slice(0, 8), false, false, true);
-  });
 }
 
 let followsRequestSeq = 0;
@@ -1349,9 +1217,9 @@ function renderModeNews(mode) {
   els.detailNewsList.innerHTML = items.map(newsCardHtml).join('');
 }
 
-function renderModeGrid(container, list, withMenu = false, playMode = false, compact = false) {
+function renderModeGrid(container, list, withMenu = false, playMode = false) {
   container.innerHTML = list
-    .map((mode) => compact ? collectionCardHtml(mode) : modeCardHtml(mode, withMenu, playMode))
+    .map((mode) => modeCardHtml(mode, withMenu, playMode))
     .join('');
   container.onclick = (e) => {
     const menuBtn = e.target.closest('.card-menu-btn');
@@ -1460,29 +1328,10 @@ async function handleCardAction(modeId, action, autoPlay = false) {
       S.state[modeId] = { ...st, library: true, hidden: false };
       renderStore();
       renderLibrary();
+      if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
       toast('Режим добавлен в библиотеку', 'ok');
     } catch (err) {
       toast('Не удалось добавить режим: ' + err, 'error');
-    }
-    return;
-  }
-
-  if (action === 'wish' || action === 'unwish') {
-    try {
-      if (action === 'wish') {
-        await api.wishlistAdd(modeId);
-        if (!S.wishlist.includes(modeId)) S.wishlist = [...S.wishlist, modeId];
-        toast('Добавлено в избранное', 'ok');
-      } else {
-        await api.wishlistRemove(modeId);
-        S.wishlist = S.wishlist.filter((id) => id !== modeId);
-        toast('Убрано из избранного', 'ok');
-      }
-      renderStore();
-      renderLibrary();
-      if (S.view === 'detail' && S.selectedId === modeId) renderDetail();
-    } catch (err) {
-      toast('Не удалось обновить избранное: ' + err, 'error');
     }
     return;
   }
@@ -1565,28 +1414,6 @@ function cardPlayIcon(kind) {
     return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.8" fill="currentColor"/></svg>';
   }
   return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5a1 1 0 0 0-1.53.85Z"/></svg>';
-}
-
-function collectionCardHtml(mode) {
-  const st = cardStatus(mode);
-  const installed = isInstalled(mode);
-  const updated = modeUpdatedAt(mode);
-  return `
-  <article class="mode-card collection-card ${installed ? 'installed' : ''}" data-id="${escapeHtml(mode.id)}">
-    <div class="card-media">
-      <img src="${escapeHtml(imageSrc(mode))}" alt="" loading="lazy" data-fallback>
-      <div class="card-badge ${st.cls}">${st.text}</div>
-    </div>
-    <div class="card-body">
-      <div class="card-title">${escapeHtml(mode.title || 'Без названия')}</div>
-      <div class="card-sub">${escapeHtml(cardSub(mode))}</div>
-      ${updated ? `<div class="card-release">Обновлено ${escapeHtml(formatUpdateDate(updated))}</div>` : ''}
-      <div class="card-foot">
-        <span class="card-installs">${Number(mode.installs) ? `${Number(mode.installs)} установок` : ''}</span>
-        ${mode.rating ? `<span class="card-installs">★ ${Number(mode.rating).toFixed(1)}</span>` : ''}
-      </div>
-    </div>
-  </article>`;
 }
 
 function modeCardHtml(mode, withMenu = false, playMode = false) {
@@ -1850,7 +1677,14 @@ function bindDetail() {
     S.search = name.toLowerCase();
     showSection('store');
   };
-  els.detailWishlist.onclick = () => toggleWishlist(modeById(S.selectedId));
+  els.detailLibrary.onclick = () => handleCardAction(S.selectedId, 'addlib');
+  if (els.detailSessionsMore) {
+    els.detailSessionsMore.onclick = () => {
+      S.sessionsExpanded = !S.sessionsExpanded;
+      const mode = modeById(S.selectedId);
+      if (mode) renderSessions(mode);
+    };
+  }
   els.detailAuthorFollow.onclick = () => toggleFollowAuthor();
   if (els.detailAuthorProfile) els.detailAuthorProfile.onclick = () => {
     const mode = modeById(S.selectedId);
@@ -2342,13 +2176,6 @@ function openCardContext(card, x, y, playMode) {
     action: inLib ? 'hide' : 'addlib',
     label: inLib ? 'Убрать из библиотеки' : 'Добавить в библиотеку'
   });
-  if (lavunioLoggedIn()) {
-    const favorite = S.wishlist.includes(mode.id);
-    actions.push({
-      action: favorite ? 'unwish' : 'wish',
-      label: favorite ? 'Убрать из избранного' : 'В избранное'
-    });
-  }
   if (installed && action !== 'running') {
     actions.push({ action: 'uninstall', label: 'Удалить с устройства', danger: true });
   }
@@ -2373,7 +2200,10 @@ function openCardContext(card, x, y, playMode) {
 function openDetail(id) {
   const mode = modeById(id);
   if (!mode) return;
-  if (S.selectedId !== id) S.detailTab = 'about';
+  if (S.selectedId !== id) {
+    S.detailTab = 'about';
+    S.sessionsExpanded = false;
+  }
   S.detailFrom = S.section || 'store';
   S.selectedId = id;
   els.storeView.hidden = true;
@@ -2635,14 +2465,7 @@ function renderDetail() {
       <img src="${escapeHtml(url)}" alt="" loading="lazy">
     </button>`).join('');
 
-  const stats = S.state[mode.id] || {};
-  const sessions = Array.isArray(stats.sessions) ? stats.sessions.slice().reverse().slice(0, 5) : [];
-  els.detailSessionsSection.hidden = sessions.length === 0;
-  els.detailSessions.innerHTML = sessions.map((session) => `
-    <div class="session-row">
-      <span>${escapeHtml(formatDateTime(session.startedAt))}</span>
-      <b>${escapeHtml(formatDuration(session.seconds))}</b>
-    </div>`).join('');
+  renderSessions(mode);
 
   renderTrailer(mode);
   renderModeNews(mode);
@@ -2673,10 +2496,6 @@ function renderDetail() {
     if (team) els.detailTeam.textContent = `Команда: ${team.title}${team.verified ? ' ✓' : ''}`;
   }
 
-  const wishlisted = S.wishlist.includes(mode.id);
-  els.detailWishlist.textContent = wishlisted ? 'В желаемом' : 'В список желаемого';
-  els.detailWishlist.classList.toggle('active', wishlisted);
-
   els.detailReviewsSection.hidden = !apiReady;
   if (apiReady) {
     renderReviews(mode);
@@ -2698,45 +2517,25 @@ function renderDetail() {
   selectDetailTab(S.detailTab || 'about');
 }
 
-async function loadWishlist() {
-  if (!lavunioLoggedIn() || !S.lavunio.configured) {
-    S.wishlist = [];
-    renderStore();
-    renderLibrary();
+function renderSessions(mode) {
+  const stats = S.state[mode.id] || {};
+  const all = Array.isArray(stats.sessions) ? stats.sessions.slice().reverse() : [];
+  els.detailSessionsSection.hidden = all.length === 0;
+  if (!all.length) {
+    els.detailSessions.innerHTML = '';
+    if (els.detailSessionsMore) els.detailSessionsMore.hidden = true;
     return;
   }
-  try {
-    const items = await api.wishlistGet();
-    S.wishlist = Array.isArray(items) ? items : [];
-  } catch (_) {
-    S.wishlist = [];
-  }
-  renderStore();
-  renderLibrary();
-  if (S.view === 'detail') renderDetail();
-}
-
-async function toggleWishlist(mode) {
-  if (!mode) return;
-  if (!lavunioLoggedIn()) {
-    openModal('modal-account');
-    toast('Сначала войдите в Lavunio ID', 'warn');
-    return;
-  }
-  const listed = S.wishlist.includes(mode.id);
-  try {
-    if (listed) {
-      await api.wishlistRemove(mode.id);
-      S.wishlist = S.wishlist.filter((id) => id !== mode.id);
-    } else {
-      await api.wishlistAdd(mode.id);
-      S.wishlist = [...S.wishlist, mode.id];
-    }
-    renderStore();
-    if (S.view === 'detail') renderDetail();
-    toast(listed ? 'Убрано из желаемого' : 'Добавлено в желаемое', 'ok');
-  } catch (err) {
-    toast('Не удалось обновить желаемое: ' + err, 'error');
+  const limit = 5;
+  const shown = S.sessionsExpanded ? all : all.slice(0, limit);
+  els.detailSessions.innerHTML = shown.map((session) => `
+    <div class="session-row">
+      <span>${escapeHtml(formatDateTime(session.startedAt))}</span>
+      <b>${escapeHtml(formatDuration(session.seconds))}</b>
+    </div>`).join('');
+  if (els.detailSessionsMore) {
+    els.detailSessionsMore.hidden = all.length <= limit;
+    els.detailSessionsMore.textContent = S.sessionsExpanded ? 'Скрыть' : 'Показать все';
   }
 }
 
@@ -2993,6 +2792,10 @@ function updateDetailAction() {
   const mode = modeById(S.selectedId);
   if (!mode) return;
   if (els.detailDefer) els.detailDefer.hidden = true;
+  if (els.detailLibrary) {
+    els.detailLibrary.hidden = inLibrary(mode);
+    els.detailLibrary.disabled = false;
+  }
 
   const task = downloadTaskForMode(mode.id);
   if (task && task.status === 'queued') {
@@ -3302,7 +3105,11 @@ async function checkUpdateInBackground(force = false) {
   toast(`Доступно обновление ${info.latest}`, 'info');
 }
 
+let startupFinalized = false;
+
 async function finishStartup() {
+  if (startupFinalized) return;
+  startupFinalized = true;
   try {
     if (api.windowReady) await api.windowReady();
   } catch (_) {
@@ -3627,7 +3434,6 @@ async function submitLavunioForm() {
     $('lavunio-password').value = '';
     renderLavunioPane();
     renderAccountChip();
-    loadWishlist();
     loadFollows();
     heartbeatPresence();
     loadNotifications();
@@ -3659,7 +3465,6 @@ async function logoutLavunio() {
     await api.lavunioLogout();
   } catch (_) {}
   S.lavunio = { configured: true, hasSession: false, user: null };
-  S.wishlist = [];
   S.reviews = {};
   S.follows = [];
   S.feed = [];
@@ -6267,14 +6072,13 @@ function bindModeration() {
     else if (action === 'author-reject') openModerationNote('author-reject', id, title);
     else if (action === 'review-approve') approveModerationReview(id);
     else if (action === 'review-reject') rejectModerationReview(id);
-    else if (action === 'collection-delete') deleteModerationCollection(id, title);
   };
 
   updateModerationNav();
 }
 
 function setModerationTab(tab) {
-  S.moderationTab = ['queue', 'modes', 'reviews', 'collections', 'reports', 'appeals', 'applications', 'news', 'history'].includes(tab) ? tab : 'queue';
+  S.moderationTab = ['queue', 'modes', 'reviews', 'reports', 'appeals', 'applications', 'news', 'history'].includes(tab) ? tab : 'queue';
   if (S.moderationTab === 'news') loadStoreNews(true);
   renderModeration();
 }
@@ -6293,12 +6097,11 @@ async function loadModeration(force = false) {
   S.moderationLoading = true;
   renderModeration();
   try {
-    const [queue, modes, reports, reviews, collections, history, appeals, applications] = await Promise.all([
+    const [queue, modes, reports, reviews, history, appeals, applications] = await Promise.all([
       api.adminQueue(),
       api.adminModes(),
       api.adminReports(),
       api.adminReviews(),
-      api.adminCollections(),
       api.adminHistory(),
       api.adminAppeals(),
       api.adminAuthorApplications()
@@ -6307,7 +6110,6 @@ async function loadModeration(force = false) {
     S.moderationModes = Array.isArray(modes) ? modes : [];
     S.moderationReports = Array.isArray(reports) ? reports : [];
     S.moderationReviews = Array.isArray(reviews) ? reviews : [];
-    S.moderationCollections = Array.isArray(collections) ? collections : [];
     S.moderationHistory = Array.isArray(history) ? history : [];
     S.moderationAppeals = Array.isArray(appeals) ? appeals : [];
     S.moderationAuthorApplications = Array.isArray(applications) ? applications : [];
@@ -6345,15 +6147,6 @@ function renderModeration() {
     content.innerHTML = moderationModesHtml();
   } else if (S.moderationTab === 'reviews') {
     content.innerHTML = moderationReviewsHtml();
-  } else if (S.moderationTab === 'collections') {
-    content.innerHTML = moderationCollectionsHtml();
-    const form = content.querySelector('#mod-collection-form');
-    if (form) {
-      form.onsubmit = (event) => {
-        event.preventDefault();
-        submitCollection();
-      };
-    }
   } else if (S.moderationTab === 'reports') {
     content.innerHTML = moderationReportsHtml();
   } else if (S.moderationTab === 'appeals') {
@@ -6442,116 +6235,6 @@ function moderationModesHtml() {
       </article>
     `;
   }).join('');
-}
-
-function moderationCollectionsHtml() {
-  const items = S.moderationCollections || [];
-  const list = items.length
-    ? items.map((item) => `
-      <article class="pub-card">
-        <div class="pub-card-head">
-          <div>
-            <div class="pub-title">${escapeHtml(item.title)}</div>
-            <div class="pub-sub">${escapeHtml(item.slug)}</div>
-          </div>
-          <span class="pub-status published">Опубликована</span>
-        </div>
-        <div class="pub-meta">
-          <span>Режимы: ${escapeHtml((item.modeSlugs || []).join(', ') || 'пусто')}</span>
-          <span>Порядок: ${Number(item.sortOrder) || 0}</span>
-        </div>
-        ${item.description ? `<div class="mod-changelog">${escapeHtml(item.description)}</div>` : ''}
-        <div class="pub-release-actions">
-          <button class="btn btn-ghost" type="button" data-action="collection-delete" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.title)}">Удалить</button>
-        </div>
-      </article>
-    `).join('')
-    : '<div class="mod-empty">Ручных подборок пока нет.</div>';
-
-  return `
-    <form id="mod-collection-form" class="mod-news-form" autocomplete="off">
-      <div class="field">
-        <label for="mod-collection-slug">Slug</label>
-        <input id="mod-collection-slug" type="text" maxlength="64" placeholder="staff-picks">
-      </div>
-      <div class="field">
-        <label for="mod-collection-title">Название</label>
-        <input id="mod-collection-title" type="text" maxlength="120" placeholder="Выбор редакции">
-      </div>
-      <div class="field">
-        <label for="mod-collection-description">Описание</label>
-        <textarea id="mod-collection-description" rows="2" placeholder="Коротко о подборке"></textarea>
-      </div>
-      <div class="field">
-        <label for="mod-collection-modes">Режимы (slug через запятую)</label>
-        <input id="mod-collection-modes" type="text" placeholder="night-demon, eclipse">
-      </div>
-      <div class="field">
-        <label for="mod-collection-order">Порядок</label>
-        <input id="mod-collection-order" type="number" value="0">
-      </div>
-      <div class="form-error" id="mod-collection-error" hidden></div>
-      <button class="btn btn-primary" id="mod-collection-submit" type="submit">Создать подборку</button>
-    </form>
-    <div class="mod-news-list">${list}</div>
-  `;
-}
-
-async function submitCollection() {
-  const slug = $('mod-collection-slug').value.trim().toLowerCase();
-  const title = $('mod-collection-title').value.trim();
-  const description = $('mod-collection-description').value.trim();
-  const modeSlugs = $('mod-collection-modes').value
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const sortOrder = Number($('mod-collection-order').value) || 0;
-  const error = $('mod-collection-error');
-  const button = $('mod-collection-submit');
-  if (!/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug)) {
-    error.textContent = 'Slug: 3–64 символа, строчные латинские буквы, цифры и дефис';
-    error.hidden = false;
-    return;
-  }
-  if (title.length < 3) {
-    error.textContent = 'Укажи название подборки';
-    error.hidden = false;
-    return;
-  }
-  error.hidden = true;
-  button.disabled = true;
-  button.textContent = 'Создаём…';
-  try {
-    await api.adminCreateCollection({ slug, title, description, modeSlugs, sortOrder });
-    toast('Подборка создана', 'ok');
-    S.moderationLoaded = false;
-    await loadModeration(true);
-    await loadCollections();
-  } catch (err) {
-    error.textContent = String(err || 'Не удалось создать подборку');
-    error.hidden = false;
-  } finally {
-    button.disabled = false;
-    button.textContent = 'Создать подборку';
-  }
-}
-
-async function deleteModerationCollection(collectionId, title) {
-  const ok = await askConfirm(
-    'Удалить подборку?',
-    `Подборка «${title || 'без названия'}» исчезнет из магазина.`,
-    'Удалить'
-  );
-  if (!ok) return;
-  try {
-    await api.adminDeleteCollection(collectionId);
-    toast('Подборка удалена', 'ok');
-    S.moderationLoaded = false;
-    await loadModeration(true);
-    await loadCollections();
-  } catch (err) {
-    toast('Не удалось удалить подборку: ' + err, 'error');
-  }
 }
 
 function moderationReviewsHtml() {

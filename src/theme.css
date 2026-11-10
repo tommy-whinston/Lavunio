@@ -1031,6 +1031,7 @@ body::before {
   font-size: 12px;
 }
 .session-row b { color: #f7f1eb; font-weight: 600; }
+#detail-sessions-more { margin-top: 10px; }
 .mod-scan {
   margin-top: 8px;
   padding: 8px 10px;
@@ -2072,13 +2073,19 @@ select option:checked {
 }
 .detail-content [data-detail-tab].tab-hidden { display: none !important; }
 
-.hero-secondary { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.hero-secondary { display: grid; grid-template-columns: 1fr; gap: 6px; }
 .hero-secondary .btn {
   height: auto;
   min-height: 34px;
+  min-width: 0;
   padding: 6px 7px;
   font-size: 10px;
   line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (min-width: 901px) {
+  .hero-action { width: 250px; }
 }
 @media (max-width: 900px) {
   .hero-secondary { grid-template-columns: 1fr; }

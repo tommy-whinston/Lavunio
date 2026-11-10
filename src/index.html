@@ -220,7 +220,6 @@
             <div class="filter-chips" id="store-filters">
               <button type="button" data-store-filter="all" class="active">Все</button>
               <button type="button" data-store-filter="installed">Установленные</button>
-              <button type="button" data-store-filter="wishlist">Желаемое</button>
               <button type="button" data-store-filter="following">Подписки</button>
               <button type="button" data-store-filter="development">В разработке</button>
               <button type="button" data-store-filter="crowdfunding">Сбор на релиз</button>
@@ -248,8 +247,6 @@
           <div class="skeleton-card"></div>
         </div>
       </section>
-
-      <div id="collections" class="collections" hidden></div>
 
       <section id="feed" class="shelf feed-shelf" hidden>
         <div class="shelf-head">
@@ -299,8 +296,6 @@
           <div class="filter-chips" id="library-filters">
             <button type="button" data-library-filter="all" class="active">Все</button>
             <button type="button" data-library-filter="installed">Установленные</button>
-            <button type="button" data-library-filter="favorites">Избранное</button>
-            <button type="button" data-library-filter="collections">Коллекции</button>
             <button type="button" data-library-filter="hidden">Скрытые</button>
             <button type="button" data-library-filter="development">В разработке</button>
             <button type="button" data-library-filter="crowdfunding">Сбор на релиз</button>
@@ -459,7 +454,6 @@
         <button class="settings-tab active" type="button" data-mod-tab="queue">Очередь</button>
         <button class="settings-tab" type="button" data-mod-tab="modes">Режимы</button>
         <button class="settings-tab" type="button" data-mod-tab="reviews">Отзывы</button>
-        <button class="settings-tab" type="button" data-mod-tab="collections">Подборки</button>
         <button class="settings-tab" type="button" data-mod-tab="reports">Жалобы</button>
         <button class="settings-tab" type="button" data-mod-tab="appeals">Апелляции</button>
         <button class="settings-tab" type="button" data-mod-tab="applications">Заявки</button>
@@ -489,7 +483,7 @@
             <button class="btn btn-primary btn-block btn-big" id="detail-action">Установить</button>
             <button class="btn btn-ghost btn-block" id="detail-defer" type="button" hidden>Отложить обновление</button>
             <div class="hero-secondary">
-              <button class="btn btn-ghost" id="detail-wishlist" type="button">В список желаемого</button>
+              <button class="btn btn-ghost" id="detail-library" type="button">Добавить в библиотеку</button>
               <button class="btn btn-ghost" id="detail-report" type="button">Пожаловаться</button>
             </div>
             <div class="status-text" id="detail-status"></div>
@@ -566,6 +560,7 @@
         <section class="detail-section" id="detail-sessions-section" data-detail-tab="about" hidden>
           <h2>История сессий</h2>
           <div id="detail-sessions" class="session-list"></div>
+          <button class="btn btn-ghost btn-small" id="detail-sessions-more" type="button" hidden>Показать все</button>
         </section>
 
         <section class="detail-section reviews-section" id="detail-reviews-section" data-detail-tab="reviews" hidden>
