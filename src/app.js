@@ -5,34 +5,26 @@ import { tKey } from './i18n/index.js';
 import { api } from './api/client.js';
 import { S } from './core/state.js';
 import { publisherAllowed, moderatorAllowed } from './core/permissions.js';
-import { lavunioLoggedIn, lavunioName, applyLavunioAvatar } from './core/lavunio.js';
-import { ownUsername, isOwnUsername, friendByUsername } from './core/social.js';
-import { teamRoleLabel } from './core/labels.js';
+import { lavunioLoggedIn } from './core/lavunio.js';
 import { els } from './core/elements.js';
-import { formatBytes, formatDateTime, formatDuration, formatPlaytime, formatUpdateDate, publisherDate, renderRichText, stripRichText } from './core/format.js';
-import { cardStatus, libraryStateMeta, modeCardHtml, imageSrc, wireImage } from './features/catalog/cards.js';
-import { configureCatalogGrid, renderModeGrid } from './features/catalog/grid.js';
-import { syncFilterButtons, modePassesFilter, sortCatalog, matchesSearch, filterModes } from './features/catalog/query.js';
-import { updateDashboardStats, updateSidebarCounts, renderLibrary } from './features/library/view.js';
+import { configureCatalogGrid } from './features/catalog/grid.js';
+import { renderLibrary } from './features/library/view.js';
 import { renderProfile } from './features/profile/view.js';
-import { configureProfileActions, openProfile, bindProfileView, uploadLavunioSkin, deleteLavunioSkin } from './features/profile/actions.js';
+import { configureProfileActions, openProfile, bindProfileView } from './features/profile/actions.js';
 import { configureSettings, bindSettings, fillSettingsForm, applyRamLimit } from './features/settings/view.js';
 import { configureTeams, bindTeams, renderTeams, loadTeams, loadTeamInvitations, openTeamPage } from './features/teams/index.js';
 import { configurePublisher, bindPublisher, loadPublisher, renderPublisher } from './features/publisher/index.js';
 import { configureModeration, bindModeration, loadModeration, renderModeration } from './features/moderation/index.js';
 import { configureMessages, loadChatList, renderMessagesList, openChat, sendChatMessage } from './features/messages/view.js';
 import { configureUpdates, bindUpdateModal, checkLauncherUpdate, checkUpdateInBackground, finishStartup, handleStartupUpdate } from './features/updates/index.js';
-import { configureNotifications, bindNotifications, loadNotifications, updateNotificationsBadge, closeNotifications, renderNotifications } from './features/notifications/index.js';
-import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderAccountModal, renderLavunioPane, logoutLavunio } from './features/account/index.js';
+import { configureNotifications, bindNotifications, loadNotifications, renderNotifications } from './features/notifications/index.js';
+import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderLavunioPane, logoutLavunio } from './features/account/index.js';
 import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
-import { newsCardHtml, loadModeNews, renderModeNews } from './features/news/index.js';
 import { configureStore, renderStore, updateAllModes, notifyModeUpdates, loadFollows, loadStoreNews, updateCardProgress } from './features/store/view.js';
 import { configureDetailActions, bindDetail, openDetail, showStore, startMode, openCardContext, closeCardContext, renderDetail, updateDetailAction } from './features/detail/actions.js';
 import { onGameEvent } from './features/game/events.js';
-import { configureDownloads, activeDownloadTask, downloadTaskForMode, enqueueDownload, pumpDownloads, finishDownload, failDownload, pauseDownload, resumeDownload, retryDownload, cancelDownload, removeDownload, clearDownloads, updateDownloadProgress, renderDownloads } from './features/downloads/queue.js';
-import { tagPill, renderSpotlight, renderChangelog, updateChangelogToggle, renderTrailer, selectDetailTab, renderSessions } from './features/detail/view.js';
-import { LOADER_LABELS, modeStatusMeta, isInstalled, inLibrary, isHiddenMode, isVisibleInLibrary, isUpdate, loaderLabel, modeSub, modeAuthors, cardSub, modeShortDescription, modeFullDescription, modeTags, sortByTitle, sortModes, modeById, modeInstalledAt, modePlaytime, modeReleaseDate, latestUpdateEntry, modeUpdatedAt, computeAction } from './core/modes.js';
-import { parseDownloadSize } from './core/units.js';
+import { configureDownloads, renderDownloads } from './features/downloads/queue.js';
+import { isInstalled, modeAuthors, modeById } from './core/modes.js';
 
 import { $, escapeHtml } from './core/dom.js';
 import { toast } from './ui/toast.js';
@@ -638,20 +630,6 @@ async function handleCardAction(modeId, action, autoPlay = false) {
   }
 }
 
-// ---------------------------------------------------------------- detail
-
-// ---------------------------------------------------------------- события игры
-
-// ---------------------------------------------------------------- модалки
-
-// ---------------------------------------------------------------- утилиты
-
-
-
-// ---------------------------------------------------------------- публикатор
-
-
-
 function updateSocialNav() {
   const logged = lavunioLoggedIn();
   if (els.sidebarMessages) els.sidebarMessages.hidden = !logged;
@@ -734,8 +712,6 @@ function bindSocial() {
     }
   }, 60000);
 }
-
-// ---------------------------------------------------------------- модерация
 
 // ---------------------------------------------------------------- debug / tests
 
