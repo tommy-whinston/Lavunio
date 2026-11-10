@@ -2,6 +2,8 @@
 
 import { EN } from './en.js';
 import { EN_PATTERNS } from './patterns.js';
+import { RU as KEYS_RU } from './locales/ru.js';
+import { EN as KEYS_EN } from './locales/en.js';
 
 const STORAGE_KEY = "lavunio.lang";
 const LEGAL_BASE = "https://lavunio.pro/legal";
@@ -151,8 +153,15 @@ function translateTextNode(node) {
   if (translated !== source) trackedText.add(node);
 }
 
+function isKeyedAttr(element, attr) {
+  if (attr === "placeholder" && element.hasAttribute("data-i18n-placeholder")) return true;
+  if ((attr === "title" || attr === "aria-label") && element.hasAttribute("data-i18n-title")) return true;
+  return false;
+}
+
 function translateAttribute(element, attr) {
   if (!element.hasAttribute(attr)) return;
+  if (isKeyedAttr(element, attr)) return;
   const current = element.getAttribute(attr);
   let store = element.__i18nAttrs;
   if (!store) {
@@ -176,9 +185,43 @@ function translateAttribute(element, attr) {
   if (translated !== source) trackedElements.add(element);
 }
 
+function tKey(key, vars) {
+  const dict = LANG === "en" ? KEYS_EN : KEYS_RU;
+  let value = dict[key] ?? KEYS_RU[key] ?? key;
+  if (vars) {
+    for (const [name, replacement] of Object.entries(vars)) {
+      value = value.replaceAll(`{${name}}`, String(replacement));
+    }
+  }
+  return value;
+}
+
+function applyKeysToElement(element) {
+  if (!element || element.nodeType !== 1) return;
+  if (element.hasAttribute("data-i18n")) {
+    element.textContent = tKey(element.getAttribute("data-i18n"));
+  }
+  if (element.hasAttribute("data-i18n-placeholder")) {
+    element.setAttribute("placeholder", tKey(element.getAttribute("data-i18n-placeholder")));
+  }
+  if (element.hasAttribute("data-i18n-title")) {
+    const value = tKey(element.getAttribute("data-i18n-title"));
+    element.setAttribute("title", value);
+    element.setAttribute("aria-label", value);
+  }
+}
+
+function applyKeyTranslations(root = document) {
+  if (!root) return;
+  if (root.nodeType === 1) applyKeysToElement(root);
+  if (!root.querySelectorAll) return;
+  root.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-title]").forEach(applyKeysToElement);
+}
+
 function translateElement(element) {
   if (!element) return;
   if (element.closest("[data-i18n-skip]")) return;
+  applyKeysToElement(element);
   for (const attr of ATTRS) translateAttribute(element, attr);
   const children = element.childNodes;
   for (let i = 0; i < children.length; i += 1) {
@@ -197,11 +240,15 @@ function restoreTextNode(node) {
 function restoreElement(element) {
   const store = element.__i18nAttrs;
   if (!store) return;
-  for (const attr of Object.keys(store)) element.setAttribute(attr, store[attr]);
+  for (const attr of Object.keys(store)) {
+    if (isKeyedAttr(element, attr)) continue;
+    element.setAttribute(attr, store[attr]);
+  }
 }
 
 function translateAll() {
   if (!document.body) return;
+  applyKeyTranslations(document.body);
   if (LANG === "en") translateElement(document.body);
   else {
     trackedText.forEach(restoreTextNode);
@@ -251,21 +298,26 @@ function init() {
   } catch (_) {}
   LANG = saved === "en" ? "en" : "ru";
   document.documentElement.lang = LANG;
+  if (document.body) applyKeyTranslations(document.body);
   if (document.body && LANG === "en") translateElement(document.body);
 
   if (!observer && document.body) {
     observer = new MutationObserver((mutations) => {
-      if (LANG !== "en") return;
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
           mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === 3) translateTextNode(node);
-            else if (node.nodeType === 1) translateElement(node);
+            if (node.nodeType === 3) {
+              if (LANG === "en") translateTextNode(node);
+            } else if (node.nodeType === 1) {
+              applyKeysToElement(node);
+              applyKeyTranslations(node);
+              if (LANG === "en") translateElement(node);
+            }
           });
         } else if (mutation.type === "characterData") {
-          translateTextNode(mutation.target);
+          if (LANG === "en") translateTextNode(mutation.target);
         } else if (mutation.type === "attributes") {
-          translateAttribute(mutation.target, mutation.attributeName);
+          if (LANG === "en") translateAttribute(mutation.target, mutation.attributeName);
         }
       }
     });
@@ -295,6 +347,8 @@ function init() {
 
 window.I18n = {
   t,
+  tKey,
+  applyKeys: applyKeyTranslations,
   lang: () => LANG,
   locale,
   setLang,
