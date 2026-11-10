@@ -108,8 +108,9 @@ const S = {
   teamNewsTeam: null,
   teamTransferTeam: null,
   playerProfile: null,
-  feedItems: [],
-  feedLoaded: false,
+  profileUsername: null,
+  profileSeq: 0,
+  profileAfterLogin: false,
   friends: [],
   friendRequests: { incoming: [], outgoing: [] },
   notifications: [],
@@ -154,15 +155,11 @@ const els = {
   storeView: $('store-view'),
   collections: $('collections'),
   libraryView: $('library-view'),
-  downloadsView: $('downloads-view'),
-  downloadsList: $('downloads-list'),
-  downloadsEmpty: $('downloads-empty'),
-  downloadsCount: $('downloads-count'),
-  downloadsStatQueued: $('downloads-stat-queued'),
-  downloadsStatActive: $('downloads-stat-active'),
-  downloadsStatDone: $('downloads-stat-done'),
-  downloadsClear: $('downloads-clear'),
-  sideDownloadsCount: $('side-downloads-count'),
+  profileView: $('profile-view'),
+  profileContent: $('profile-content'),
+  messagesView: $('messages-view'),
+  messagesList: $('messages-list'),
+  messagesRefresh: $('messages-refresh'),
   publisherView: $('publisher-view'),
   teamView: $('team-view'),
   teamList: $('team-list'),
@@ -173,20 +170,22 @@ const els = {
   teamMembersList: $('team-members-list'),
   teamMembersHint: $('team-members-hint'),
   teamPageContent: $('team-page-content'),
-  playerContent: $('player-content'),
-  playerForm: $('player-form'),
-  feedView: $('feed-view'),
-  feedList: $('feed-list'),
-  friendsView: $('friends-view'),
-  friendsList: $('friends-list'),
-  friendRequestsList: $('friend-requests-list'),
-  friendsEmpty: $('friends-empty'),
-  chatView: $('chat-view'),
-  chatList: $('chat-list'),
+  chatTitle: $('chat-title'),
+  chatSubtitle: $('chat-subtitle'),
   chatEmpty: $('chat-empty'),
   chatMessages: $('chat-messages'),
+  chatForm: $('chat-form'),
+  chatInput: $('chat-input'),
   notificationsList: $('notifications-list'),
+  notificationsPopover: $('notifications-popover'),
+  notificationsReadAll: $('notifications-read-all'),
   notifBadge: $('notif-badge'),
+  sidebarProfile: $('sidebar-profile'),
+  sidebarAvatar: $('sidebar-avatar'),
+  sidebarName: $('sidebar-name'),
+  sidebarStatus: $('sidebar-status'),
+  sidebarMessages: $('sidebar-messages'),
+  sidebarSettings: $('sidebar-settings'),
   moderationView: $('moderation-view'),
   libraryGrid: $('library-grid'),
   libraryCount: $('library-count'),
@@ -222,9 +221,6 @@ const els = {
   loadingState: $('loading-state'),
   search: $('search-input'),
   refresh: $('btn-refresh'),
-  accChip: $('account-chip'),
-  accAvatar: $('account-avatar'),
-  accName: $('account-name'),
   updateChip: $('update-chip'),
   updateChipText: $('update-chip-text'),
   updateCurrent: $('update-current'),
@@ -327,7 +323,6 @@ async function init() {
   bindModals();
   bindSidebar();
   bindStore();
-  bindDownloads();
   bindCatalogControls();
   bindDetail();
   bindSettings();
@@ -346,7 +341,6 @@ async function init() {
     renderAccountChip();
     renderStore();
     renderLibrary();
-    renderDownloads();
     if (S.section === 'detail' && S.selectedId) renderDetail();
     else renderCurrentSection();
     if (!$('modal-account').hidden) renderLavunioPane();
@@ -363,7 +357,6 @@ async function init() {
 
   renderStore();
   renderLibrary();
-  renderDownloads();
   updateSidebar();
   if (els.splashSub) els.splashSub.textContent = 'Загружаем режимы и аккаунт…';
 
@@ -461,7 +454,6 @@ setTimeout(() => {
 function bindWindowButtons() {
   $('btn-min').onclick = () => api.minimize();
   $('btn-max').onclick = () => api.toggleMaximize().catch(() => {});
-  $('btn-settings').onclick = () => openModal('modal-settings');
   $('btn-close').onclick = () => api.hide();
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'F11') return;
@@ -670,48 +662,91 @@ function bindSidebar() {
       showSection(btn.dataset.section);
     };
   });
+  if (els.sidebarProfile) {
+    els.sidebarProfile.onclick = () => {
+      const user = S.lavunio && S.lavunio.user;
+      if (user) openProfile(user.username);
+      else {
+        S.profileAfterLogin = true;
+        openModal('modal-account');
+      }
+    };
+  }
+  if (els.sidebarMessages) {
+    els.sidebarMessages.onclick = (event) => {
+      event.stopPropagation();
+      showSection('messages');
+    };
+  }
+  if (els.sidebarSettings) {
+    els.sidebarSettings.onclick = (event) => {
+      event.stopPropagation();
+      openModal('modal-settings');
+    };
+  }
+  bindProfileView();
+}
+
+const PRIMARY_SECTIONS = new Set(['store', 'library', 'publisher', 'team', 'moderation', 'profile', 'messages']);
+
+function showView(section) {
+  S.section = section;
+  S.view = section;
+  els.storeView.hidden = section !== 'store';
+  els.libraryView.hidden = section !== 'library';
+  if (els.publisherView) els.publisherView.hidden = section !== 'publisher';
+  if (els.teamView) els.teamView.hidden = section !== 'team';
+  if (els.moderationView) els.moderationView.hidden = section !== 'moderation';
+  if (els.profileView) els.profileView.hidden = section !== 'profile';
+  if (els.messagesView) els.messagesView.hidden = section !== 'messages';
+  els.detailView.hidden = true;
+  if (section !== 'messages' && S.chatTimer) {
+    clearInterval(S.chatTimer);
+    S.chatTimer = null;
+  }
+  updateSidebar();
+  const app = $('app');
+  if (app) app.scrollTop = 0;
 }
 
 function showSection(section) {
   if (section === 'publisher' && !publisherAllowed()) section = 'store';
   if (section === 'team' && !publisherAllowed()) section = 'store';
   if (section === 'moderation' && !moderatorAllowed()) section = 'store';
-  if ((section === 'friends' || section === 'chat') && !lavunioLoggedIn()) section = 'store';
-  S.section = ['library', 'publisher', 'team', 'moderation', 'downloads', 'feed', 'friends', 'chat'].includes(section) ? section : 'store';
-  S.view = S.section;
-  els.storeView.hidden = S.section !== 'store';
-  els.libraryView.hidden = S.section !== 'library';
-  if (els.downloadsView) els.downloadsView.hidden = S.section !== 'downloads';
-  if (els.publisherView) els.publisherView.hidden = S.section !== 'publisher';
-  if (els.teamView) els.teamView.hidden = S.section !== 'team';
-  if (els.moderationView) els.moderationView.hidden = S.section !== 'moderation';
-  if (els.feedView) els.feedView.hidden = S.section !== 'feed';
-  if (els.friendsView) els.friendsView.hidden = S.section !== 'friends';
-  if (els.chatView) els.chatView.hidden = S.section !== 'chat';
-  els.detailView.hidden = true;
-  updateSidebar();
-  if (S.section === 'library') renderLibrary();
-  else if (S.section === 'downloads') renderDownloads();
-  else if (S.section === 'publisher') {
+  if ((section === 'profile' || section === 'messages') && !lavunioLoggedIn()) {
+    S.profileAfterLogin = section === 'profile';
+    openModal('modal-account');
+    section = 'store';
+  }
+  if (!PRIMARY_SECTIONS.has(section)) section = 'store';
+
+  if (section === 'profile') {
+    const target = S.profileUsername || (S.lavunio && S.lavunio.user && S.lavunio.user.username);
+    if (!target) {
+      openModal('modal-account');
+      return;
+    }
+    openProfile(target);
+    return;
+  }
+
+  showView(section);
+  if (section === 'library') renderLibrary();
+  else if (section === 'publisher') {
     renderPublisher();
     loadPublisher();
-  } else if (S.section === 'team') {
+  } else if (section === 'team') {
     renderTeams();
     loadTeams();
     loadTeamInvitations();
-  } else if (S.section === 'moderation') {
+  } else if (section === 'moderation') {
     renderModeration();
     loadModeration();
-  } else if (S.section === 'feed') {
-    loadFeed();
-  } else if (S.section === 'friends') {
-    loadFriends();
-  } else if (S.section === 'chat') {
+  } else if (section === 'messages') {
     loadChatList();
   } else renderStore();
-  requestAnimationFrame(() => {
-    $('app').scrollTop = 0;
-  });
+  const app = $('app');
+  if (app) app.scrollTop = 0;
 }
 
 function updateSidebar() {
@@ -721,6 +756,9 @@ function updateSidebar() {
     if (active) btn.setAttribute('aria-current', 'page');
     else btn.removeAttribute('aria-current');
   });
+  const profileCard = $('sidebar-profile-card');
+  if (profileCard) profileCard.classList.toggle('active', S.section === 'profile');
+  if (els.sidebarMessages) els.sidebarMessages.classList.toggle('active', S.section === 'messages');
   updatePublisherNav();
   updateModerationNav();
   updateSocialNav();
@@ -737,13 +775,13 @@ function updateSideGroups() {
 
 function renderCurrentSection() {
   if (S.section === 'library') renderLibrary();
-  else if (S.section === 'downloads') renderDownloads();
   else if (S.section === 'publisher') renderPublisher();
   else if (S.section === 'team') renderTeams();
   else if (S.section === 'moderation') renderModeration();
-  else if (S.section === 'feed') renderFeed();
-  else if (S.section === 'friends') renderFriends();
-  else if (S.section === 'chat') renderChatList();
+  else if (S.section === 'profile') {
+    if (S.playerProfile) renderProfile(S.playerProfile);
+    else if (S.profileUsername) openProfile(S.profileUsername);
+  } else if (S.section === 'messages') renderMessagesList();
   else renderStore();
 }
 
@@ -1640,7 +1678,11 @@ function formatUpdateDate(value) {
 }
 
 function formatDateTime(value) {
-  const ms = Number(value) || 0;
+  let ms = Number(value);
+  if (!Number.isFinite(ms) || !ms) {
+    const parsed = Date.parse(String(value || ''));
+    ms = Number.isFinite(parsed) ? parsed : 0;
+  }
   if (!ms) return '—';
   return new Date(ms).toLocaleString(window.I18n ? window.I18n.locale() : 'ru-RU', {
     day: '2-digit',
@@ -1812,7 +1854,7 @@ function bindDetail() {
   els.detailAuthorFollow.onclick = () => toggleFollowAuthor();
   if (els.detailAuthorProfile) els.detailAuthorProfile.onclick = () => {
     const mode = modeById(S.selectedId);
-    if (mode && mode.author) openPlayerProfile(mode.author.username);
+    if (mode && mode.author) openProfile(mode.author.username);
   };
   if (els.detailTeam) els.detailTeam.onclick = () => {
     const mode = modeById(S.selectedId);
@@ -1909,25 +1951,6 @@ const DOWNLOAD_STATUS = {
   error: 'Ошибка',
   cancelled: 'Отменено'
 };
-
-function bindDownloads() {
-  if (els.downloadsList) {
-    els.downloadsList.onclick = (event) => {
-      const button = event.target.closest('[data-download-action]');
-      if (!button) return;
-      const id = button.getAttribute('data-download-id');
-      const action = button.getAttribute('data-download-action');
-      if (action === 'pause') pauseDownload(id);
-      else if (action === 'resume') resumeDownload(id);
-      else if (action === 'cancel') cancelDownload(id);
-      else if (action === 'retry') retryDownload(id);
-      else if (action === 'remove') removeDownload(id);
-    };
-  }
-  if (els.downloadsClear) {
-    els.downloadsClear.onclick = () => clearDownloads();
-  }
-}
 
 function parseDownloadSize(label) {
   const match = String(label || '').replace(',', '.').match(/([\d.]+)\s*(ГБ|МБ|КБ|GB|MB|KB|Б|B)/i);
@@ -2204,90 +2227,11 @@ function updateDownloadProgress(task, progress) {
 }
 
 function updateDownloadsBadge() {
-  if (!els.sideDownloadsCount) return;
-  const count = S.downloads.filter((task) => ['queued', 'downloading'].includes(task.status)).length;
-  els.sideDownloadsCount.textContent = String(count);
-  els.sideDownloadsCount.hidden = count === 0;
+  // Очередь загрузок работает в фоне, отдельного раздела в интерфейсе больше нет.
 }
 
 function renderDownloads() {
-  if (!els.downloadsView) return;
-  const tasks = S.downloads || [];
-  const queued = tasks.filter((task) => ['queued', 'paused'].includes(task.status)).length;
-  const active = tasks.filter((task) => task.status === 'downloading').length;
-  const done = tasks.filter((task) => task.status === 'completed').length;
-  if (els.downloadsStatQueued) els.downloadsStatQueued.textContent = String(queued);
-  if (els.downloadsStatActive) els.downloadsStatActive.textContent = String(active);
-  if (els.downloadsStatDone) els.downloadsStatDone.textContent = String(done);
   updateDownloadsBadge();
-
-  if (els.downloadsClear) {
-    els.downloadsClear.hidden = !tasks.some((task) =>
-      ['completed', 'cancelled', 'error'].includes(task.status)
-    );
-  }
-
-  const order = { downloading: 0, queued: 1, paused: 2, error: 3, cancelled: 4, completed: 5 };
-  const list = [...tasks].sort(
-    (a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.createdAt - b.createdAt
-  );
-  if (els.downloadsList) {
-    els.downloadsList.innerHTML = list.map(downloadCardHtml).join('');
-  }
-  if (els.downloadsEmpty) els.downloadsEmpty.hidden = list.length > 0;
-  if (els.downloadsCount) els.downloadsCount.textContent = String(list.length);
-}
-
-function downloadCardHtml(task) {
-  const mode = modeById(task.modeId);
-  const title = (mode && mode.title) || task.modeTitle || task.modeId;
-  const cover = (mode && imageSrc(mode)) || task.cover || '';
-  const status = DOWNLOAD_STATUS[task.status] || task.status;
-  const percent = Math.round(Math.max(0, Math.min(1, task.progress)) * 100);
-  const stage = task.stage || DOWNLOAD_STATUS[task.status] || '';
-  const size = task.sizeLabel || (mode && mode.size) || '';
-  const speed = task.speed > 0 ? `${formatBytes(task.speed)}/с` : '—';
-  const eta = task.eta > 0 && task.status !== 'completed' ? `~${formatDownloadEta(task.eta)}` : '—';
-  const actions = [];
-  if (task.status === 'downloading') {
-    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="pause" data-download-id="${escapeHtml(task.id)}">Пауза</button>`);
-    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="cancel" data-download-id="${escapeHtml(task.id)}">Отмена</button>`);
-  } else if (task.status === 'queued') {
-    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="cancel" data-download-id="${escapeHtml(task.id)}">Отмена</button>`);
-  } else if (task.status === 'paused') {
-    actions.push(`<button class="btn btn-primary btn-small" type="button" data-download-action="resume" data-download-id="${escapeHtml(task.id)}">Продолжить</button>`);
-    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="cancel" data-download-id="${escapeHtml(task.id)}">Отмена</button>`);
-  } else if (task.status === 'error' || task.status === 'cancelled') {
-    actions.push(`<button class="btn btn-primary btn-small" type="button" data-download-action="retry" data-download-id="${escapeHtml(task.id)}">Повторить</button>`);
-    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="remove" data-download-id="${escapeHtml(task.id)}">Убрать</button>`);
-  } else {
-    actions.push(`<button class="btn btn-ghost btn-small" type="button" data-download-action="remove" data-download-id="${escapeHtml(task.id)}">Убрать</button>`);
-  }
-
-  return `
-    <article class="download-card ${task.status}">
-      <div class="download-cover">
-        ${cover ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy">` : ''}
-      </div>
-      <div class="download-body">
-        <div class="download-head">
-          <div>
-            <div class="download-title">${escapeHtml(title)}</div>
-            <div class="download-sub">${escapeHtml(downloadActionLabel(task.action))}${size ? ` · ${escapeHtml(size)}` : ''}</div>
-          </div>
-          <span class="download-status ${task.status}">${escapeHtml(status)}</span>
-        </div>
-        <div class="download-progress"><span style="width:${percent}%"></span></div>
-        <div class="download-meta">
-          <span>${escapeHtml(stage)}</span>
-          <span>${percent}%</span>
-          <span>Скорость: ${speed}</span>
-          <span>Осталось: ${eta}</span>
-        </div>
-        ${task.error ? `<div class="form-error">${escapeHtml(task.error)}</div>` : ''}
-        <div class="download-actions">${actions.join('')}</div>
-      </div>
-    </article>`;
 }
 
 async function verifyMode(mode) {
@@ -2436,9 +2380,19 @@ function openDetail(id) {
   els.libraryView.hidden = true;
   if (els.publisherView) els.publisherView.hidden = true;
   if (els.moderationView) els.moderationView.hidden = true;
+  if (els.profileView) els.profileView.hidden = true;
+  if (els.messagesView) els.messagesView.hidden = true;
+  if (els.teamView) els.teamView.hidden = true;
+  if (S.chatTimer) {
+    clearInterval(S.chatTimer);
+    S.chatTimer = null;
+  }
   els.detailView.hidden = false;
   S.view = 'detail';
-  els.detailBackLabel.textContent = S.detailFrom === 'library' ? 'Назад в библиотеку' : 'Назад в каталог';
+  els.detailBackLabel.textContent = S.detailFrom === 'library'
+    ? 'Назад в библиотеку'
+    : S.detailFrom === 'profile' ? 'Назад в профиль'
+      : 'Назад в каталог';
   renderDetail();
   $('app').scrollTop = 0;
 }
@@ -3508,12 +3462,20 @@ function applyLavunioAvatar(el, user) {
 
 function renderAccountChip() {
   const user = S.lavunio && S.lavunio.user;
-  els.accName.textContent = user ? lavunioName(user) : 'Гость';
-  applyLavunioAvatar(els.accAvatar, user);
+  if (els.sidebarName) els.sidebarName.textContent = user ? lavunioName(user) : 'Гость';
+  if (els.sidebarStatus) {
+    els.sidebarStatus.textContent = user
+      ? (user.role === 'admin' ? 'Администратор'
+        : user.role === 'author' ? 'Автор'
+          : user.role === 'moderator' ? 'Модератор' : 'Игрок')
+      : 'Войти в Lavunio';
+  }
+  applyLavunioAvatar(els.sidebarAvatar, user);
+  if (els.sidebarMessages) els.sidebarMessages.hidden = !user;
+  updateSocialNav();
 }
 
 function bindAccountModal() {
-  els.accChip.onclick = () => openModal('modal-account');
   $('lavunio-form').onsubmit = (event) => {
     event.preventDefault();
     submitLavunioForm();
@@ -3526,25 +3488,9 @@ function bindAccountModal() {
   $('lavunio-logout').onclick = () => logoutLavunio();
   $('lavunio-profile').onclick = () => {
     const user = S.lavunio && S.lavunio.user;
-    if (user) openPlayerProfile(user.username);
-  };
-  const playerForm = $('player-form');
-  if (playerForm) playerForm.onsubmit = (event) => {
-    event.preventDefault();
-    savePlayerProfile();
-  };
-  const playerContent = els.playerContent;
-  if (playerContent) playerContent.onclick = (event) => {
-    const teamButton = event.target.closest('[data-player-team]');
-    if (teamButton) {
-      openTeamPage({ slug: teamButton.dataset.playerTeam, title: teamButton.dataset.playerTitle || teamButton.dataset.playerTeam });
-      return;
-    }
-    const modeButton = event.target.closest('[data-player-mode]');
-    if (modeButton) {
-      $('modal-player').hidden = true;
-      openDetail(modeButton.dataset.playerMode);
-    }
+    if (!user) return;
+    $('modal-account').hidden = true;
+    openProfile(user.username);
   };
   $('lavunio-verify-btn').onclick = () => verifyLavunioEmail();
   $('lavunio-skin-upload').onclick = () => uploadLavunioSkin();
@@ -3692,6 +3638,11 @@ async function submitLavunioForm() {
     if (status && status.user && !status.user.emailVerified) {
       toast('Почта не подтверждена', 'warn');
     }
+    if (status && status.user) $('modal-account').hidden = true;
+    if (S.profileAfterLogin && status && status.user) {
+      S.profileAfterLogin = false;
+      openProfile(status.user.username);
+    }
   } catch (err) {
     error.textContent = String(err || 'Не удалось выполнить вход');
     error.hidden = false;
@@ -3715,9 +3666,15 @@ async function logoutLavunio() {
   S.friends = [];
   S.notifications = [];
   S.notificationsUnread = 0;
+  S.playerProfile = null;
+  S.profileUsername = null;
+  S.chatKind = null;
+  S.chatTarget = null;
+  S.chatMessages = [];
   updateNotificationsBadge();
+  closeNotifications();
   updateSocialNav();
-  if (S.section === 'friends' || S.section === 'chat') showSection('store');
+  if (S.section === 'profile' || S.section === 'messages') showSection('store');
   renderLavunioPane();
   renderAccountChip();
   renderStore();
@@ -3821,98 +3778,392 @@ async function submitAuthorApplication() {
   }
 }
 
-async function openPlayerProfile(username) {
-  if (!username) return;
-  $('player-title').textContent = 'Профиль';
-  els.playerContent.innerHTML = '<div class="mod-empty">Загрузка профиля…</div>';
-  els.playerForm.hidden = true;
-  openModal('modal-player');
-  try {
-    const profile = await api.playerProfile(username);
-    S.playerProfile = profile;
-    renderPlayerProfile(profile);
-  } catch (err) {
-    els.playerContent.innerHTML = `<div class="mod-empty">Не удалось загрузить профиль: ${escapeHtml(String(err))}</div>`;
-  }
+function ownUsername() {
+  return S.lavunio && S.lavunio.user ? S.lavunio.user.username : null;
 }
 
-function renderPlayerProfile(profile) {
-  const own = !!(S.lavunio && S.lavunio.user &&
-    String(S.lavunio.user.username).toLowerCase() === String(profile.username).toLowerCase());
-  const roleLabel = profile.role === 'admin' ? 'администратор'
-    : profile.role === 'author' ? 'автор'
-      : profile.role === 'moderator' ? 'модератор' : 'игрок';
-  $('player-title').textContent = `${profile.displayName || profile.username}${profile.role === 'author' || profile.role === 'admin' ? ' ✓' : ''}`;
-  els.playerContent.innerHTML = `
-    <div class="player-head">
-      <span class="avatar" id="player-avatar"></span>
-      <div class="grow">
-        <div class="player-name">${escapeHtml(profile.displayName || profile.username)}</div>
-        <div class="player-sub">@${escapeHtml(profile.username)} · ${escapeHtml(roleLabel)}</div>
-        <div class="hint">${escapeHtml(profile.bio || 'Без статуса')}</div>
+function isOwnUsername(username) {
+  const own = ownUsername();
+  return !!own && String(own).toLowerCase() === String(username || '').toLowerCase();
+}
+
+function friendByUsername(username) {
+  const target = String(username || '').toLowerCase();
+  return (S.friends || []).find(
+    (friend) => String(friend.username || '').toLowerCase() === target
+  ) || null;
+}
+
+function profileRoleLabel(role) {
+  return role === 'admin' ? 'Администратор'
+    : role === 'author' ? 'Автор'
+      : role === 'moderator' ? 'Модератор' : 'Игрок';
+}
+
+function profileOnlineLabel(profile) {
+  const tr = (text) => (window.I18n ? window.I18n.t(text) : text);
+  if (profile.online) return tr('в сети');
+  const seen = formatDateTime(profile.lastSeenAt);
+  return seen === '—' ? tr('не в сети') : `${tr('был(а)')} ${seen}`;
+}
+
+function profileModesHtml(profile) {
+  const modes = profile.modes || [];
+  if (!modes.length) return '<div class="profile-empty">Опубликованных режимов нет</div>';
+  return modes.map((mode) => `
+    <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.slug)}">
+      <span>${escapeHtml(mode.title)}</span>
+      <b>${Number(mode.installs) || 0} установок</b>
+    </button>
+  `).join('');
+}
+
+function profileTeamsHtml(profile) {
+  const teams = profile.teams || [];
+  if (!teams.length) return '<div class="profile-empty">Не состоит в командах</div>';
+  return teams.map((team) => `
+    <button class="profile-mode-row" type="button" data-profile-team="${escapeHtml(team.slug)}" data-profile-team-title="${escapeHtml(team.title)}">
+      <span>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</span>
+      <b>${escapeHtml(teamRoleLabel(team.role))}</b>
+    </button>
+  `).join('');
+}
+
+function profileFriendsHtml() {
+  const friends = S.friends || [];
+  if (!friends.length) return '<div class="profile-empty">Друзей пока нет</div>';
+  return friends.map((friend) => `
+    <div class="profile-friend">
+      <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
+      <div class="profile-friend-copy">
+        <b>${escapeHtml(friend.displayName || friend.username)}</b>
+        <span>@${escapeHtml(friend.username)} · <span>${friend.online ? 'в сети' : 'не в сети'}</span></span>
+      </div>
+      <div class="profile-friend-actions">
+        <button class="icon-btn" type="button" title="Профиль" data-profile-action="friend-profile" data-username="${escapeHtml(friend.username)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/></svg>
+        </button>
+        <button class="icon-btn" type="button" title="Написать" data-profile-action="chat" data-username="${escapeHtml(friend.username)}" data-name="${escapeHtml(friend.displayName || friend.username)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>
+        </button>
+        <button class="icon-btn" type="button" title="Удалить" data-profile-action="remove-friend" data-username="${escapeHtml(friend.username)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7v12h10V7"/></svg>
+        </button>
       </div>
     </div>
-    <div class="dashboard-stats team-page-stats">
-      <div class="dash-stat"><span>Режимы</span><b>${Number(profile.stats && profile.stats.modes) || 0}</b></div>
-      <div class="dash-stat"><span>Скачивания</span><b>${Number(profile.stats && profile.stats.downloads) || 0}</b></div>
-      <div class="dash-stat"><span>Установки</span><b>${Number(profile.stats && profile.stats.installs) || 0}</b></div>
-    </div>
-    <h3 class="team-page-heading">Команды</h3>
-    <div class="team-mode-list">
-      ${(profile.teams || []).map((team) => `
-        <button class="team-mode-row" type="button" data-player-team="${escapeHtml(team.slug)}" data-player-title="${escapeHtml(team.title)}">
-          <span>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</span>
-          <b>${escapeHtml(teamRoleLabel(team.role))}</b>
-        </button>
-      `).join('') || '<div class="hint">Не состоит в командах</div>'}
-    </div>
-    ${own ? `
-      <h3 class="team-page-heading">Моя библиотека</h3>
-      <div class="team-mode-list">
-        ${S.modes.filter((mode) => inLibrary(mode)).slice(0, 20).map((mode) => `
-          <button class="team-mode-row" type="button" data-player-mode="${escapeHtml(mode.id)}">
-            <span>${escapeHtml(mode.title)}</span>
-            <b>${isInstalled(mode) ? 'установлен' : 'в библиотеке'}</b>
-          </button>
-        `).join('') || '<div class="hint">Библиотека пуста</div>'}
-      </div>
-    ` : ''}
-    <h3 class="team-page-heading">Режимы</h3>
-    <div class="team-mode-list">
-      ${(profile.modes || []).map((mode) => `
-        <button class="team-mode-row" type="button" data-player-mode="${escapeHtml(mode.slug)}">
-          <span>${escapeHtml(mode.title)}</span>
-          <b>${Number(mode.installs) || 0} установок</b>
-        </button>
-      `).join('') || '<div class="hint">Опубликованных режимов нет</div>'}
-    </div>
-    <div class="hint">В Lavunio с ${escapeHtml(formatDateTime(profile.createdAt))}</div>
+  `).join('');
+}
+
+function profileRequestsHtml() {
+  const incoming = (S.friendRequests && S.friendRequests.incoming) || [];
+  if (!incoming.length) return '';
+  return `
+    <section class="profile-panel">
+      <h2>Заявки в друзья</h2>
+      ${incoming.map((item) => `
+        <div class="profile-request">
+          <span>@${escapeHtml(item.username)}</span>
+          <span class="profile-request-actions">
+            <button class="btn btn-primary btn-small" type="button" data-profile-action="accept-request" data-id="${escapeHtml(item.id)}">Принять</button>
+            <button class="btn btn-ghost btn-small" type="button" data-profile-action="decline-request" data-id="${escapeHtml(item.id)}">Отклонить</button>
+          </span>
+        </div>
+      `).join('')}
+    </section>
   `;
-  applyLavunioAvatar($('player-avatar'), {
+}
+
+function profileSkinHtml(profile) {
+  return `
+    <div class="profile-skin">
+      <div class="skin-preview">
+        ${profile.skinUrl ? `<img id="profile-skin-img" src="${escapeHtml(profile.skinUrl)}" alt="Скин">` : ''}
+        ${profile.skinUrl ? '' : '<span class="skin-empty">Нет скина</span>'}
+      </div>
+      <div class="skin-controls">
+        <div class="field">
+          <label for="profile-skin-model">Модель скина</label>
+          <select id="profile-skin-model">
+            <option value="classic"${profile.skinModel === 'slim' ? '' : ' selected'}>Classic</option>
+            <option value="slim"${profile.skinModel === 'slim' ? ' selected' : ''}>Slim</option>
+          </select>
+        </div>
+        <div class="skin-actions">
+          <button class="btn btn-ghost" type="button" data-profile-action="skin-upload">Загрузить скин</button>
+          <button class="btn btn-ghost" type="button" data-profile-action="skin-delete" ${profile.skinUrl ? '' : 'hidden'}>Удалить скин</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function profileEditHtml(profile) {
+  return `
+    <section class="profile-panel" id="profile-edit">
+      <h2>Настройки профиля</h2>
+      <form class="profile-edit" data-profile-form="edit" autocomplete="off">
+        <div class="field">
+          <label for="profile-display-name">Отображаемое имя</label>
+          <input id="profile-display-name" type="text" maxlength="40" value="${escapeHtml(profile.displayName || profile.username)}">
+        </div>
+        <div class="field">
+          <label for="profile-bio">О себе</label>
+          <textarea id="profile-bio" rows="3" maxlength="500" placeholder="Пара слов о себе">${escapeHtml(profile.bio || '')}</textarea>
+        </div>
+        <div class="form-error" id="profile-error" hidden></div>
+        <button class="btn btn-primary" id="profile-save" type="submit">Сохранить</button>
+      </form>
+      ${profileSkinHtml(profile)}
+      <div class="profile-account-row">
+        <button class="btn btn-ghost" type="button" data-profile-action="settings">Настройки лаунчера</button>
+        <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти из Lavunio</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderProfile(profile) {
+  if (!profile || !els.profileContent) return;
+  const own = isOwnUsername(profile.username);
+  const friend = friendByUsername(profile.username);
+  const outgoing = ((S.friendRequests && S.friendRequests.outgoing) || []).some(
+    (item) => String(item.username || '').toLowerCase() === String(profile.username).toLowerCase()
+  );
+  const display = profile.displayName || profile.username;
+  const stats = profile.stats || {};
+
+  const actions = own
+    ? `
+      <button class="icon-btn" type="button" title="Настройки" data-profile-action="settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.3 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="btn btn-primary" type="button" data-profile-action="messages">Сообщения</button>
+      <button class="btn btn-ghost" type="button" data-profile-action="edit">Редактировать</button>
+      <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти</button>
+    `
+    : `
+      ${friend
+        ? `<button class="btn btn-primary" type="button" data-profile-action="chat" data-username="${escapeHtml(profile.username)}" data-name="${escapeHtml(display)}">Написать</button>
+           <button class="btn btn-ghost" type="button" data-profile-action="remove-friend" data-username="${escapeHtml(profile.username)}">Удалить из друзей</button>`
+        : outgoing
+          ? '<button class="btn btn-ghost" type="button" disabled>Заявка отправлена</button>'
+          : `<button class="btn btn-primary" type="button" data-profile-action="add-friend" data-username="${escapeHtml(profile.username)}">Добавить в друзья</button>`}
+      <button class="btn btn-ghost" type="button" data-profile-action="messages">Сообщения</button>
+    `;
+
+  els.profileContent.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-avatar-wrap"><span class="avatar" id="profile-avatar"></span></div>
+      <div class="profile-hero-main">
+        <h1>${escapeHtml(display)}</h1>
+        <div class="profile-handle">@${escapeHtml(profile.username)}</div>
+        <div class="profile-badges">
+          <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>
+          <span class="profile-badge ${profile.online ? 'online' : ''}">${escapeHtml(profileOnlineLabel(profile))}</span>
+          ${friend ? '<span class="profile-badge">друг</span>' : ''}
+          ${own ? '<span class="profile-badge">это вы</span>' : ''}
+        </div>
+        <div class="profile-bio">${escapeHtml(profile.bio || 'Без описания')}</div>
+      </div>
+      <div class="profile-actions">${actions}</div>
+    </div>
+
+    <div class="profile-stats">
+      <div class="profile-stat"><span>Режимы</span><b>${Number(stats.modes) || 0}</b></div>
+      <div class="profile-stat"><span>Скачивания</span><b>${Number(stats.downloads) || 0}</b></div>
+      <div class="profile-stat"><span>Установки</span><b>${Number(stats.installs) || 0}</b></div>
+      <div class="profile-stat"><span>Команды</span><b>${(profile.teams || []).length}</b></div>
+    </div>
+
+    <div class="profile-layout">
+      <div class="profile-main">
+        <section class="profile-panel">
+          <h2>Режимы</h2>
+          ${profileModesHtml(profile)}
+        </section>
+        ${own ? `
+          <section class="profile-panel">
+            <h2>Библиотека</h2>
+            ${S.modes.filter((mode) => inLibrary(mode)).slice(0, 20).map((mode) => `
+              <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
+                <span>${escapeHtml(mode.title)}</span>
+                <b>${isInstalled(mode) ? 'Установлено' : 'В библиотеке'}</b>
+              </button>
+            `).join('') || '<div class="profile-empty">Библиотека пуста</div>'}
+          </section>
+          ${profileEditHtml(profile)}
+        ` : ''}
+      </div>
+      <aside class="profile-side">
+        <section class="profile-panel">
+          <h2>Команды</h2>
+          ${profileTeamsHtml(profile)}
+        </section>
+        ${own ? `
+          ${profileRequestsHtml()}
+          <section class="profile-panel">
+            <h2>Друзья</h2>
+            <form class="profile-add-friend" data-profile-form="friend" autocomplete="off">
+              <input id="profile-friend-name" type="text" maxlength="20" placeholder="username">
+              <button class="btn btn-ghost" type="submit">Добавить</button>
+            </form>
+            ${profileFriendsHtml()}
+          </section>
+        ` : `
+          <section class="profile-panel">
+            <h2>Информация</h2>
+            <div class="profile-info-row"><span>Роль</span><b>${escapeHtml(profileRoleLabel(profile.role))}</b></div>
+            <div class="profile-info-row"><span>Статус</span><b>${profile.online ? 'в сети' : 'не в сети'}</b></div>
+            <div class="profile-info-row"><span>В Lavunio с</span><b>${escapeHtml(formatDateTime(profile.createdAt))}</b></div>
+          </section>
+        `}
+      </aside>
+    </div>
+  `;
+
+  $('app').scrollTop = 0;
+  applyLavunioAvatar($('profile-avatar'), {
     skinUrl: profile.skinUrl,
     username: profile.username,
     displayName: profile.displayName
   });
-  els.playerForm.hidden = !own;
-  if (own) {
-    $('player-display-name').value = profile.displayName || profile.username;
-    $('player-bio').value = profile.bio || '';
-    $('player-error').hidden = true;
+  els.profileContent.querySelectorAll('[data-avatar-friend]').forEach((el) => {
+    const friendItem = friendByUsername(el.dataset.avatarFriend);
+    if (friendItem) applyLavunioAvatar(el, friendItem);
+  });
+}
+
+async function openProfile(username) {
+  const user = S.lavunio && S.lavunio.user;
+  const target = username || (user && user.username);
+  if (!target) {
+    openModal('modal-account');
+    return;
+  }
+  const seq = ++S.profileSeq;
+  S.profileUsername = target;
+  if (S.section !== 'profile') showView('profile');
+  if (els.profileContent) {
+    els.profileContent.innerHTML = '<div class="mod-empty">Загрузка профиля…</div>';
+  }
+  try {
+    const profile = await api.playerProfile(target);
+    if (seq !== S.profileSeq) return;
+    S.playerProfile = profile;
+    if (isOwnUsername(profile.username)) {
+      try {
+        await loadFriends(true);
+      } catch (_) {}
+      if (seq !== S.profileSeq) return;
+    }
+    renderProfile(profile);
+  } catch (err) {
+    if (seq !== S.profileSeq) return;
+    if (els.profileContent) {
+      els.profileContent.innerHTML = `<div class="mod-empty">Не удалось загрузить профиль: ${escapeHtml(String(err))}</div>`;
+    }
   }
 }
 
+function bindProfileView() {
+  if (!els.profileContent || els.profileContent.dataset.bound) return;
+  els.profileContent.dataset.bound = '1';
+  els.profileContent.addEventListener('click', async (event) => {
+    const teamButton = event.target.closest('[data-profile-team]');
+    if (teamButton) {
+      openTeamPage({ slug: teamButton.dataset.profileTeam, title: teamButton.dataset.profileTeamTitle || teamButton.dataset.profileTeam });
+      return;
+    }
+    const modeButton = event.target.closest('[data-profile-mode]');
+    if (modeButton) {
+      openDetail(modeButton.dataset.profileMode);
+      return;
+    }
+    const button = event.target.closest('[data-profile-action]');
+    if (!button) return;
+    const action = button.dataset.profileAction;
+    const username = button.dataset.username || (S.playerProfile && S.playerProfile.username);
+    if (action === 'settings') {
+      openModal('modal-settings');
+    } else if (action === 'edit') {
+      const panel = $('profile-edit');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (action === 'logout') {
+      logoutLavunio();
+    } else if (action === 'messages') {
+      showSection('messages');
+    } else if (action === 'chat') {
+      openChat('direct', username, button.dataset.name || username);
+    } else if (action === 'friend-profile') {
+      openProfile(username);
+    } else if (action === 'add-friend') {
+      button.disabled = true;
+      try {
+        await api.friendAdd(username);
+        toast('Заявка отправлена', 'ok');
+        await loadFriends(true);
+        await openProfile(username);
+      } catch (err) {
+        toast('Не удалось добавить друга: ' + err, 'error');
+        button.disabled = false;
+      }
+    } else if (action === 'remove-friend') {
+      const confirmed = await askConfirm('Удалить друга?', `@${username} исчезнет из списка друзей.`, 'Удалить');
+      if (!confirmed) return;
+      try {
+        await api.friendRemove(username);
+        toast('Друг удалён', 'ok');
+        await loadFriends(true);
+        if (S.playerProfile) await openProfile(S.playerProfile.username);
+      } catch (err) {
+        toast('Не удалось удалить друга: ' + err, 'error');
+      }
+    } else if (action === 'accept-request' || action === 'decline-request') {
+      await respondFriendRequest(button.dataset.id, action === 'accept-request' ? 'accept' : 'decline');
+      if (S.playerProfile) await openProfile(S.playerProfile.username);
+    } else if (action === 'skin-upload') {
+      await uploadLavunioSkin();
+    } else if (action === 'skin-delete') {
+      await deleteLavunioSkin();
+    }
+  });
+  els.profileContent.addEventListener('submit', async (event) => {
+    const form = event.target.closest('[data-profile-form]');
+    if (!form) return;
+    event.preventDefault();
+    if (form.dataset.profileForm === 'friend') {
+      const input = $('profile-friend-name');
+      const username = input ? input.value.trim() : '';
+      if (!username) return;
+      try {
+        await api.friendAdd(username);
+        input.value = '';
+        toast('Заявка отправлена', 'ok');
+        await loadFriends(true);
+        if (S.playerProfile) renderProfile(S.playerProfile);
+      } catch (err) {
+        toast('Не удалось добавить друга: ' + err, 'error');
+      }
+      return;
+    }
+    if (form.dataset.profileForm === 'edit') await savePlayerProfile();
+  });
+}
+
 async function savePlayerProfile() {
-  const displayName = $('player-display-name').value.trim();
-  const bio = $('player-bio').value.trim();
-  const error = $('player-error');
+  const displayName = $('profile-display-name') ? $('profile-display-name').value.trim() : '';
+  const bio = $('profile-bio') ? $('profile-bio').value.trim() : '';
+  const error = $('profile-error');
   if (!displayName) {
-    error.textContent = 'Укажи отображаемое имя';
-    error.hidden = false;
+    if (error) {
+      error.textContent = 'Укажи отображаемое имя';
+      error.hidden = false;
+    }
     return;
   }
-  const button = $('player-save');
-  button.disabled = true;
-  error.hidden = true;
+  const button = $('profile-save');
+  if (button) button.disabled = true;
+  if (error) error.hidden = true;
   try {
     await api.playerUpdateProfile(displayName, bio);
     if (api.lavunioRefreshProfile) {
@@ -3921,12 +4172,14 @@ async function savePlayerProfile() {
     renderAccountChip();
     renderLavunioPane();
     toast('Профиль сохранён', 'ok');
-    if (S.playerProfile) await openPlayerProfile(S.playerProfile.username);
+    if (S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {
-    error.textContent = String(err || 'Не удалось сохранить профиль');
-    error.hidden = false;
+    if (error) {
+      error.textContent = String(err || 'Не удалось сохранить профиль');
+      error.hidden = false;
+    }
   } finally {
-    button.disabled = false;
+    if (button) button.disabled = false;
   }
 }
 
@@ -3941,17 +4194,22 @@ async function uploadLavunioSkin() {
   }
   if (!path) return;
 
-  const button = $('lavunio-skin-upload');
-  button.disabled = true;
+  const accountOpen = $('modal-account') && !$('modal-account').hidden;
+  const modelEl = accountOpen
+    ? $('lavunio-skin-model')
+    : ($('profile-skin-model') || $('lavunio-skin-model'));
+  const buttons = [$('profile-save'), $('lavunio-skin-upload')].filter(Boolean);
+  buttons.forEach((button) => { button.disabled = true; });
   try {
-    S.lavunio = await api.uploadSkin(path, $('lavunio-skin-model').value);
+    S.lavunio = await api.uploadSkin(path, modelEl ? modelEl.value : 'classic');
     renderLavunioPane();
     renderAccountChip();
     toast('Скин обновлён', 'ok');
+    if (S.section === 'profile' && S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {
     toast('Не удалось загрузить скин: ' + err, 'error');
   } finally {
-    button.disabled = false;
+    buttons.forEach((button) => { button.disabled = false; });
   }
 }
 
@@ -3962,6 +4220,7 @@ async function deleteLavunioSkin() {
     renderLavunioPane();
     renderAccountChip();
     toast('Скин удалён', 'ok');
+    if (S.section === 'profile' && S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {
     toast('Не удалось удалить скин: ' + err, 'error');
   }
@@ -4291,10 +4550,7 @@ function publisherAllowed() {
 
 function updateSocialNav() {
   const logged = lavunioLoggedIn();
-  const friends = $('side-friends');
-  const chat = $('side-chat');
-  if (friends) friends.hidden = !logged;
-  if (chat) chat.hidden = !logged;
+  if (els.sidebarMessages) els.sidebarMessages.hidden = !logged;
   updateSideGroups();
 }
 
@@ -5058,57 +5314,53 @@ async function toggleTeamVerified(team) {
 
 function bindSocial() {
   const bell = $('btn-notifications');
-  if (bell) bell.onclick = () => openNotifications();
-  const readAll = $('notifications-read-all');
-  if (readAll) readAll.onclick = () => readAllNotifications();
-  const feedRefresh = $('feed-refresh');
-  if (feedRefresh) feedRefresh.onclick = () => loadFeed(true);
-  const addForm = $('friend-add-form');
-  if (addForm) addForm.onsubmit = (event) => {
-    event.preventDefault();
-    addFriend();
-  };
-  const chatRefresh = $('chat-refresh');
-  if (chatRefresh) chatRefresh.onclick = () => loadChatList(true);
-  const chatForm = $('chat-form');
-  if (chatForm) chatForm.onsubmit = (event) => {
-    event.preventDefault();
-    sendChatMessage();
-  };
-  const feedList = $('feed-list');
-  if (feedList) feedList.onclick = (event) => {
-    const mode = event.target.closest('[data-feed-mode]');
-    if (mode) { openDetail(mode.dataset.feedMode); return; }
-    const team = event.target.closest('[data-feed-team]');
-    if (team) openTeamPage({ slug: team.dataset.feedTeam, title: team.dataset.feedTitle || team.dataset.feedTeam });
-  };
-  const friendsList = $('friends-list');
-  if (friendsList) friendsList.onclick = (event) => {
-    const button = event.target.closest('button[data-friend-action]');
-    if (!button) return;
-    const username = button.dataset.username;
-    if (button.dataset.friendAction === 'profile') openPlayerProfile(username);
-    else if (button.dataset.friendAction === 'chat') openChat('direct', username, username);
-    else if (button.dataset.friendAction === 'remove') removeFriend(username);
-  };
-  const requestsList = $('friend-requests-list');
-  if (requestsList) requestsList.onclick = (event) => {
-    const button = event.target.closest('button[data-friend-request]');
-    if (!button) return;
-    respondFriendRequest(button.dataset.id, button.dataset.friendRequest);
-  };
-  const chatList = $('chat-list');
-  if (chatList) chatList.onclick = (event) => {
-    const button = event.target.closest('button[data-chat-kind]');
-    if (!button) return;
-    openChat(button.dataset.chatKind, button.dataset.chatTarget, button.dataset.chatTitle || button.dataset.chatTarget);
-  };
-  const notificationsList = $('notifications-list');
-  if (notificationsList) notificationsList.onclick = (event) => {
-    const button = event.target.closest('button[data-notification-id]');
-    if (!button) return;
-    openNotification(button);
-  };
+  if (bell) {
+    bell.onclick = (event) => {
+      event.stopPropagation();
+      toggleNotifications();
+    };
+  }
+  if (els.notificationsReadAll) {
+    els.notificationsReadAll.onclick = (event) => {
+      event.stopPropagation();
+      readAllNotifications();
+    };
+  }
+  if (els.notificationsList) {
+    els.notificationsList.onclick = (event) => {
+      const button = event.target.closest('button[data-notification-id]');
+      if (!button) return;
+      openNotification(button);
+    };
+  }
+  if (els.messagesRefresh) {
+    els.messagesRefresh.onclick = () => loadChatList(true);
+  }
+  if (els.chatForm) {
+    els.chatForm.onsubmit = (event) => {
+      event.preventDefault();
+      sendChatMessage();
+    };
+  }
+  if (els.messagesList) {
+    els.messagesList.onclick = (event) => {
+      const button = event.target.closest('button[data-chat-kind]');
+      if (!button) return;
+      openChat(
+        button.dataset.chatKind,
+        button.dataset.chatTarget,
+        button.dataset.chatTitle || button.dataset.chatTarget
+      );
+    };
+  }
+  document.addEventListener('click', (event) => {
+    if (!els.notificationsPopover || els.notificationsPopover.hidden) return;
+    if (!event.target.closest('.notif-wrap')) closeNotifications();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (els.notificationsPopover && !els.notificationsPopover.hidden) closeNotifications();
+  });
   window.addEventListener('focus', () => {
     heartbeatPresence();
     loadNotifications();
@@ -5126,47 +5378,6 @@ async function heartbeatPresence() {
   try { await api.presenceHeartbeat(); } catch (_) {}
 }
 
-function feedKindLabel(kind) {
-  return ({ release: 'Новый релиз', review: 'Отзыв', team_news: 'Новость команды' })[kind] || 'Событие';
-}
-
-async function loadFeed(force = false) {
-  if (S.feedLoaded && !force) {
-    renderFeed();
-    return;
-  }
-  try {
-    const items = await api.activityFeed();
-    S.feedItems = Array.isArray(items) ? items : [];
-    S.feedLoaded = true;
-  } catch (err) {
-    toast('Не удалось загрузить ленту: ' + err, 'error');
-  }
-  renderFeed();
-}
-
-function renderFeed() {
-  if (!els.feedList) return;
-  const items = S.feedItems || [];
-  els.feedList.innerHTML = items.length
-    ? items.map((item) => `
-      <article class="pub-card">
-        <div class="pub-card-head">
-          <div>
-            <div class="pub-title">${escapeHtml(item.title)}</div>
-            <div class="pub-sub">${escapeHtml(feedKindLabel(item.kind))} · @${escapeHtml(item.username)}</div>
-          </div>
-        </div>
-        <div class="mod-changelog">${escapeHtml(item.subtitle || '')}</div>
-        <div class="pub-release-actions">
-          ${item.modeSlug ? `<button class="btn btn-ghost" type="button" data-feed-mode="${escapeHtml(item.modeSlug)}">Открыть режим</button>` : ''}
-          ${item.teamSlug ? `<button class="btn btn-ghost" type="button" data-feed-team="${escapeHtml(item.teamSlug)}" data-feed-title="${escapeHtml(item.title)}">Открыть команду</button>` : ''}
-        </div>
-      </article>
-    `).join('')
-    : '<div class="mod-empty">Лента пуста.</div>';
-}
-
 async function loadFriends(force = false) {
   if (!lavunioLoggedIn() || !api.friendsList) return;
   try {
@@ -5178,63 +5389,12 @@ async function loadFriends(force = false) {
   } catch (err) {
     toast('Не удалось загрузить друзей: ' + err, 'error');
   }
-  renderFriends();
+  refreshFriendSurfaces();
 }
 
-function renderFriends() {
-  if (!els.friendsList) return;
-  const requests = S.friendRequests || { incoming: [], outgoing: [] };
-  els.friendRequestsList.innerHTML = requests.incoming.length
-    ? requests.incoming.map((item) => `
-      <div class="friend-request-row">
-        <div>
-          <b>@${escapeHtml(item.username)}</b>
-          <div class="hint">Хочет добавить тебя в друзья</div>
-        </div>
-        <div class="team-invite-actions">
-          <button class="btn btn-primary btn-small" type="button" data-friend-request="accept" data-id="${escapeHtml(item.id)}">Принять</button>
-          <button class="btn btn-ghost btn-small" type="button" data-friend-request="decline" data-id="${escapeHtml(item.id)}">Отклонить</button>
-        </div>
-      </div>
-    `).join('')
-    : '';
-  els.friendsList.innerHTML = (S.friends || []).map((friend) => `
-    <article class="pub-card">
-      <div class="pub-card-head">
-        <div>
-          <div class="pub-title">${escapeHtml(friend.displayName || friend.username)}</div>
-          <div class="pub-sub">@${escapeHtml(friend.username)} · ${friend.online ? 'в сети' : 'не в сети'}</div>
-        </div>
-        <span class="pub-status ${friend.online ? 'published' : 'hidden'}">${friend.online ? 'Онлайн' : 'Офлайн'}</span>
-      </div>
-      <div class="pub-release-actions">
-        <button class="btn btn-ghost" type="button" data-friend-action="profile" data-username="${escapeHtml(friend.username)}">Профиль</button>
-        <button class="btn btn-ghost" type="button" data-friend-action="chat" data-username="${escapeHtml(friend.username)}">Написать</button>
-        <button class="btn btn-ghost" type="button" data-friend-action="remove" data-username="${escapeHtml(friend.username)}">Удалить</button>
-      </div>
-    </article>
-  `).join('');
-  if (els.friendsEmpty) els.friendsEmpty.hidden = (S.friends || []).length > 0;
-  const badge = $('side-friend-requests');
-  if (badge) {
-    const count = requests.incoming.length;
-    badge.hidden = count === 0;
-    badge.textContent = String(count);
-  }
-}
-
-async function addFriend() {
-  const input = $('friend-add-name');
-  const username = input.value.trim();
-  if (!username) return;
-  try {
-    await api.friendAdd(username);
-    input.value = '';
-    toast('Заявка отправлена', 'ok');
-    await loadFriends(true);
-  } catch (err) {
-    toast('Не удалось добавить друга: ' + err, 'error');
-  }
+function refreshFriendSurfaces() {
+  if (S.section === 'profile' && S.playerProfile) renderProfile(S.playerProfile);
+  if (S.section === 'messages') renderMessagesList();
 }
 
 async function respondFriendRequest(id, action) {
@@ -5268,19 +5428,38 @@ async function loadNotifications() {
     S.notificationsUnread = Number(result && result.unread) || 0;
   } catch (_) {}
   updateNotificationsBadge();
+  if (els.notificationsPopover && !els.notificationsPopover.hidden) renderNotifications();
 }
 
 function updateNotificationsBadge() {
   if (!els.notifBadge) return;
   const count = S.notificationsUnread || 0;
-  els.notifBadge.hidden = count === 0;
+  els.notifBadge.hidden = !lavunioLoggedIn() || count === 0;
   els.notifBadge.textContent = count > 99 ? '99+' : String(count);
 }
 
-function openNotifications() {
+function closeNotifications() {
+  if (els.notificationsPopover) els.notificationsPopover.hidden = true;
+}
+
+function toggleNotifications(force) {
+  if (!lavunioLoggedIn()) {
+    openModal('modal-account');
+    return;
+  }
+  if (!els.notificationsPopover) return;
+  const show = typeof force === 'boolean' ? force : els.notificationsPopover.hidden;
+  if (!show) {
+    closeNotifications();
+    return;
+  }
+  els.notificationsPopover.hidden = false;
   renderNotifications();
-  openModal('modal-notifications');
   loadNotifications().then(renderNotifications);
+}
+
+function openNotifications() {
+  toggleNotifications(true);
 }
 
 function renderNotifications() {
@@ -5321,63 +5500,119 @@ async function openNotification(button) {
     S.notificationsUnread = result.unread || 0;
     updateNotificationsBadge();
   } catch (_) {}
-  $('modal-notifications').hidden = true;
+  closeNotifications();
   const type = button.dataset.notifLinkType;
   const link = button.dataset.notifLinkId;
   if (type === 'mode' && link) openDetail(link);
   else if (type === 'team' && link) openTeamPage({ slug: link, title: link });
-  else if (type === 'user' && link) openPlayerProfile(link);
+  else if (type === 'user' && link) openProfile(link);
 }
 
 async function loadChatList(force = false) {
   if (!lavunioLoggedIn()) return;
   if (!S.friends.length) await loadFriends();
   if (!S.teams.length) await loadTeams();
-  renderChatList();
+  renderMessagesList();
+  if (!S.chatKind || !S.chatTarget) {
+    const firstFriend = (S.friends || [])[0];
+    if (firstFriend) {
+      openChat('direct', firstFriend.username, firstFriend.displayName || firstFriend.username);
+      return;
+    }
+    const firstTeam = (S.teams || [])[0];
+    if (firstTeam) {
+      openChat('team', firstTeam.id, firstTeam.title);
+      return;
+    }
+  }
+  if (S.chatKind && S.chatTarget) {
+    await loadChatMessages();
+    startChatPolling();
+  } else {
+    showChatEmpty();
+  }
 }
 
-function renderChatList() {
-  if (!els.chatList) return;
+function renderMessagesList() {
+  const wrap = els.messagesList;
+  if (!wrap) return;
   const friends = S.friends || [];
   const teams = S.teams || [];
-  const cards = [
-    ...friends.map((friend) => `
-      <article class="pub-card">
-        <div class="pub-card-head">
-          <div><div class="pub-title">${escapeHtml(friend.displayName || friend.username)}</div>
-          <div class="pub-sub">@${escapeHtml(friend.username)} · личный чат</div></div>
-          <span class="pub-status ${friend.online ? 'published' : 'hidden'}">${friend.online ? 'Онлайн' : 'Офлайн'}</span>
-        </div>
-        <div class="pub-release-actions">
-          <button class="btn btn-primary" type="button" data-chat-kind="direct" data-chat-target="${escapeHtml(friend.username)}" data-chat-title="${escapeHtml(friend.displayName || friend.username)}">Открыть чат</button>
-        </div>
-      </article>
-    `),
-    ...teams.map((team) => `
-      <article class="pub-card">
-        <div class="pub-card-head">
-          <div><div class="pub-title">${escapeHtml(team.title)}</div>
-          <div class="pub-sub">${escapeHtml(team.slug)} · чат команды</div></div>
-          <span class="pub-status published">Команда</span>
-        </div>
-        <div class="pub-release-actions">
-          <button class="btn btn-ghost" type="button" data-chat-kind="team" data-chat-target="${escapeHtml(team.id)}" data-chat-title="${escapeHtml(team.title)}">Открыть чат</button>
-        </div>
-      </article>
-    `)
-  ];
-  els.chatList.innerHTML = cards.join('');
-  if (els.chatEmpty) els.chatEmpty.hidden = cards.length > 0;
+  const parts = [];
+  if (friends.length) {
+    parts.push('<div class="messages-group-label">Друзья</div>');
+    parts.push(friends.map((friend) => {
+      const active = S.chatKind === 'direct'
+        && String(S.chatTarget || '').toLowerCase() === String(friend.username || '').toLowerCase();
+      return `
+        <button class="message-person ${active ? 'active' : ''}" type="button"
+          data-chat-kind="direct"
+          data-chat-target="${escapeHtml(friend.username)}"
+          data-chat-title="${escapeHtml(friend.displayName || friend.username)}">
+          <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
+          <span class="message-person-copy">
+            <b>${escapeHtml(friend.displayName || friend.username)}</b>
+            <small>@${escapeHtml(friend.username)}</small>
+          </span>
+          <span class="dot ${friend.online ? 'online' : ''}"></span>
+        </button>
+      `;
+    }).join(''));
+  }
+  if (teams.length) {
+    parts.push('<div class="messages-group-label">Команды</div>');
+    parts.push(teams.map((team) => {
+      const active = S.chatKind === 'team' && String(S.chatTarget || '') === String(team.id || '');
+      return `
+        <button class="message-person ${active ? 'active' : ''}" type="button"
+          data-chat-kind="team"
+          data-chat-target="${escapeHtml(team.id)}"
+          data-chat-title="${escapeHtml(team.title)}">
+          <span class="avatar lavunio-avatar">${escapeHtml((team.title || '?')[0].toUpperCase())}</span>
+          <span class="message-person-copy">
+            <b>${escapeHtml(team.title)}</b>
+            <small>@${escapeHtml(team.slug)}</small>
+          </span>
+          <span class="dot"></span>
+        </button>
+      `;
+    }).join(''));
+  }
+  wrap.innerHTML = parts.join('') || '<div class="profile-empty">Добавь друга, чтобы начать переписку</div>';
+  wrap.querySelectorAll('[data-avatar-friend]').forEach((el) => {
+    const friendItem = friendByUsername(el.dataset.avatarFriend);
+    if (friendItem) applyLavunioAvatar(el, friendItem);
+  });
+}
+
+function showChatEmpty() {
+  if (els.chatTitle) els.chatTitle.textContent = 'Сообщения';
+  if (els.chatSubtitle) els.chatSubtitle.textContent = 'Выбери чат слева';
+  if (els.chatMessages) {
+    els.chatMessages.innerHTML = '';
+    els.chatMessages.hidden = true;
+  }
+  if (els.chatEmpty) els.chatEmpty.hidden = false;
+  if (els.chatForm) els.chatForm.hidden = true;
 }
 
 function openChat(kind, target, title) {
+  if (!kind || !target) return;
   S.chatKind = kind;
   S.chatTarget = target;
-  S.chatTitle = title;
-  $('chat-title').textContent = `Чат · ${title}`;
-  $('chat-subtitle').textContent = kind === 'team' ? 'Чат команды' : `Личный чат с @${target}`;
-  els.chatMessages.innerHTML = '';
-  openModal('modal-chat');
+  S.chatTitle = title || target;
+  showView('messages');
+  renderMessagesList();
+  if (els.chatTitle) els.chatTitle.textContent = S.chatTitle;
+  if (els.chatSubtitle) {
+    els.chatSubtitle.textContent = kind === 'team' ? 'Чат команды' : `Личный чат с @${target}`;
+  }
+  if (els.chatMessages) {
+    els.chatMessages.innerHTML = '';
+    els.chatMessages.hidden = false;
+  }
+  if (els.chatEmpty) els.chatEmpty.hidden = true;
+  if (els.chatForm) els.chatForm.hidden = false;
   loadChatMessages();
   startChatPolling();
 }
@@ -5391,7 +5626,9 @@ async function loadChatMessages() {
     S.chatMessages = Array.isArray(items) ? items : [];
     renderChatMessages();
   } catch (err) {
-    els.chatMessages.innerHTML = `<div class="hint">Не удалось загрузить чат: ${escapeHtml(String(err))}</div>`;
+    if (els.chatMessages) {
+      els.chatMessages.innerHTML = `<div class="hint">Не удалось загрузить чат: ${escapeHtml(String(err))}</div>`;
+    }
   }
 }
 
@@ -5408,11 +5645,10 @@ function renderChatMessages() {
 }
 
 async function sendChatMessage() {
-  if (!S.chatKind || !S.chatTarget) return;
-  const input = $('chat-input');
-  const body = input.value.trim();
+  if (!S.chatKind || !S.chatTarget || !els.chatInput) return;
+  const body = els.chatInput.value.trim();
   if (!body) return;
-  input.value = '';
+  els.chatInput.value = '';
   try {
     if (S.chatKind === 'direct') await api.chatSendDirect(S.chatTarget, body);
     else await api.chatSendTeam(S.chatTarget, body);
@@ -5425,7 +5661,7 @@ async function sendChatMessage() {
 function startChatPolling() {
   if (S.chatTimer) clearInterval(S.chatTimer);
   S.chatTimer = setInterval(() => {
-    if ($('modal-chat').hidden) {
+    if (S.section !== 'messages' || !S.chatKind || !S.chatTarget) {
       clearInterval(S.chatTimer);
       S.chatTimer = null;
       return;
