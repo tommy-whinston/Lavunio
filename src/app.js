@@ -24,6 +24,7 @@ import { configureMessages, loadChatList, renderMessagesList, openChat, sendChat
 import { configureUpdates, bindUpdateModal, checkLauncherUpdate, checkUpdateInBackground, finishStartup, handleStartupUpdate } from './features/updates/index.js';
 import { configureNotifications, bindNotifications, loadNotifications, updateNotificationsBadge, closeNotifications, renderNotifications } from './features/notifications/index.js';
 import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderAccountModal, renderLavunioPane, logoutLavunio } from './features/account/index.js';
+import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
 import { configureDownloads, activeDownloadTask, downloadTaskForMode, enqueueDownload, pumpDownloads, finishDownload, failDownload, pauseDownload, resumeDownload, retryDownload, cancelDownload, removeDownload, clearDownloads, updateDownloadProgress, renderDownloads } from './features/downloads/queue.js';
 import { tagPill, renderSpotlight, renderChangelog, updateChangelogToggle, renderTrailer, selectDetailTab, renderSessions } from './features/detail/view.js';
 import { LOADER_LABELS, modeStatusMeta, isInstalled, inLibrary, isHiddenMode, isVisibleInLibrary, isUpdate, loaderLabel, modeSub, modeAuthors, cardSub, modeShortDescription, modeFullDescription, modeTags, sortByTitle, sortModes, modeById, modeInstalledAt, modePlaytime, modeReleaseDate, latestUpdateEntry, modeUpdatedAt, computeAction } from './core/modes.js';
@@ -98,6 +99,8 @@ configureAccount({
   renderStore,
   openModal
 });
+
+configureSocial({ askConfirm });
 
 configureTeams({
   openDetail,
@@ -2032,53 +2035,6 @@ function bindSocial() {
       loadNotifications();
     }
   }, 60000);
-}
-
-async function heartbeatPresence() {
-  if (!lavunioLoggedIn() || !api.presenceHeartbeat) return;
-  try { await api.presenceHeartbeat(); } catch (_) {}
-}
-
-async function loadFriends(force = false) {
-  if (!lavunioLoggedIn() || !api.friendsList) return;
-  try {
-    const [friends, requests] = await Promise.all([api.friendsList(), api.friendRequests()]);
-    S.friends = Array.isArray(friends) ? friends : [];
-    S.friendRequests = requests && typeof requests === 'object'
-      ? { incoming: requests.incoming || [], outgoing: requests.outgoing || [] }
-      : { incoming: [], outgoing: [] };
-  } catch (err) {
-    toast(tKey("failed.to.load.friends") + " " + err, 'error');
-  }
-  refreshFriendSurfaces();
-}
-
-function refreshFriendSurfaces() {
-  if (S.section === 'profile' && S.playerProfile) renderProfile(S.playerProfile);
-  if (S.section === 'messages') renderMessagesList();
-}
-
-async function respondFriendRequest(id, action) {
-  try {
-    await api.friendRespond(id, action);
-    toast(action === 'accept' ? tKey("request.accepted") : tKey("request.declined"), 'ok');
-    await loadFriends(true);
-    await loadNotifications();
-  } catch (err) {
-    toast(tKey("failed.to.process.request") + " " + err, 'error');
-  }
-}
-
-async function removeFriend(username) {
-  const confirmed = await askConfirm(tKey("remove.friend"), tKey("app.friend.remove.warning", [username]), tKey("delete"));
-  if (!confirmed) return;
-  try {
-    await api.friendRemove(username);
-    toast(tKey("friend.removed"), 'ok');
-    await loadFriends(true);
-  } catch (err) {
-    toast(tKey("failed.to.remove.friend") + " " + err, 'error');
-  }
 }
 
 // ---------------------------------------------------------------- модерация
