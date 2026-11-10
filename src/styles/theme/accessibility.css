@@ -1,0 +1,36 @@
+/* ============ ACCESSIBILITY ============ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #ffb45e;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.side-link:focus-visible,
+.card:focus-visible,
+.pub-card:focus-visible {
+  outline: 2px solid #ffb45e;
+  outline-offset: -2px;
+}
+.modal-close:focus-visible {
+  outline: 2px solid #ffb45e;
+  outline-offset: 2px;
+}
+html[lang="en"] .btn {
+  height: auto;
+  min-height: 38px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  line-height: 1.25;
+}
+html[lang="en"] .btn-small { min-height: 32px; }
+html[lang="en"] .btn-big { min-height: 46px; }
+html[lang="en"] .filter-chips button { white-space: normal; }
+
+select { color-scheme: dark; }
+select option {
+  background-color: #111111;
+  color: #f4efe9;
+}
+select option:checked {
+  background-color: #e5322b;
+  color: #ffffff;
+}

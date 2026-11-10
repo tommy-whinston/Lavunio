@@ -1,0 +1,57 @@
+/* ============ АНИМАЦИИ ============ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(7px) scale(0.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+#store-view:not([hidden]), #library-view:not([hidden]), #detail-view:not([hidden]) {
+  animation: fadeUp 0.32s ease both;
+}
+.mode-card { animation: cardIn 0.38s ease both; }
+.mode-card:nth-child(2) { animation-delay: 0.03s; }
+.mode-card:nth-child(3) { animation-delay: 0.06s; }
+.mode-card:nth-child(4) { animation-delay: 0.09s; }
+.mode-card:nth-child(5) { animation-delay: 0.12s; }
+.mode-card:nth-child(6) { animation-delay: 0.15s; }
+.card-media { overflow: hidden; }
+.card-media img { transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1); }
+.mode-card:hover .card-media img { transform: scale(1.045); }
+.side-link { transition: background 0.16s ease, color 0.16s ease, padding-left 0.16s ease; }
+.side-link.active { padding-left: 14px; }
+.btn { transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, box-shadow 0.14s ease, transform 0.08s ease; }
+.btn-primary { position: relative; overflow: hidden; }
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.16) 48%, transparent 72%);
+  transform: translateX(-130%);
+  transition: transform 0.55s ease;
+}
+.btn-primary:hover::after { transform: translateX(130%); }
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 12% -8%, rgba(13, 140, 255, 0.07), transparent 65%),
+    radial-gradient(760px 520px at 100% 28%, rgba(124, 92, 255, 0.055), transparent 65%);
+}
+
+@media (max-width: 1080px) {
+  .update-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .sidebar-foot { display: none; }
+  .update-list { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

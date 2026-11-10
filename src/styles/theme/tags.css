@@ -1,0 +1,17 @@
+/* ============ TAGS ============ */
+
+.tags span {
+  border-radius: 4px;
+  background: rgba(229, 50, 43, 0.1);
+  border: 1px solid rgba(229, 50, 43, 0.32);
+  color: #ffad99;
+  font-size: 9.5px;
+  letter-spacing: 1px;
+}
+.card-body .tags span {
+  font-size: 8.5px;
+  padding: 3px 6px;
+  background: #171010;
+  border-color: #3a211d;
+  color: #c99486;
+}

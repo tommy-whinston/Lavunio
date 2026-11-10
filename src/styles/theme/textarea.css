@@ -1,0 +1,8 @@
+/* ============ AUTO-GROWING TEXTAREAS ============ */
+textarea {
+  resize: none;
+  overflow-y: hidden;
+  min-height: 42px;
+  max-height: 45vh;
+  line-height: 1.5;
+}

@@ -1,0 +1,44 @@
+/* ============ SMALL TWEAKS ============ */
+
+@keyframes heroGlitch {
+  0%, 90%, 100% {
+    text-shadow:
+      3px 0 0 rgba(229, 50, 43, 0.55),
+      -1px 0 0 rgba(255, 255, 255, 0.12),
+      0 10px 44px rgba(0, 0, 0, 0.85);
+    transform: translateX(0);
+  }
+  91% {
+    text-shadow:
+      -5px 0 0 rgba(255, 122, 31, 0.7),
+      4px 0 0 rgba(229, 50, 43, 0.55),
+      0 10px 44px rgba(0, 0, 0, 0.85);
+    transform: translateX(1px);
+  }
+  92% {
+    text-shadow:
+      5px 0 0 rgba(229, 50, 43, 0.65),
+      -4px 0 0 rgba(255, 255, 255, 0.16),
+      0 10px 44px rgba(0, 0, 0, 0.85);
+    transform: translateX(-1px);
+  }
+  93% {
+    text-shadow:
+      2px 0 0 rgba(229, 50, 43, 0.55),
+      -1px 0 0 rgba(255, 255, 255, 0.12),
+      0 10px 44px rgba(0, 0, 0, 0.85);
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 1080px) {
+  #sidebar { width: 192px; }
+  #app { padding: 24px 24px 38px; }
+}
+
+
+/* Brand keeps mixed case (Lavunio) */
+.brand-name,
+.splash-brand {
+  text-transform: none;
+}

@@ -1,0 +1,132 @@
+/* ============ MODALS / FORMS ============ */
+
+.modal-overlay {
+  background: rgba(3, 3, 3, 0.82);
+  backdrop-filter: blur(5px);
+}
+.modal {
+  background: #101010;
+  border-color: #2c2422;
+  border-radius: 10px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7), 0 0 50px rgba(229, 50, 43, 0.06);
+}
+.modal-head h2 {
+  font-size: 15px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.modal-close { border-radius: 5px; color: #8f857e; }
+.modal-close:hover { background: rgba(229, 50, 43, 0.16); color: #ff8a7a; }
+.confirm-modal { width: min(440px, calc(100vw - 48px)); }
+.confirm-modal .modal-actions { margin-top: 20px; }
+.confirm-modal .btn-danger {
+  background: linear-gradient(180deg, #ff5c55, #d92b25);
+  border-color: #ff6a5c;
+  box-shadow: 0 6px 18px rgba(229, 50, 43, 0.2);
+}
+.confirm-modal .btn-danger:hover { background: linear-gradient(180deg, #ff756c, #e5322b); }
+
+.field > label { color: #9a9088; letter-spacing: 1.4px; }
+.field output { color: #ff8a5c; }
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
+  background: #161616;
+  border-color: #2b2b2b;
+  border-radius: 6px;
+}
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+  border-color: rgba(229, 50, 43, 0.7);
+  background: #1c1c1c;
+  box-shadow: 0 0 0 3px rgba(229, 50, 43, 0.12);
+}
+input[type="range"] { accent-color: #ff5a2c; }
+.check input { accent-color: #ff5a2c; }
+select option { background: #161616; }
+.hint { color: #7c726b; }
+.link { color: #ff8a5c; }
+
+.settings-tabs {
+  background: #141414;
+  border-color: #262626;
+  border-radius: 7px;
+}
+.settings-tab {
+  border-radius: 5px;
+  font-size: 10.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #8e847c;
+}
+.settings-tab:hover { color: #f1ebe5; }
+.settings-tab.active {
+  background: linear-gradient(180deg, rgba(229, 50, 43, 0.26), rgba(229, 50, 43, 0.1));
+  color: #ffb09d;
+  box-shadow: inset 0 0 0 1px rgba(229, 50, 43, 0.3);
+}
+
+.acc-current {
+  background: #151515;
+  border-color: #292929;
+  border-radius: 8px;
+}
+.acc-current .acc-name { color: #f4eee8; }
+.acc-row {
+  background: #151515;
+  border-color: #292929;
+  border-radius: 8px;
+}
+.acc-row.current {
+  border-color: rgba(229, 50, 43, 0.55);
+  background: rgba(229, 50, 43, 0.09);
+}
+.acc-row .acc-type {
+  background: rgba(229, 50, 43, 0.14);
+  color: #ff9c86;
+  border-radius: 4px;
+}
+.acc-row .acc-type.offline { background: #222; color: #9a9088; }
+.acc-row button { border-radius: 5px; }
+.acc-row button:hover { background: #242424; color: #fff; }
+.acc-row button.del:hover { background: rgba(229, 50, 43, 0.16); color: #ff766c; }
+.acc-list-head { color: #7c726b; letter-spacing: 2px; }
+
+.ely-mark {
+  background: linear-gradient(135deg, #e5322b, #ff7a1f);
+  border-radius: 7px;
+}
+.ely-mark.big { border-radius: 10px; }
+.ely-login-brand {
+  background: #151515;
+  border-color: #292929;
+  border-radius: 8px;
+}
+
+.update-versions {
+  background: #151515;
+  border-color: #292929;
+  border-radius: 8px;
+}
+.update-versions b { color: #f4eee8; }
+.update-arrow { color: #ff6a3d; }
+.update-notes {
+  background: #0c0c0c;
+  border-color: #262626;
+  border-radius: 7px;
+  color: #bfb6ae;
+}
+.update-notes::selection { background: rgba(229, 50, 43, 0.5); }
+
+#toast {
+  background: rgba(16, 16, 16, 0.98);
+  border-color: #2c2c2c;
+  border-left-color: #ff5a2c;
+  border-radius: 7px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+}
+
+.progress { background: #1d1d1d; }
+.progress-bar {
+  background: linear-gradient(90deg, #e5322b, #ff7a1f);
+  box-shadow: 0 0 12px rgba(229, 50, 43, 0.5);
+  transition: width 0.3s ease;
+}

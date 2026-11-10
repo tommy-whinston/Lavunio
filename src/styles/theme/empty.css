@@ -1,0 +1,13 @@
+/* ============ EMPTY / SKELETON ============ */
+
+.empty {
+  border-color: #2c2220;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(229, 50, 43, 0.035), transparent);
+}
+.empty-icon { color: #6b4a43; }
+.skeleton-card {
+  background: linear-gradient(100deg, #101010 20%, #191919 40%, #101010 60%);
+  background-size: 200% 100%;
+  border-color: #242424;
+}

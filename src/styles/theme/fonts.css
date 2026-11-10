@@ -1,0 +1,77 @@
+/* ============================================================
+   LAVUNIO — RED GRUNGE THEME
+   ============================================================ */
+
+@font-face {
+  font-family: 'Silkscreen';
+  src: url('../../assets/fonts/Silkscreen.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Silkscreen';
+  src: url('../../assets/fonts/Silkscreen-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #080808;
+  --bg-soft: #0b0b0b;
+  --panel: #111111;
+  --panel-2: #191919;
+  --panel-3: #222222;
+  --text: #f4efe9;
+  --muted: #a69d95;
+  --muted-2: #716861;
+  --accent: #e5322b;
+  --accent-2: #ff6a3d;
+  --accent-soft: rgba(229, 50, 43, 0.14);
+  --ok: #67d391;
+  --warn: #ff9a3d;
+  --danger: #ff3b30;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --radius: 9px;
+  --shadow: 0 24px 64px rgba(0, 0, 0, 0.66);
+  --orange: #ff7a1f;
+  --orange-2: #ff5416;
+}
+
+html, body {
+  background: #080808;
+  color: var(--text);
+}
+
+body::before {
+  background:
+    radial-gradient(1100px 620px at 82% -12%, rgba(229, 50, 43, 0.17), transparent 62%),
+    radial-gradient(820px 520px at -8% 108%, rgba(255, 106, 31, 0.09), transparent 60%),
+    radial-gradient(520px 320px at 50% 45%, rgba(255, 255, 255, 0.018), transparent 72%);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px),
+    radial-gradient(rgba(255, 255, 255, 0.05) 0.6px, transparent 0.7px);
+  background-size: auto, 3px 3px;
+  opacity: 0.32;
+  mix-blend-mode: soft-light;
+}
+
+::selection { background: rgba(229, 50, 43, 0.5); color: #fff; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb {
+  background: #3a1a17;
+  border-radius: 8px;
+  border: 3px solid #080808;
+}
+::-webkit-scrollbar-thumb:hover { background: #e5322b; }

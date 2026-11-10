@@ -1,0 +1,19 @@
+/* ============ SIDEBAR FOOT ============ */
+#sidebar { display: flex; flex-direction: column; }
+.sidebar-foot {
+  margin-top: auto;
+  padding: 14px 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.sidebar-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+.sidebar-stat b { color: var(--muted); font-size: 11px; font-weight: 700; }

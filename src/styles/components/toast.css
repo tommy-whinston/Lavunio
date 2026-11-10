@@ -1,0 +1,24 @@
+/* ============ ТОСТ ============ */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(80px);
+  z-index: 100;
+  padding: 12px 20px;
+  border-radius: 9px;
+  background: rgba(27, 27, 31, 0.97);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent-2);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.25s;
+  max-width: 70vw;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+#toast.ok { border-left-color: var(--ok); }
+#toast.warn { border-left-color: var(--warn); }
+#toast.error { border-left-color: var(--danger); }

@@ -1,0 +1,15 @@
+/* ============ DETAIL META ACTIONS ============ */
+.detail-folder-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 190px;
+  min-width: 0;
+}
+.detail-folder-actions .detail-folder {
+  width: 100%;
+  height: 40px;
+  min-height: 40px;
+  align-self: stretch;
+}

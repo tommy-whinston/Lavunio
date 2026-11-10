@@ -1,0 +1,139 @@
+/* ============ SPLASH UPDATE STATE ============ */
+.splash-normal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.splash-update {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: splashStateIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.splash-beam {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  width: 240px;
+  height: 340px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, transparent, rgba(0, 194, 255, 0.07) 45%, transparent);
+  filter: blur(22px);
+  animation: splashBeam 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.splash-update .splash-logo-wrap { margin-bottom: 4px; }
+.splash-update-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(13, 140, 255, 0.35);
+  background: linear-gradient(90deg, rgba(13, 140, 255, 0.16), rgba(0, 194, 255, 0.06));
+  box-shadow: 0 0 26px rgba(13, 140, 255, 0.18), inset 0 0 20px rgba(13, 140, 255, 0.08);
+  color: #d6ecff;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  overflow: hidden;
+}
+.splash-update-pill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.22), transparent 70%);
+  transform: translateX(-120%);
+  animation: splashPillShine 2.8s ease-in-out infinite;
+}
+.splash-update-pill b {
+  color: var(--accent-2);
+  font-family: 'Unbounded', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.splash-update-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 10px 1px rgba(0, 194, 255, 0.75);
+  animation: splashDotPulse 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.splash-update-status {
+  min-height: 32px;
+  max-width: 280px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+.splash-update-progress-row {
+  width: 248px;
+  max-width: calc(100vw - 64px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+.splash-update-progress {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.45);
+}
+#splash-update-bar {
+  position: relative;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 12px rgba(13, 140, 255, 0.65);
+  transition: width 0.2s linear;
+}
+.splash-update-percent {
+  min-width: 34px;
+  text-align: right;
+  color: var(--accent-2);
+  font-family: 'Unbounded', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-shadow: 0 0 12px rgba(0, 194, 255, 0.45);
+}
+.splash-update-hint {
+  color: var(--muted-2);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+.splash-update.installing .splash-update-hint { opacity: 0; transition: opacity 0.2s ease; }
+.splash-update.installing .splash-update-pill-dot { animation-duration: 0.45s; }
+@keyframes splashStateIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes splashPillShine {
+  0%, 45% { transform: translateX(-120%); }
+  85%, 100% { transform: translateX(120%); }
+}
+@keyframes splashDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.7); }
+}
+@keyframes splashBeam {
+  0%, 100% { opacity: 0.35; transform: translateX(-50%) translateY(-6px); }
+  50% { opacity: 0.9; transform: translateX(-50%) translateY(10px); }
+}

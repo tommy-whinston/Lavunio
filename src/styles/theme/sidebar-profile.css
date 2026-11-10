@@ -1,0 +1,52 @@
+/* ============ SIDEBAR PROFILE ============ */
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 10px 0;
+  padding: 10px 8px;
+  border: 1px solid #222222;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #111111, #0b0b0b);
+  margin-top: auto;
+}
+.sidebar-profile.active {
+  border-color: rgba(229, 50, 43, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(229, 50, 43, 0.08);
+}
+#sidebar .sidebar-foot { margin-top: 0; }
+.sidebar-profile-main .avatar { width: 32px; height: 32px; flex: 0 0 auto; background-size: 256px auto, 256px auto; background-position: -32px -32px, -160px -32px; }
+.sidebar-profile-main .avatar.lavunio-avatar { background-size: auto, auto; background-position: center, center; }
+.sidebar-profile-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  flex: 1;
+  background: none;
+  text-align: left;
+  color: inherit;
+}
+.sidebar-profile-main .avatar { width: 32px; height: 32px; flex: 0 0 auto; }
+.sidebar-profile-copy { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.sidebar-profile-copy b {
+  overflow: hidden;
+  color: #f1ebe5;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-profile-copy span {
+  overflow: hidden;
+  color: #8f867f;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-profile-actions { display: flex; gap: 1px; flex: 0 0 auto; }
+.sidebar-profile-actions .icon-btn { width: 27px; height: 27px; padding: 0; }
+.sidebar-profile-actions .icon-btn.active {
+  color: #ff9c86;
+  background: rgba(229, 50, 43, 0.16);
+}

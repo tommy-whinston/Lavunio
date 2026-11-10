@@ -1,0 +1,82 @@
+/* ============ FEATURED ============ */
+
+.featured {
+  height: 356px;
+  border-radius: 10px;
+  border: 1px solid #2a1715;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.66), 0 0 46px rgba(229, 50, 43, 0.09);
+  background: #0b0b0b;
+}
+.featured img {
+  opacity: 1;
+  filter: none;
+  transition: transform 0.65s ease, filter 0.4s ease;
+}
+.featured:hover img {
+  transform: scale(1.025);
+  filter: brightness(1.03);
+}
+.featured-shade {
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(7, 7, 7, 0.98) 0%, rgba(7, 7, 7, 0.86) 36%, rgba(7, 7, 7, 0.3) 72%, rgba(7, 7, 7, 0.5) 100%),
+    linear-gradient(0deg, #070707 0%, rgba(7, 7, 7, 0.1) 60%),
+    radial-gradient(620px 320px at 12% 110%, rgba(229, 50, 43, 0.3), transparent 70%);
+}
+.featured::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, rgba(229, 50, 43, 0.08), transparent 55%);
+  mix-blend-mode: screen;
+}
+.featured-content { z-index: 2; left: 36px; bottom: 32px; max-width: 660px; }
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 5px 9px;
+  border-radius: 4px;
+  border: 1px solid rgba(229, 50, 43, 0.38);
+  background: rgba(229, 50, 43, 0.12);
+  color: #ff9c86;
+  font-family: 'Silkscreen', 'Golos Text', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  margin-bottom: 13px;
+}
+.eyebrow::before { display: none; }
+
+.featured h1 {
+  font-family: 'Unbounded', sans-serif;
+  font-size: clamp(34px, 4.1vw, 56px);
+  line-height: 0.98;
+  font-weight: 800;
+  letter-spacing: -1.8px;
+  text-transform: uppercase;
+  color: #f8f3ed;
+  text-shadow:
+    3px 0 0 rgba(229, 50, 43, 0.55),
+    -1px 0 0 rgba(255, 255, 255, 0.12),
+    0 10px 44px rgba(0, 0, 0, 0.85);
+  animation: heroGlitch 7s steps(1) infinite;
+}
+.featured p {
+  margin-top: 14px;
+  color: #c7bdb4;
+  font-size: 13px;
+}
+.featured-actions { margin-top: 22px; gap: 16px; }
+.featured-status {
+  color: #c9a394;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
