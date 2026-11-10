@@ -85,6 +85,9 @@ fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
 fn main() {
     logging::init();
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main(app);
+        }))
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::win_minimize,
