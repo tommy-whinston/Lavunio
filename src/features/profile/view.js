@@ -1,0 +1,249 @@
+'use strict';
+
+import { S } from '../../core/state.js';
+import { escapeHtml } from '../../core/dom.js';
+import { formatDateTime } from '../../core/format.js';
+import { isInstalled, isVisibleInLibrary } from '../../core/modes.js';
+import { teamRoleLabel } from '../../core/labels.js';
+import { isOwnUsername, friendByUsername } from '../../core/social.js';
+import { applyLavunioAvatar } from '../../core/lavunio.js';
+
+export function profileRoleLabel(role) {
+  return role === 'admin' ? 'Администратор'
+    : role === 'author' ? 'Автор'
+      : role === 'moderator' ? 'Модератор' : 'Игрок';
+}
+
+export function profileOnlineLabel(profile) {
+  const tr = (text) => (window.I18n ? window.I18n.t(text) : text);
+  if (profile.online) return tr('в сети');
+  const seen = formatDateTime(profile.lastSeenAt);
+  return seen === '—' ? tr('не в сети') : `${tr('был(а)')} ${seen}`;
+}
+
+export function profileModesHtml(profile) {
+  const modes = profile.modes || [];
+  if (!modes.length) return '<div class="profile-empty">Опубликованных режимов нет</div>';
+  return modes.map((mode) => `
+    <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.slug)}">
+      <span>${escapeHtml(mode.title)}</span>
+      <b>${Number(mode.installs) || 0} установок</b>
+    </button>
+  `).join('');
+}
+
+export function profileTeamsHtml(profile) {
+  const teams = profile.teams || [];
+  if (!teams.length) return '<div class="profile-empty">Не состоит в командах</div>';
+  return teams.map((team) => `
+    <button class="profile-mode-row" type="button" data-profile-team="${escapeHtml(team.slug)}" data-profile-team-title="${escapeHtml(team.title)}">
+      <span>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</span>
+      <b>${escapeHtml(teamRoleLabel(team.role))}</b>
+    </button>
+  `).join('');
+}
+
+export function profileFriendsHtml() {
+  const friends = S.friends || [];
+  if (!friends.length) return '<div class="profile-empty">Друзей пока нет</div>';
+  return friends.map((friend) => `
+    <div class="profile-friend">
+      <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
+      <div class="profile-friend-copy">
+        <b>${escapeHtml(friend.displayName || friend.username)}</b>
+        <span>@${escapeHtml(friend.username)} · <span>${friend.online ? 'в сети' : 'не в сети'}</span></span>
+      </div>
+      <div class="profile-friend-actions">
+        <button class="icon-btn" type="button" title="Профиль" data-profile-action="friend-profile" data-username="${escapeHtml(friend.username)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/></svg>
+        </button>
+        <button class="icon-btn" type="button" title="Написать" data-profile-action="chat" data-username="${escapeHtml(friend.username)}" data-name="${escapeHtml(friend.displayName || friend.username)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>
+        </button>
+        <button class="icon-btn" type="button" title="Удалить" data-profile-action="remove-friend" data-username="${escapeHtml(friend.username)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7v12h10V7"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+export function profileRequestsHtml() {
+  const incoming = (S.friendRequests && S.friendRequests.incoming) || [];
+  if (!incoming.length) return '';
+  return `
+    <section class="profile-panel">
+      <h2>Заявки в друзья</h2>
+      ${incoming.map((item) => `
+        <div class="profile-request">
+          <span>@${escapeHtml(item.username)}</span>
+          <span class="profile-request-actions">
+            <button class="btn btn-primary btn-small" type="button" data-profile-action="accept-request" data-id="${escapeHtml(item.id)}">Принять</button>
+            <button class="btn btn-ghost btn-small" type="button" data-profile-action="decline-request" data-id="${escapeHtml(item.id)}">Отклонить</button>
+          </span>
+        </div>
+      `).join('')}
+    </section>
+  `;
+}
+
+export function profileSkinHtml(profile) {
+  return `
+    <div class="profile-skin">
+      <div class="skin-preview">
+        ${profile.skinUrl ? `<img id="profile-skin-img" src="${escapeHtml(profile.skinUrl)}" alt="Скин">` : ''}
+        ${profile.skinUrl ? '' : '<span class="skin-empty">Нет скина</span>'}
+      </div>
+      <div class="skin-controls">
+        <div class="field">
+          <label for="profile-skin-model">Модель скина</label>
+          <select id="profile-skin-model">
+            <option value="classic"${profile.skinModel === 'slim' ? '' : ' selected'}>Classic</option>
+            <option value="slim"${profile.skinModel === 'slim' ? ' selected' : ''}>Slim</option>
+          </select>
+        </div>
+        <div class="skin-actions">
+          <button class="btn btn-ghost" type="button" data-profile-action="skin-upload">Загрузить скин</button>
+          <button class="btn btn-ghost" type="button" data-profile-action="skin-delete" ${profile.skinUrl ? '' : 'hidden'}>Удалить скин</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function profileEditHtml(profile) {
+  return `
+    <section class="profile-panel" id="profile-edit">
+      <h2>Настройки профиля</h2>
+      <form class="profile-edit" data-profile-form="edit" autocomplete="off">
+        <div class="field">
+          <label for="profile-display-name">Отображаемое имя</label>
+          <input id="profile-display-name" type="text" maxlength="40" value="${escapeHtml(profile.displayName || profile.username)}">
+        </div>
+        <div class="field">
+          <label for="profile-bio">О себе</label>
+          <textarea id="profile-bio" rows="3" maxlength="500" placeholder="Пара слов о себе">${escapeHtml(profile.bio || '')}</textarea>
+        </div>
+        <div class="form-error" id="profile-error" hidden></div>
+        <button class="btn btn-primary" id="profile-save" type="submit">Сохранить</button>
+      </form>
+      ${profileSkinHtml(profile)}
+      <div class="profile-account-row">
+        <button class="btn btn-ghost" type="button" data-profile-action="settings">Настройки лаунчера</button>
+        <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти из Lavunio</button>
+      </div>
+    </section>
+  `;
+}
+
+export function renderProfile(profile) {
+  if (!profile || !els.profileContent) return;
+  const own = isOwnUsername(profile.username);
+  const friend = friendByUsername(profile.username);
+  const outgoing = ((S.friendRequests && S.friendRequests.outgoing) || []).some(
+    (item) => String(item.username || '').toLowerCase() === String(profile.username).toLowerCase()
+  );
+  const display = profile.displayName || profile.username;
+  const stats = profile.stats || {};
+
+  const actions = own
+    ? `
+      <button class="icon-btn" type="button" title="Настройки" data-profile-action="settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.3 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="btn btn-primary" type="button" data-profile-action="messages">Сообщения</button>
+      <button class="btn btn-ghost" type="button" data-profile-action="edit">Редактировать</button>
+      <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти</button>
+    `
+    : `
+      ${friend
+        ? `<button class="btn btn-primary" type="button" data-profile-action="chat" data-username="${escapeHtml(profile.username)}" data-name="${escapeHtml(display)}">Написать</button>
+           <button class="btn btn-ghost" type="button" data-profile-action="remove-friend" data-username="${escapeHtml(profile.username)}">Удалить из друзей</button>`
+        : outgoing
+          ? '<button class="btn btn-ghost" type="button" disabled>Заявка отправлена</button>'
+          : `<button class="btn btn-primary" type="button" data-profile-action="add-friend" data-username="${escapeHtml(profile.username)}">Добавить в друзья</button>`}
+      <button class="btn btn-ghost" type="button" data-profile-action="messages">Сообщения</button>
+    `;
+
+  els.profileContent.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-avatar-wrap"><span class="avatar" id="profile-avatar"></span></div>
+      <div class="profile-hero-main">
+        <h1>${escapeHtml(display)}</h1>
+        <div class="profile-handle">@${escapeHtml(profile.username)}</div>
+        <div class="profile-badges">
+          <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>
+          <span class="profile-badge ${profile.online ? 'online' : ''}">${escapeHtml(profileOnlineLabel(profile))}</span>
+          ${friend ? '<span class="profile-badge">друг</span>' : ''}
+          ${own ? '<span class="profile-badge">это вы</span>' : ''}
+        </div>
+        <div class="profile-bio">${escapeHtml(profile.bio || 'Без описания')}</div>
+      </div>
+      <div class="profile-actions">${actions}</div>
+    </div>
+
+    <div class="profile-stats">
+      <div class="profile-stat"><span>Режимы</span><b>${Number(stats.modes) || 0}</b></div>
+      <div class="profile-stat"><span>Скачивания</span><b>${Number(stats.downloads) || 0}</b></div>
+      <div class="profile-stat"><span>Установки</span><b>${Number(stats.installs) || 0}</b></div>
+      <div class="profile-stat"><span>Команды</span><b>${(profile.teams || []).length}</b></div>
+    </div>
+
+    <div class="profile-layout">
+      <div class="profile-main">
+        <section class="profile-panel">
+          <h2>Режимы</h2>
+          ${profileModesHtml(profile)}
+        </section>
+        ${own ? `
+          <section class="profile-panel">
+            <h2>Библиотека</h2>
+            ${S.modes.filter((mode) => isVisibleInLibrary(mode)).slice(0, 20).map((mode) => `
+              <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
+                <span>${escapeHtml(mode.title)}</span>
+                <b>${isInstalled(mode) ? 'Установлено' : 'В библиотеке'}</b>
+              </button>
+            `).join('') || '<div class="profile-empty">Библиотека пуста</div>'}
+          </section>
+          ${profileEditHtml(profile)}
+        ` : ''}
+      </div>
+      <aside class="profile-side">
+        <section class="profile-panel">
+          <h2>Команды</h2>
+          ${profileTeamsHtml(profile)}
+        </section>
+        ${own ? `
+          ${profileRequestsHtml()}
+          <section class="profile-panel">
+            <h2>Друзья</h2>
+            <form class="profile-add-friend" data-profile-form="friend" autocomplete="off">
+              <input id="profile-friend-name" type="text" maxlength="20" placeholder="username">
+              <button class="btn btn-ghost" type="submit">Добавить</button>
+            </form>
+            ${profileFriendsHtml()}
+          </section>
+        ` : `
+          <section class="profile-panel">
+            <h2>Информация</h2>
+            <div class="profile-info-row"><span>Роль</span><b>${escapeHtml(profileRoleLabel(profile.role))}</b></div>
+            <div class="profile-info-row"><span>Статус</span><b>${profile.online ? 'в сети' : 'не в сети'}</b></div>
+            <div class="profile-info-row"><span>В Lavunio с</span><b>${escapeHtml(formatDateTime(profile.createdAt))}</b></div>
+          </section>
+        `}
+      </aside>
+    </div>
+  `;
+
+  $('app').scrollTop = 0;
+  applyLavunioAvatar($('profile-avatar'), {
+    skinUrl: profile.skinUrl,
+    username: profile.username,
+    displayName: profile.displayName
+  });
+  els.profileContent.querySelectorAll('[data-avatar-friend]').forEach((el) => {
+    const friendItem = friendByUsername(el.dataset.avatarFriend);
+    if (friendItem) applyLavunioAvatar(el, friendItem);
+  });
+}
+

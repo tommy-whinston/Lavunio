@@ -2,12 +2,17 @@
 
 import { api } from './api/client.js';
 import { S } from './core/state.js';
+import { lavunioLoggedIn, lavunioName, applyLavunioAvatar } from './core/lavunio.js';
+import { ownUsername, isOwnUsername, friendByUsername } from './core/social.js';
+import { teamRoleLabel } from './core/labels.js';
 import { els } from './core/elements.js';
 import { formatBytes, formatDateTime, formatDuration, formatPlaytime, formatUpdateDate, renderRichText, stripRichText } from './core/format.js';
 import { cardStatus, libraryStateMeta, modeCardHtml, imageSrc, wireImage } from './features/catalog/cards.js';
 import { configureCatalogGrid, renderModeGrid } from './features/catalog/grid.js';
 import { syncFilterButtons, modePassesFilter, sortCatalog, matchesSearch, filterModes } from './features/catalog/query.js';
 import { updateDashboardStats, updateSidebarCounts, renderLibrary } from './features/library/view.js';
+import { renderProfile } from './features/profile/view.js';
+import { configureMessages, loadChatList, renderMessagesList, openChat, sendChatMessage } from './features/messages/view.js';
 import { configureDownloads, activeDownloadTask, downloadTaskForMode, enqueueDownload, pumpDownloads, finishDownload, failDownload, pauseDownload, resumeDownload, retryDownload, cancelDownload, removeDownload, clearDownloads, updateDownloadProgress, renderDownloads } from './features/downloads/queue.js';
 import { tagPill, renderSpotlight, renderChangelog, updateChangelogToggle, renderTrailer, selectDetailTab, renderSessions } from './features/detail/view.js';
 import { LOADER_LABELS, modeStatusMeta, isInstalled, inLibrary, isHiddenMode, isVisibleInLibrary, isUpdate, loaderLabel, modeSub, modeAuthors, cardSub, modeShortDescription, modeFullDescription, modeTags, sortByTitle, sortModes, modeById, modeInstalledAt, modePlaytime, modeReleaseDate, latestUpdateEntry, modeUpdatedAt, computeAction } from './core/modes.js';
@@ -43,6 +48,12 @@ configureDownloads({
   renderLibrary,
   renderDetail,
   updateDetailAction
+});
+
+configureMessages({
+  showView,
+  loadFriends,
+  loadTeams
 });
 
 init();
@@ -1940,35 +1951,6 @@ async function startAutoUpdate(info, options = {}) {
 
 // ---------------------------------------------------------------- аккаунт
 
-function lavunioLoggedIn() {
-  return !!(S.lavunio && S.lavunio.user);
-}
-
-function lavunioName(user) {
-  if (!user) return 'Гость';
-  return user.displayName || user.username || 'Игрок';
-}
-
-function lavunioLetter(user) {
-  const name = lavunioName(user);
-  return name ? name[0].toUpperCase() : '?';
-}
-
-function applyLavunioAvatar(el, user) {
-  if (!el) return;
-  el.classList.remove('loaded', 'skin-head', 'lavunio-avatar');
-  const url = user && user.skinUrl;
-  if (url) {
-    el.textContent = '';
-    el.style.backgroundImage = `url("${url}")`;
-    el.classList.add('loaded', 'skin-head');
-  } else {
-    el.style.backgroundImage = '';
-    el.textContent = lavunioLetter(user);
-    el.classList.add('lavunio-avatar');
-  }
-}
-
 function renderAccountChip() {
   const user = S.lavunio && S.lavunio.user;
   if (els.sidebarName) els.sidebarName.textContent = user ? lavunioName(user) : 'Гость';
@@ -2283,261 +2265,6 @@ async function submitAuthorApplication() {
     button.disabled = false;
     button.textContent = 'Отправить заявку';
   }
-}
-
-function ownUsername() {
-  return S.lavunio && S.lavunio.user ? S.lavunio.user.username : null;
-}
-
-function isOwnUsername(username) {
-  const own = ownUsername();
-  return !!own && String(own).toLowerCase() === String(username || '').toLowerCase();
-}
-
-function friendByUsername(username) {
-  const target = String(username || '').toLowerCase();
-  return (S.friends || []).find(
-    (friend) => String(friend.username || '').toLowerCase() === target
-  ) || null;
-}
-
-function profileRoleLabel(role) {
-  return role === 'admin' ? 'Администратор'
-    : role === 'author' ? 'Автор'
-      : role === 'moderator' ? 'Модератор' : 'Игрок';
-}
-
-function profileOnlineLabel(profile) {
-  const tr = (text) => (window.I18n ? window.I18n.t(text) : text);
-  if (profile.online) return tr('в сети');
-  const seen = formatDateTime(profile.lastSeenAt);
-  return seen === '—' ? tr('не в сети') : `${tr('был(а)')} ${seen}`;
-}
-
-function profileModesHtml(profile) {
-  const modes = profile.modes || [];
-  if (!modes.length) return '<div class="profile-empty">Опубликованных режимов нет</div>';
-  return modes.map((mode) => `
-    <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.slug)}">
-      <span>${escapeHtml(mode.title)}</span>
-      <b>${Number(mode.installs) || 0} установок</b>
-    </button>
-  `).join('');
-}
-
-function profileTeamsHtml(profile) {
-  const teams = profile.teams || [];
-  if (!teams.length) return '<div class="profile-empty">Не состоит в командах</div>';
-  return teams.map((team) => `
-    <button class="profile-mode-row" type="button" data-profile-team="${escapeHtml(team.slug)}" data-profile-team-title="${escapeHtml(team.title)}">
-      <span>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</span>
-      <b>${escapeHtml(teamRoleLabel(team.role))}</b>
-    </button>
-  `).join('');
-}
-
-function profileFriendsHtml() {
-  const friends = S.friends || [];
-  if (!friends.length) return '<div class="profile-empty">Друзей пока нет</div>';
-  return friends.map((friend) => `
-    <div class="profile-friend">
-      <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
-      <div class="profile-friend-copy">
-        <b>${escapeHtml(friend.displayName || friend.username)}</b>
-        <span>@${escapeHtml(friend.username)} · <span>${friend.online ? 'в сети' : 'не в сети'}</span></span>
-      </div>
-      <div class="profile-friend-actions">
-        <button class="icon-btn" type="button" title="Профиль" data-profile-action="friend-profile" data-username="${escapeHtml(friend.username)}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/></svg>
-        </button>
-        <button class="icon-btn" type="button" title="Написать" data-profile-action="chat" data-username="${escapeHtml(friend.username)}" data-name="${escapeHtml(friend.displayName || friend.username)}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>
-        </button>
-        <button class="icon-btn" type="button" title="Удалить" data-profile-action="remove-friend" data-username="${escapeHtml(friend.username)}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7v12h10V7"/></svg>
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function profileRequestsHtml() {
-  const incoming = (S.friendRequests && S.friendRequests.incoming) || [];
-  if (!incoming.length) return '';
-  return `
-    <section class="profile-panel">
-      <h2>Заявки в друзья</h2>
-      ${incoming.map((item) => `
-        <div class="profile-request">
-          <span>@${escapeHtml(item.username)}</span>
-          <span class="profile-request-actions">
-            <button class="btn btn-primary btn-small" type="button" data-profile-action="accept-request" data-id="${escapeHtml(item.id)}">Принять</button>
-            <button class="btn btn-ghost btn-small" type="button" data-profile-action="decline-request" data-id="${escapeHtml(item.id)}">Отклонить</button>
-          </span>
-        </div>
-      `).join('')}
-    </section>
-  `;
-}
-
-function profileSkinHtml(profile) {
-  return `
-    <div class="profile-skin">
-      <div class="skin-preview">
-        ${profile.skinUrl ? `<img id="profile-skin-img" src="${escapeHtml(profile.skinUrl)}" alt="Скин">` : ''}
-        ${profile.skinUrl ? '' : '<span class="skin-empty">Нет скина</span>'}
-      </div>
-      <div class="skin-controls">
-        <div class="field">
-          <label for="profile-skin-model">Модель скина</label>
-          <select id="profile-skin-model">
-            <option value="classic"${profile.skinModel === 'slim' ? '' : ' selected'}>Classic</option>
-            <option value="slim"${profile.skinModel === 'slim' ? ' selected' : ''}>Slim</option>
-          </select>
-        </div>
-        <div class="skin-actions">
-          <button class="btn btn-ghost" type="button" data-profile-action="skin-upload">Загрузить скин</button>
-          <button class="btn btn-ghost" type="button" data-profile-action="skin-delete" ${profile.skinUrl ? '' : 'hidden'}>Удалить скин</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function profileEditHtml(profile) {
-  return `
-    <section class="profile-panel" id="profile-edit">
-      <h2>Настройки профиля</h2>
-      <form class="profile-edit" data-profile-form="edit" autocomplete="off">
-        <div class="field">
-          <label for="profile-display-name">Отображаемое имя</label>
-          <input id="profile-display-name" type="text" maxlength="40" value="${escapeHtml(profile.displayName || profile.username)}">
-        </div>
-        <div class="field">
-          <label for="profile-bio">О себе</label>
-          <textarea id="profile-bio" rows="3" maxlength="500" placeholder="Пара слов о себе">${escapeHtml(profile.bio || '')}</textarea>
-        </div>
-        <div class="form-error" id="profile-error" hidden></div>
-        <button class="btn btn-primary" id="profile-save" type="submit">Сохранить</button>
-      </form>
-      ${profileSkinHtml(profile)}
-      <div class="profile-account-row">
-        <button class="btn btn-ghost" type="button" data-profile-action="settings">Настройки лаунчера</button>
-        <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти из Lavunio</button>
-      </div>
-    </section>
-  `;
-}
-
-function renderProfile(profile) {
-  if (!profile || !els.profileContent) return;
-  const own = isOwnUsername(profile.username);
-  const friend = friendByUsername(profile.username);
-  const outgoing = ((S.friendRequests && S.friendRequests.outgoing) || []).some(
-    (item) => String(item.username || '').toLowerCase() === String(profile.username).toLowerCase()
-  );
-  const display = profile.displayName || profile.username;
-  const stats = profile.stats || {};
-
-  const actions = own
-    ? `
-      <button class="icon-btn" type="button" title="Настройки" data-profile-action="settings">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.3 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
-      </button>
-      <button class="btn btn-primary" type="button" data-profile-action="messages">Сообщения</button>
-      <button class="btn btn-ghost" type="button" data-profile-action="edit">Редактировать</button>
-      <button class="btn btn-ghost" type="button" data-profile-action="logout">Выйти</button>
-    `
-    : `
-      ${friend
-        ? `<button class="btn btn-primary" type="button" data-profile-action="chat" data-username="${escapeHtml(profile.username)}" data-name="${escapeHtml(display)}">Написать</button>
-           <button class="btn btn-ghost" type="button" data-profile-action="remove-friend" data-username="${escapeHtml(profile.username)}">Удалить из друзей</button>`
-        : outgoing
-          ? '<button class="btn btn-ghost" type="button" disabled>Заявка отправлена</button>'
-          : `<button class="btn btn-primary" type="button" data-profile-action="add-friend" data-username="${escapeHtml(profile.username)}">Добавить в друзья</button>`}
-      <button class="btn btn-ghost" type="button" data-profile-action="messages">Сообщения</button>
-    `;
-
-  els.profileContent.innerHTML = `
-    <div class="profile-hero">
-      <div class="profile-avatar-wrap"><span class="avatar" id="profile-avatar"></span></div>
-      <div class="profile-hero-main">
-        <h1>${escapeHtml(display)}</h1>
-        <div class="profile-handle">@${escapeHtml(profile.username)}</div>
-        <div class="profile-badges">
-          <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>
-          <span class="profile-badge ${profile.online ? 'online' : ''}">${escapeHtml(profileOnlineLabel(profile))}</span>
-          ${friend ? '<span class="profile-badge">друг</span>' : ''}
-          ${own ? '<span class="profile-badge">это вы</span>' : ''}
-        </div>
-        <div class="profile-bio">${escapeHtml(profile.bio || 'Без описания')}</div>
-      </div>
-      <div class="profile-actions">${actions}</div>
-    </div>
-
-    <div class="profile-stats">
-      <div class="profile-stat"><span>Режимы</span><b>${Number(stats.modes) || 0}</b></div>
-      <div class="profile-stat"><span>Скачивания</span><b>${Number(stats.downloads) || 0}</b></div>
-      <div class="profile-stat"><span>Установки</span><b>${Number(stats.installs) || 0}</b></div>
-      <div class="profile-stat"><span>Команды</span><b>${(profile.teams || []).length}</b></div>
-    </div>
-
-    <div class="profile-layout">
-      <div class="profile-main">
-        <section class="profile-panel">
-          <h2>Режимы</h2>
-          ${profileModesHtml(profile)}
-        </section>
-        ${own ? `
-          <section class="profile-panel">
-            <h2>Библиотека</h2>
-            ${S.modes.filter((mode) => isVisibleInLibrary(mode)).slice(0, 20).map((mode) => `
-              <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
-                <span>${escapeHtml(mode.title)}</span>
-                <b>${isInstalled(mode) ? 'Установлено' : 'В библиотеке'}</b>
-              </button>
-            `).join('') || '<div class="profile-empty">Библиотека пуста</div>'}
-          </section>
-          ${profileEditHtml(profile)}
-        ` : ''}
-      </div>
-      <aside class="profile-side">
-        <section class="profile-panel">
-          <h2>Команды</h2>
-          ${profileTeamsHtml(profile)}
-        </section>
-        ${own ? `
-          ${profileRequestsHtml()}
-          <section class="profile-panel">
-            <h2>Друзья</h2>
-            <form class="profile-add-friend" data-profile-form="friend" autocomplete="off">
-              <input id="profile-friend-name" type="text" maxlength="20" placeholder="username">
-              <button class="btn btn-ghost" type="submit">Добавить</button>
-            </form>
-            ${profileFriendsHtml()}
-          </section>
-        ` : `
-          <section class="profile-panel">
-            <h2>Информация</h2>
-            <div class="profile-info-row"><span>Роль</span><b>${escapeHtml(profileRoleLabel(profile.role))}</b></div>
-            <div class="profile-info-row"><span>Статус</span><b>${profile.online ? 'в сети' : 'не в сети'}</b></div>
-            <div class="profile-info-row"><span>В Lavunio с</span><b>${escapeHtml(formatDateTime(profile.createdAt))}</b></div>
-          </section>
-        `}
-      </aside>
-    </div>
-  `;
-
-  $('app').scrollTop = 0;
-  applyLavunioAvatar($('profile-avatar'), {
-    skinUrl: profile.skinUrl,
-    username: profile.username,
-    displayName: profile.displayName
-  });
-  els.profileContent.querySelectorAll('[data-avatar-friend]').forEach((el) => {
-    const friendItem = friendByUsername(el.dataset.avatarFriend);
-    if (friendItem) applyLavunioAvatar(el, friendItem);
-  });
 }
 
 async function openProfile(username) {
@@ -3257,16 +2984,6 @@ function bindTeams() {
     };
     slug.oninput = () => { slug.dataset.touched = '1'; };
   }
-}
-
-function teamRoleLabel(role) {
-  return ({
-    owner: 'владелец',
-    admin: 'администратор',
-    publisher: 'публикатор',
-    designer: 'дизайнер',
-    member: 'участник'
-  })[role] || role;
 }
 
 function renderTeams() {
@@ -4013,168 +3730,6 @@ async function openNotification(button) {
   if (type === 'mode' && link) openDetail(link);
   else if (type === 'team' && link) openTeamPage({ slug: link, title: link });
   else if (type === 'user' && link) openProfile(link);
-}
-
-async function loadChatList(force = false) {
-  if (!lavunioLoggedIn()) return;
-  if (!S.friends.length) await loadFriends();
-  if (!S.teams.length) await loadTeams();
-  renderMessagesList();
-  if (!S.chatKind || !S.chatTarget) {
-    const firstFriend = (S.friends || [])[0];
-    if (firstFriend) {
-      openChat('direct', firstFriend.username, firstFriend.displayName || firstFriend.username);
-      return;
-    }
-    const firstTeam = (S.teams || [])[0];
-    if (firstTeam) {
-      openChat('team', firstTeam.id, firstTeam.title);
-      return;
-    }
-  }
-  if (S.chatKind && S.chatTarget) {
-    await loadChatMessages();
-    startChatPolling();
-  } else {
-    showChatEmpty();
-  }
-}
-
-function renderMessagesList() {
-  const wrap = els.messagesList;
-  if (!wrap) return;
-  const friends = S.friends || [];
-  const teams = S.teams || [];
-  const parts = [];
-  if (friends.length) {
-    parts.push('<div class="messages-group-label">Друзья</div>');
-    parts.push(friends.map((friend) => {
-      const active = S.chatKind === 'direct'
-        && String(S.chatTarget || '').toLowerCase() === String(friend.username || '').toLowerCase();
-      return `
-        <button class="message-person ${active ? 'active' : ''}" type="button"
-          data-chat-kind="direct"
-          data-chat-target="${escapeHtml(friend.username)}"
-          data-chat-title="${escapeHtml(friend.displayName || friend.username)}">
-          <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
-          <span class="message-person-copy">
-            <b>${escapeHtml(friend.displayName || friend.username)}</b>
-            <small>@${escapeHtml(friend.username)}</small>
-          </span>
-          <span class="dot ${friend.online ? 'online' : ''}"></span>
-        </button>
-      `;
-    }).join(''));
-  }
-  if (teams.length) {
-    parts.push('<div class="messages-group-label">Команды</div>');
-    parts.push(teams.map((team) => {
-      const active = S.chatKind === 'team' && String(S.chatTarget || '') === String(team.id || '');
-      return `
-        <button class="message-person ${active ? 'active' : ''}" type="button"
-          data-chat-kind="team"
-          data-chat-target="${escapeHtml(team.id)}"
-          data-chat-title="${escapeHtml(team.title)}">
-          <span class="avatar lavunio-avatar">${escapeHtml((team.title || '?')[0].toUpperCase())}</span>
-          <span class="message-person-copy">
-            <b>${escapeHtml(team.title)}</b>
-            <small>@${escapeHtml(team.slug)}</small>
-          </span>
-          <span class="dot"></span>
-        </button>
-      `;
-    }).join(''));
-  }
-  wrap.innerHTML = parts.join('') || '<div class="profile-empty">Добавь друга, чтобы начать переписку</div>';
-  wrap.querySelectorAll('[data-avatar-friend]').forEach((el) => {
-    const friendItem = friendByUsername(el.dataset.avatarFriend);
-    if (friendItem) applyLavunioAvatar(el, friendItem);
-  });
-}
-
-function showChatEmpty() {
-  if (els.chatTitle) els.chatTitle.textContent = 'Сообщения';
-  if (els.chatSubtitle) els.chatSubtitle.textContent = 'Выбери чат слева';
-  if (els.chatMessages) {
-    els.chatMessages.innerHTML = '';
-    els.chatMessages.hidden = true;
-  }
-  if (els.chatEmpty) els.chatEmpty.hidden = false;
-  if (els.chatForm) els.chatForm.hidden = true;
-}
-
-function openChat(kind, target, title) {
-  if (!kind || !target) return;
-  S.chatKind = kind;
-  S.chatTarget = target;
-  S.chatTitle = title || target;
-  showView('messages');
-  renderMessagesList();
-  if (els.chatTitle) els.chatTitle.textContent = S.chatTitle;
-  if (els.chatSubtitle) {
-    els.chatSubtitle.textContent = kind === 'team' ? 'Чат команды' : `Личный чат с @${target}`;
-  }
-  if (els.chatMessages) {
-    els.chatMessages.innerHTML = '';
-    els.chatMessages.hidden = false;
-  }
-  if (els.chatEmpty) els.chatEmpty.hidden = true;
-  if (els.chatForm) els.chatForm.hidden = false;
-  loadChatMessages();
-  startChatPolling();
-}
-
-async function loadChatMessages() {
-  if (!S.chatKind || !S.chatTarget) return;
-  try {
-    const items = S.chatKind === 'direct'
-      ? await api.chatDirect(S.chatTarget)
-      : await api.chatTeam(S.chatTarget);
-    S.chatMessages = Array.isArray(items) ? items : [];
-    renderChatMessages();
-  } catch (err) {
-    if (els.chatMessages) {
-      els.chatMessages.innerHTML = `<div class="hint">Не удалось загрузить чат: ${escapeHtml(String(err))}</div>`;
-    }
-  }
-}
-
-function renderChatMessages() {
-  if (!els.chatMessages) return;
-  const me = S.lavunio && S.lavunio.user ? S.lavunio.user.id : '';
-  els.chatMessages.innerHTML = (S.chatMessages || []).map((message) => `
-    <div class="chat-msg ${message.senderId === me ? 'own' : ''}">
-      <div class="meta">${escapeHtml(message.senderDisplayName || message.senderUsername)} · ${escapeHtml(formatDateTime(message.createdAt))}</div>
-      ${escapeHtml(message.body)}
-    </div>
-  `).join('') || '<div class="hint">Сообщений пока нет.</div>';
-  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
-}
-
-async function sendChatMessage() {
-  if (!S.chatKind || !S.chatTarget || !els.chatInput) return;
-  const body = els.chatInput.value.trim();
-  if (!body) return;
-  els.chatInput.value = '';
-  try {
-    if (S.chatKind === 'direct') await api.chatSendDirect(S.chatTarget, body);
-    else await api.chatSendTeam(S.chatTarget, body);
-    await loadChatMessages();
-  } catch (err) {
-    toast('Не удалось отправить сообщение: ' + err, 'error');
-  }
-}
-
-function startChatPolling() {
-  if (S.chatTimer) clearInterval(S.chatTimer);
-  S.chatTimer = setInterval(() => {
-    if (S.section !== 'messages' || !S.chatKind || !S.chatTarget) {
-      clearInterval(S.chatTimer);
-      S.chatTimer = null;
-      return;
-    }
-    loadChatMessages();
-  }, 4000);
 }
 
 function publisherSlug(value) {
