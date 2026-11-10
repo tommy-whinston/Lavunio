@@ -24,6 +24,7 @@
     getModes: () => invoke("modes_get"),
     getCachedModes: () => invoke("modes_cached"),
     refreshModes: () => invoke("modes_refresh"),
+    searchModes: (query) => invoke("modes_search", { query }),
     collectionsGet: () => invoke("collections_get"),
     getState: () => invoke("state_get"),
     getSystemRam: () => invoke("system_ram_gb"),

@@ -59,6 +59,8 @@ export const els = {
   libraryStatPlaytime: $('library-stat-playtime'),
   libraryFilters: $('library-filters'),
   librarySort: $('library-sort'),
+  storeMoreWrap: $('store-more-wrap'),
+  storeLoadMore: $('store-load-more'),
   libraryEmpty: $('library-empty'),
   libraryEmptyTitle: $('library-empty-title'),
   libraryEmptySub: $('library-empty-sub'),

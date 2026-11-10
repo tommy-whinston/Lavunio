@@ -101,6 +101,7 @@ fn main() {
             commands::modes_get,
             commands::modes_cached,
             commands::modes_refresh,
+            commands::modes_search,
             commands::collections_get,
             commands::state_get,
             commands::system_ram_gb,

@@ -1045,4 +1045,5 @@ export const EN = {
   "rating.4.stars": "4 stars",
   "rating.5.stars": "5 stars",
   "size.placeholder": "58 MB",
+  "load.more": "Load more",
 };

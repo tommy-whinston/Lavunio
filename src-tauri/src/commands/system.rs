@@ -1,5 +1,5 @@
 use super::{blocking, load_modes};
-use crate::models::{Mode, Settings};
+use crate::models::{CatalogPage, CatalogQuery, Mode, Settings};
 use crate::net;
 use crate::state::AppState;
 use crate::util::{open_path, open_url, path_string};
@@ -22,6 +22,14 @@ pub fn modes_cached(state: State<'_, AppState>) -> Result<Vec<Mode>, String> {
 #[tauri::command]
 pub async fn modes_refresh(state: State<'_, AppState>) -> Result<Vec<Mode>, String> {
     Ok(load_modes(state.inner()).await)
+}
+
+#[tauri::command]
+pub async fn modes_search(query: CatalogQuery) -> Result<CatalogPage, String> {
+    let Some(api_base) = net::api_base_url() else {
+        return Err("Lavunio API не настроен".to_string());
+    };
+    blocking(move || net::fetch_api_catalog(&api_base, &query)).await?
 }
 
 #[tauri::command]

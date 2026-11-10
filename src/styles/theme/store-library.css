@@ -546,6 +546,14 @@ body::before {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+.store-more {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 4px;
+}
+.store-more[hidden] { display: none; }
+.store-more .btn { min-width: 180px; }
+
 @media (max-width: 860px) {
   #store-view .grid,
   #library-view .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

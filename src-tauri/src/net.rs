@@ -1,5 +1,5 @@
 use crate::events::GameEvent;
-use crate::models::{Author, BuildInfo, Mode, Settings};
+use crate::models::{Author, BuildInfo, CatalogPage, CatalogQuery, Mode, Settings};
 use crate::util::{format_error, safe_join, sha256_file, write_json};
 use reqwest::blocking::{Client, Response};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, RANGE, USER_AGENT};
@@ -360,12 +360,57 @@ fn parse_modes(data: Value) -> Result<Vec<Mode>, String> {
 }
 
 pub fn fetch_api_modes(api_base: &str) -> Result<Vec<Mode>, String> {
-    let url = format!(
-        "{}/v1/catalog?page=1&limit=100",
-        api_base.trim_end_matches('/')
-    );
+    let mut modes = Vec::new();
+    for page in 1..=5 {
+        let page_data = fetch_api_catalog(
+            api_base,
+            &CatalogQuery {
+                sort: "updated".to_string(),
+                page,
+                limit: 100,
+                ..Default::default()
+            },
+        )?;
+        let received = page_data.items.len();
+        modes.extend(page_data.items);
+        if modes.len() >= page_data.total as usize || received < 100 {
+            break;
+        }
+    }
+    Ok(modes)
+}
+
+pub fn fetch_api_catalog(api_base: &str, query: &CatalogQuery) -> Result<CatalogPage, String> {
+    let base = format!("{}/v1/catalog", api_base.trim_end_matches('/'));
+    let mut url = Url::parse(&base)
+        .map_err(|error| format!("Некорректный адрес каталога: {error}"))?;
+    let page = query.page.max(1);
+    let limit = query.limit.clamp(1, 100);
+    {
+        let mut pairs = url.query_pairs_mut();
+        pairs.append_pair("page", &page.to_string());
+        pairs.append_pair("limit", &limit.to_string());
+        if !query.q.trim().is_empty() {
+            pairs.append_pair("q", query.q.trim());
+        }
+        if !query.tag.trim().is_empty() {
+            pairs.append_pair("tag", query.tag.trim());
+        }
+        if !query.mc_version.trim().is_empty() {
+            pairs.append_pair("mcVersion", query.mc_version.trim());
+        }
+        if !query.loader.trim().is_empty() {
+            pairs.append_pair("loader", query.loader.trim());
+        }
+        if !query.author.trim().is_empty() {
+            pairs.append_pair("author", query.author.trim());
+        }
+        if !query.sort.trim().is_empty() {
+            pairs.append_pair("sort", query.sort.trim());
+        }
+    }
     let response = client()
-        .get(&url)
+        .get(url)
         .header(ACCEPT, "application/json")
         .send()
         .map_err(|error| format!("Не удалось загрузить API-каталог: {}", format_error(error)))?;
@@ -378,13 +423,22 @@ pub fn fetch_api_modes(api_base: &str) -> Result<Vec<Mode>, String> {
     let Some(items) = data.get("items").and_then(Value::as_array) else {
         return Err("В API-каталоге нет массива items".to_string());
     };
-    let mut modes = Vec::new();
-    for item in items {
-        if let Some(mode) = api_mode(item) {
-            modes.push(mode);
-        }
-    }
-    Ok(modes)
+    let total = data
+        .get("total")
+        .and_then(Value::as_u64)
+        .unwrap_or(items.len() as u64) as u32;
+    Ok(CatalogPage {
+        items: items.iter().filter_map(api_mode).collect(),
+        page: data
+            .get("page")
+            .and_then(Value::as_u64)
+            .unwrap_or(page as u64) as u32,
+        limit: data
+            .get("limit")
+            .and_then(Value::as_u64)
+            .unwrap_or(limit as u64) as u32,
+        total,
+    })
 }
 
 pub fn fetch_api_collections(api_base: &str) -> Result<Value, String> {

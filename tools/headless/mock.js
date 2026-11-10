@@ -73,6 +73,13 @@ function createMockScript(scenario) {
   const history = { action: 'approve', moderatorName: 'Mod', targetType: 'mode', targetId: '1234567890', createdAt: now };
   const news = [{ title: 'Store news', body: 'Body text', authorName: 'Admin', createdAt: now }];
   const modeNews = [{ title: 'Mode news', body: 'Body text', authorName: 'Steve', createdAt: now }];
+  const storeModes = Array.from({ length: 30 }, (_, index) => ({
+    ...mode,
+    id: `mode-${index + 1}`,
+    slug: `mode-${index + 1}`,
+    title: `Night Mode ${index + 1}`,
+    installs: index + 1
+  }));
 
   const data = {
     user,
@@ -90,7 +97,8 @@ function createMockScript(scenario) {
     application,
     history,
     news,
-    modeNews
+    modeNews,
+    storeModes
   };
 
   return `<script>
@@ -108,6 +116,15 @@ const base = {
   getModes: async () => { if (data.offline) throw new Error('offline'); return [data.mode]; },
   getCachedModes: async () => [data.mode],
   refreshModes: async () => { if (data.offline) throw new Error('offline'); return [data.mode]; },
+  searchModes: async (query) => {
+    if (data.offline) throw new Error('offline');
+    const page = Math.max(1, Number(query && query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query && query.limit) || 24));
+    const q = String((query && query.q) || '').trim().toLowerCase();
+    const filtered = data.storeModes.filter((mode) => !q || mode.title.toLowerCase().includes(q));
+    const start = (page - 1) * limit;
+    return { items: filtered.slice(start, start + limit), page, limit, total: filtered.length };
+  },
   getState: async () => ({ 'night-demon': { installed: true, library: true, version: '1.0.0', installedAt: now } }),
   getSettings: async () => ({ lang: 'en', ramGb: 4 }), saveSettings: async (p) => ({ ...p }),
   getSystemRam: async () => 16, diskInfo: async () => ({ availableBytes: 1024 * 1024 * 1024, totalBytes: 4 * 1024 * 1024 * 1024, libraryBytes: 1024 * 1024 }),

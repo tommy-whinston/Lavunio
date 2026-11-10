@@ -1045,4 +1045,5 @@ export const RU = {
   "rating.4.stars": "4 звезды",
   "rating.5.stars": "5 звёзд",
   "size.placeholder": "58 МБ",
+  "load.more": "Показать ещё",
 };

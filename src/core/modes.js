@@ -117,7 +117,9 @@ export function sortModes(list) {
 }
 
 export function modeById(id) {
-  return S.modes.find((m) => m.id === id) || null;
+  return S.modes.find((m) => m.id === id)
+    || (Array.isArray(S.storeItems) ? S.storeItems.find((m) => m.id === id) : null)
+    || null;
 }
 
 export function modeInstalledAt(mode) {

@@ -85,6 +85,28 @@ pub struct Mode {
     pub build: Option<BuildInfo>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogPage {
+    pub items: Vec<Mode>,
+    pub page: u32,
+    pub limit: u32,
+    pub total: u32,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CatalogQuery {
+    pub q: String,
+    pub tag: String,
+    pub mc_version: String,
+    pub loader: String,
+    pub author: String,
+    pub sort: String,
+    pub page: u32,
+    pub limit: u32,
+}
+
 impl Default for Mode {
     fn default() -> Self {
         Self {

@@ -20,7 +20,7 @@ import { configureUpdates, bindUpdateModal, checkLauncherUpdate, checkUpdateInBa
 import { configureNotifications, bindNotifications, loadNotifications, renderNotifications } from './features/notifications/index.js';
 import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderLavunioPane, logoutLavunio } from './features/account/index.js';
 import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
-import { configureStore, renderStore, updateAllModes, notifyModeUpdates, loadFollows, loadStoreNews, updateCardProgress } from './features/store/view.js';
+import { configureStore, renderStore, updateAllModes, notifyModeUpdates, loadFollows, loadStoreNews, updateCardProgress, refreshStore, loadStorePage } from './features/store/view.js';
 import { configureDetailActions, bindDetail, openDetail, showStore, startMode, openCardContext, closeCardContext, renderDetail, updateDetailAction } from './features/detail/actions.js';
 import { onGameEvent } from './features/game/events.js';
 import { configureDownloads, renderDownloads } from './features/downloads/queue.js';
@@ -298,12 +298,12 @@ function bindCatalogControls() {
       };
     });
   };
-  bind(els.storeFilters, 'store-filter', 'storeFilter', renderStore);
+  bind(els.storeFilters, 'store-filter', 'storeFilter', () => refreshStore({ reset: true }));
   bind(els.libraryFilters, 'library-filter', 'libraryFilter', renderLibrary);
   if (els.storeSort) {
     els.storeSort.onchange = () => {
       S.storeSort = els.storeSort.value;
-      renderStore();
+      refreshStore({ reset: true });
     };
   }
   if (els.librarySort) {
@@ -311,6 +311,9 @@ function bindCatalogControls() {
       S.librarySort = els.librarySort.value;
       renderLibrary();
     };
+  }
+  if (els.storeLoadMore) {
+    els.storeLoadMore.onclick = () => loadStorePage();
   }
   if (els.libraryUpdateAll) {
     els.libraryUpdateAll.onclick = () => updateAllModes();
@@ -333,6 +336,8 @@ function bindStore() {
     if (S.view === 'detail') {
       S.detailFrom = null;
       showSection(S.section);
+    } else if (S.section === 'store') {
+      refreshStore({ reset: true, debounce: 250 });
     } else {
       renderCurrentSection();
     }

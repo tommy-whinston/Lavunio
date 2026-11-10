@@ -27,6 +27,93 @@ export function configureStore(actions) {
   storeActions = { ...storeActions, ...actions };
 }
 
+function canUseRemoteStore() {
+  return typeof api.searchModes === 'function'
+    && S.storeFilter === 'all'
+    && (!!S.search || S.storeSort === 'title');
+}
+
+function remoteSort() {
+  if (S.storeSort === 'title') return 'title';
+  if (S.storeSort === 'default') return 'updated';
+  return 'updated';
+}
+
+let storeRefreshTimer = null;
+
+export function refreshStore(options = {}) {
+  const reset = options.reset !== false;
+  const debounce = Number(options.debounce) || 0;
+  if (storeRefreshTimer) clearTimeout(storeRefreshTimer);
+  const run = () => {
+    if (canUseRemoteStore()) {
+      loadStorePage({ reset });
+      return;
+    }
+    S.storeRemote = false;
+    S.storeItems = [];
+    S.storeTotal = 0;
+    S.storePage = 0;
+    S.storeHasMore = false;
+    renderStore();
+  };
+  if (debounce > 0) storeRefreshTimer = setTimeout(run, debounce);
+  else run();
+}
+
+export async function loadStorePage({ reset = false } = {}) {
+  if (S.storeLoading) return;
+  if (!canUseRemoteStore() || typeof api.searchModes !== 'function') {
+    refreshStore({ reset: true });
+    return;
+  }
+  if (!reset && !S.storeHasMore) return;
+  if (reset) {
+    S.storeItems = [];
+    S.storeTotal = 0;
+    S.storePage = 0;
+    S.storeHasMore = false;
+  }
+  S.storeLoading = true;
+  renderStore();
+  try {
+    const page = reset ? 1 : S.storePage + 1;
+    const result = await api.searchModes({
+      q: S.search,
+      tag: '',
+      mcVersion: '',
+      loader: '',
+      author: '',
+      sort: remoteSort(),
+      page,
+      limit: S.storePageSize
+    });
+    const items = result && Array.isArray(result.items) ? result.items : [];
+    S.storeItems = reset ? items : [...S.storeItems, ...items];
+    S.storeTotal = Number(result && result.total) || S.storeItems.length;
+    S.storePage = Number(result && result.page) || page;
+    S.storeRemote = true;
+    S.storeHasMore = S.storeItems.length < S.storeTotal && items.length > 0;
+  } catch (_) {
+    S.storeRemote = false;
+    S.storeItems = [];
+    S.storeTotal = 0;
+    S.storePage = 0;
+    S.storeHasMore = false;
+  } finally {
+    S.storeLoading = false;
+    renderStore();
+  }
+}
+
+function renderStoreMore() {
+  if (!els.storeMoreWrap || !els.storeLoadMore) return;
+  const show = S.storeRemote && canUseRemoteStore() && S.storeHasMore;
+  els.storeMoreWrap.hidden = !show;
+  els.storeLoadMore.disabled = S.storeLoading;
+  els.storeLoadMore.textContent = S.storeLoading ? tKey('loading.2') : tKey('load.more');
+}
+
 export function renderStore() {
   if (!els.storeView) return;
 
@@ -42,6 +129,7 @@ export function renderStore() {
       els.storeNews.hidden = true;
       els.storeNewsList.innerHTML = '';
     }
+    if (els.storeMoreWrap) els.storeMoreWrap.hidden = true;
     els.catalogTitle.textContent = tKey("loading");
     els.modesCount.textContent = '';
     els.modesGrid.innerHTML = '';
@@ -53,6 +141,36 @@ export function renderStore() {
   els.loadingState.hidden = true;
   updateDashboardStats();
   syncFilterButtons(els.storeFilters, 'store-filter', S.storeFilter);
+
+  if (canUseRemoteStore() && S.storeRemote) {
+    els.featured.hidden = true;
+    if (els.feed) {
+      els.feed.hidden = true;
+      els.feedList.innerHTML = '';
+    }
+    if (els.storeNews) {
+      els.storeNews.hidden = true;
+      els.storeNewsList.innerHTML = '';
+    }
+    els.catalogTitle.textContent = S.search ? tKey("search.results") : tKey("all.modes");
+    els.modesCount.textContent = String(S.storeTotal || S.storeItems.length);
+    els.modesGrid.innerHTML = '';
+    renderModeGrid(els.modesGrid, S.storeItems, true);
+    els.loadingState.hidden = !(S.storeLoading && !S.storeItems.length);
+    if (S.storeLoading && !S.storeItems.length) {
+      els.emptyState.hidden = true;
+    } else {
+      setEmpty(
+        S.storeItems.length === 0,
+        tKey("nothing.found"),
+        tKey("try.changing.the.query")
+      );
+    }
+    renderStoreMore();
+    updateSidebarCounts();
+    return;
+  }
+  renderStoreMore();
 
   if (searchActive) {
     els.featured.hidden = true;

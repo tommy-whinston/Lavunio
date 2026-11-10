@@ -238,6 +238,56 @@ async function checkStaticPanels(cdp) {
   }
 }
 
+async function checkServerSearch(cdp) {
+  await cdp.evaluate(`window.LavunioDebug.showSection('store')`);
+  await cdp.evaluate(`(() => {
+    const input = document.getElementById('search-input');
+    input.value = 'Night';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await sleep(600);
+  const first = await cdp.evaluate(`({
+    cards: document.querySelectorAll('#modes-grid .mode-card').length,
+    more: !document.getElementById('store-more-wrap').hidden
+  })`);
+  if (first.cards < 2 || !first.more) throw new Error('server search: ' + JSON.stringify(first));
+  await cdp.evaluate(`document.getElementById('store-load-more').click()`);
+  await sleep(600);
+  const second = await cdp.evaluate(`({
+    cards: document.querySelectorAll('#modes-grid .mode-card').length,
+    more: !document.getElementById('store-more-wrap').hidden
+  })`);
+  if (second.cards <= first.cards) throw new Error('load more не добавил карточки: ' + JSON.stringify(second));
+  await cdp.evaluate(`window.LavunioDebug.openDetail('mode-30')`);
+  await sleep(300);
+  const title = await cdp.evaluate(`document.getElementById('detail-title').textContent`);
+  if (!title.includes('Night Mode 30')) throw new Error('detail из второй страницы не открылся: ' + title);
+  await cdp.evaluate(`(() => {
+    const input = document.getElementById('search-input');
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    window.LavunioDebug.showSection('store');
+  })()`);
+  await sleep(500);
+  await cdp.evaluate(`(() => {
+    const sort = document.getElementById('store-sort');
+    sort.value = 'title';
+    sort.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await sleep(600);
+  const sorted = await cdp.evaluate(`({
+    cards: document.querySelectorAll('#modes-grid .mode-card').length,
+    more: !document.getElementById('store-more-wrap').hidden
+  })`);
+  if (sorted.cards < 2 || !sorted.more) throw new Error('server sort: ' + JSON.stringify(sorted));
+  await cdp.evaluate(`(() => {
+    const sort = document.getElementById('store-sort');
+    sort.value = 'date';
+    sort.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await sleep(400);
+}
+
 async function runTeamFlows(cdp) {
   const cases = [
     ['team-new', `m.openTeamModal(null)`],
@@ -350,6 +400,9 @@ async function runScenario(cdp, scenario) {
   }
   await check(cdp, results, 'language switch', () => checkLanguage(cdp));
   await check(cdp, results, 'sections', () => checkSections(cdp));
+  if (scenario !== 'offline') {
+    await check(cdp, results, 'server search/pagination', () => checkServerSearch(cdp));
+  }
   await check(cdp, results, 'detail', () => checkDetail(cdp));
   await check(cdp, results, 'settings/account', () => checkStaticPanels(cdp));
 
