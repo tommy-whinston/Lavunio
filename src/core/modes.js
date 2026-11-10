@@ -2,6 +2,7 @@
 
 import { S } from './state.js';
 import { stripRichText } from './format.js';
+import { parseChangelog } from './changelog.js';
 
 export const LOADER_LABELS = {
   vanilla: 'Vanilla',
@@ -136,3 +137,31 @@ export function modeReleaseDate(mode) {
   return '';
 }
 
+export function latestUpdateEntry(mode) {
+  if (Array.isArray(mode.history) && mode.history.length) {
+    return mode.history[0];
+  }
+  const parsed = parseChangelog(mode)[0];
+  if (!parsed) return null;
+  const match = String(parsed.title || '').match(/^v?(\d+\.\d+(?:\.\d+)?)/i);
+  return {
+    version: match ? match[1] : parsed.title,
+    title: '',
+    tags: [],
+    date: '',
+    changes: parsed.lines
+  };
+}
+
+export function modeUpdatedAt(mode) {
+  const latest = latestUpdateEntry(mode);
+  return String((latest && latest.date) || modeReleaseDate(mode) || '');
+}
+
+export function computeAction(mode) {
+  if (S.running === mode.id) return 'running';
+  if (!inLibrary(mode)) return 'add';
+  if (isUpdate(mode)) return 'update';
+  if (isInstalled(mode)) return 'play';
+  return 'install';
+}
