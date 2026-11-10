@@ -26,6 +26,7 @@ import { configureNotifications, bindNotifications, loadNotifications, updateNot
 import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderAccountModal, renderLavunioPane, logoutLavunio } from './features/account/index.js';
 import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
 import { newsCardHtml, loadModeNews, renderModeNews } from './features/news/index.js';
+import { configureStore, renderStore, updateAllModes, notifyModeUpdates, loadFollows, loadStoreNews, updateCardProgress } from './features/store/view.js';
 import { configureDownloads, activeDownloadTask, downloadTaskForMode, enqueueDownload, pumpDownloads, finishDownload, failDownload, pauseDownload, resumeDownload, retryDownload, cancelDownload, removeDownload, clearDownloads, updateDownloadProgress, renderDownloads } from './features/downloads/queue.js';
 import { tagPill, renderSpotlight, renderChangelog, updateChangelogToggle, renderTrailer, selectDetailTab, renderSessions } from './features/detail/view.js';
 import { LOADER_LABELS, modeStatusMeta, isInstalled, inLibrary, isHiddenMode, isVisibleInLibrary, isUpdate, loaderLabel, modeSub, modeAuthors, cardSub, modeShortDescription, modeFullDescription, modeTags, sortByTitle, sortModes, modeById, modeInstalledAt, modePlaytime, modeReleaseDate, latestUpdateEntry, modeUpdatedAt, computeAction } from './core/modes.js';
@@ -102,6 +103,8 @@ configureAccount({
 });
 
 configureSocial({ askConfirm });
+
+configureStore({ openDetail, renderDetail, renderModeration });
 
 configureTeams({
   openDetail,
@@ -518,227 +521,6 @@ function renderCurrentSection() {
   else renderStore();
 }
 
-function renderStore() {
-  if (!els.storeView) return;
-
-  const searchActive = !!S.search;
-
-  if (S.loading) {
-    els.featured.hidden = true;
-    if (els.feed) {
-      els.feed.hidden = true;
-      els.feedList.innerHTML = '';
-    }
-    if (els.storeNews) {
-      els.storeNews.hidden = true;
-      els.storeNewsList.innerHTML = '';
-    }
-    els.catalogTitle.textContent = tKey("loading");
-    els.modesCount.textContent = '';
-    els.modesGrid.innerHTML = '';
-    els.emptyState.hidden = true;
-    els.loadingState.hidden = false;
-    updateSidebarCounts();
-    return;
-  }
-  els.loadingState.hidden = true;
-  updateDashboardStats();
-  syncFilterButtons(els.storeFilters, 'store-filter', S.storeFilter);
-
-  if (searchActive) {
-    els.featured.hidden = true;
-    if (els.feed) {
-      els.feed.hidden = true;
-    }
-    if (els.storeNews) {
-      els.storeNews.hidden = true;
-    }
-    const result = sortCatalog(filterModes().filter((mode) => modePassesFilter(mode, S.storeFilter)), S.storeSort);
-    els.catalogTitle.textContent = tKey("search.results");
-    els.modesCount.textContent = String(result.length);
-    renderModeGrid(els.modesGrid, result, true);
-    setEmpty(
-      result.length === 0,
-      tKey("nothing.found"),
-      tKey("try.changing.the.query")
-    );
-    return;
-  }
-
-  const featured = S.modes.find((m) => m.imageUrl || m.image) || S.modes[0] || null;
-  S.featuredId = featured ? featured.id : null;
-  renderFeatured(featured);
-  renderFeed();
-  renderStoreNews();
-
-  const list = sortCatalog(
-    S.modes.filter((mode) => modePassesFilter(mode, S.storeFilter)),
-    S.storeSort
-  );
-  const titles = {
-    all: tKey("all.modes"),
-    installed: tKey("installed"),
-    following: tKey("following"),
-    development: tKey("in.development"),
-    crowdfunding: tKey("crowdfunding")
-  };
-  els.catalogTitle.textContent = titles[S.storeFilter] || tKey("all.modes");
-  els.modesCount.textContent = String(list.length);
-  renderModeGrid(els.modesGrid, list, true);
-  setEmpty(
-    list.length === 0,
-    tKey("nothing.here.yet"),
-    tKey("try.another.filter.or")
-  );
-  updateSidebarCounts();
-}
-
-function updateAllModes() {
-  const updates = S.modes.filter((mode) => isUpdate(mode));
-  if (!updates.length) {
-    toast(tKey("no.updates"), 'info');
-    return;
-  }
-  updates.forEach((mode) => enqueueDownload(mode, 'update', false, true));
-  toast(tKey("app.updates.queued", [updates.length]), 'ok');
-}
-
-let modeUpdatesNotified = false;
-function notifyModeUpdates() {
-  if (modeUpdatesNotified || S.updatesSnoozed) return;
-  const count = S.modes.filter((mode) => isUpdate(mode)).length;
-  if (!count) return;
-  modeUpdatesNotified = true;
-  toast(tKey("app.mode.updates.available.open", [count]), 'warn');
-}
-
-function renderFeatured(mode) {
-  if (!mode) {
-    els.featured.hidden = true;
-    return;
-  }
-  els.featured.hidden = false;
-  els.featuredImg.src = imageSrc(mode);
-  wireImage(els.featuredImg, mode);
-  els.featuredTitle.textContent = mode.title || tKey("untitled");
-  els.featuredDesc.textContent = modeShortDescription(mode);
-  els.featuredTags.innerHTML = modeTags(mode, 4)
-    .map((t) => `<span>${escapeHtml(t)}</span>`)
-    .join('');
-  const st = cardStatus(mode);
-  els.featuredStatus.textContent = st.text;
-}
-
-let followsRequestSeq = 0;
-
-async function loadFollows() {
-  const seq = ++followsRequestSeq;
-  if (!lavunioLoggedIn() || !api.followsGet || !api.feedGet) {
-    S.follows = [];
-    S.feed = [];
-    renderFeed();
-    return;
-  }
-  let follows = [];
-  let feed = [];
-  try {
-    [follows, feed] = await Promise.all([api.followsGet(), api.feedGet()]);
-  } catch (_) {}
-  if (seq !== followsRequestSeq) return;
-  S.follows = Array.isArray(follows)
-    ? follows.map((item) => item && item.username).filter(Boolean)
-    : [];
-  S.feed = Array.isArray(feed) ? feed : [];
-  renderFeed();
-  renderStore();
-  if (S.view === 'detail') renderDetail();
-}
-
-function renderFeed() {
-  if (!els.feed || !els.feedList) return;
-  if (S.loading || S.view !== 'store' || S.search || S.storeFilter !== 'all' || !S.feed.length) {
-    els.feed.hidden = true;
-    els.feedList.innerHTML = '';
-    return;
-  }
-  els.feed.hidden = false;
-  els.feedList.innerHTML = S.feed.map((item) => {
-    const date = item.publishedAt ? publisherDate(item.publishedAt) : '';
-    const changelog = String(item.changelog || '').split('\n')[0].slice(0, 180);
-    return `
-      <button class="feed-item" type="button" data-feed-slug="${escapeHtml(item.modeSlug)}">
-        ${item.coverUrl
-          ? `<img src="${escapeHtml(item.coverUrl)}" alt="" loading="lazy">`
-          : '<span class="feed-cover"></span>'}
-        <span class="feed-body">
-          <span class="feed-title">${escapeHtml(item.modeTitle || item.modeSlug)} <span class="feed-version">v${escapeHtml(item.version || '')}</span></span>
-          <span class="feed-sub">${escapeHtml(item.authorName || item.authorUsername || '')}${date ? ' · ' + escapeHtml(date) : ''}</span>
-          ${changelog ? `<span class="feed-text">${escapeHtml(changelog)}</span>` : ''}
-        </span>
-        <span class="feed-arrow">›</span>
-      </button>`;
-  }).join('');
-  els.feedList.onclick = (event) => {
-    const item = event.target.closest('[data-feed-slug]');
-    if (item) openDetail(item.dataset.feedSlug);
-  };
-}
-
-let storeNewsLoaded = false;
-
-async function loadStoreNews(force = false) {
-  if (!api.newsStore) return;
-  if (storeNewsLoaded && !force) return;
-  try {
-    const items = await api.newsStore();
-    S.storeNews = Array.isArray(items) ? items : [];
-    storeNewsLoaded = true;
-  } catch (_) {
-    S.storeNews = [];
-  }
-  renderStoreNews();
-  if (S.moderationTab === 'news' && moderatorAllowed()) renderModeration();
-}
-
-function renderStoreNews() {
-  if (!els.storeNews || !els.storeNewsList) return;
-  if (S.loading || S.search || !S.storeNews.length) {
-    els.storeNews.hidden = true;
-    els.storeNewsList.innerHTML = '';
-    return;
-  }
-  els.storeNews.hidden = false;
-  els.storeNewsList.innerHTML = S.storeNews.slice(0, 5).map(newsCardHtml).join('');
-}
-
-function updateCardProgress() {
-  document.querySelectorAll('[data-card-progress]').forEach((bar) => {
-    const card = bar.closest('.mode-card');
-    if (!card) return;
-    const mode = modeById(card.dataset.id);
-    if (mode) {
-      const meta = libraryStateMeta(mode);
-      const state = card.querySelector('[data-card-state]');
-      if (state) {
-        state.className = `card-state state-${meta.cls}`;
-        state.textContent = meta.label;
-      }
-      const play = card.querySelector('.card-play');
-      if (play) {
-        play.disabled = !!meta.busy;
-        play.dataset.cardAction = meta.action;
-      }
-    }
-    const active = !!(S.busy && S.busy.modeId === card.dataset.id);
-    bar.hidden = !active;
-    if (!active) return;
-    const percent = Math.max(0, Math.min(100, Math.round((Number(S.progress) || 0) * 100)));
-    bar.setAttribute('aria-valuenow', String(percent));
-    const fill = bar.querySelector('span');
-    if (fill) fill.style.width = `${percent}%`;
-  });
-}
-
 function closeCardMenus() {
   document.querySelectorAll('.card-menu:not([hidden])').forEach((menu) => {
     menu.hidden = true;
@@ -848,14 +630,6 @@ async function handleCardAction(modeId, action, autoPlay = false) {
     } catch (err) {
       toast(tKey("failed.to.delete.mode") + " " + err, 'error');
     }
-  }
-}
-
-function setEmpty(show, title, sub) {
-  els.emptyState.hidden = !show;
-  if (show) {
-    els.emptyTitle.textContent = title;
-    els.emptySub.textContent = sub;
   }
 }
 
