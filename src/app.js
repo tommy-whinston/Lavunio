@@ -1,8 +1,12 @@
 'use strict';
 
-const api = window.tm;
-const $ = (id) => document.getElementById(id);
+import { S } from './core/state.js';
+import { $, escapeHtml } from './core/dom.js';
+import { toast } from './ui/toast.js';
+import { initCustomSelects, closeSelectMenu, syncSelectLabels } from './ui/select.js';
+import { initAutoGrowTextareas, growAllTextareas } from './ui/textarea.js';
 
+const api = window.tm;
 // WebView2 показывает своё меню (назад, сохранить как, печать) — в лаунчере оно не нужно.
 document.addEventListener('contextmenu', (event) => event.preventDefault());
 
@@ -44,99 +48,8 @@ const ART_CACHE = new Map();
 const DEFAULT_ACCENT = '#e5322b';
 const SPLASH_START = performance.now();
 let lastUpdateCheckAt = 0;
-let activeSelectMenu = null;
-let selectEnhanceFrame = 0;
-let selectSyncTimer = null;
 
-const S = {
-  modes: [],
-  state: {},
-  settings: null,
-  systemRamGb: 0,
-  selectedId: null,
-  detailTab: 'about',
-  sessionsExpanded: false,
-  featuredId: null,
-  view: 'store',
-  busy: null,
-  running: null,
-  progress: 0,
-  status: '',
-  stage: '',
-  search: '',
-  loading: true,
-  refreshing: false,
-  section: 'store',
-  detailFrom: null,
-  updateInfo: null,
-  autoUpdating: false,
-  updatesSnoozed: false,
-  storeFilter: 'all',
-  storeSort: 'date',
-  libraryFilter: 'all',
-  librarySort: 'date',
-  pendingPlay: null,
-  lavunio: null,
-  lavunioRegisterMode: false,
-  authorApplication: null,
-  follows: [],
-  feed: [],
-  storeNews: [],
-  modeNews: {},
-  modeNewsLoading: {},
-  downloads: [],
-  downloadsActiveId: null,
-  downloadsSeq: 0,
-  sessionStartedAt: 0,
-  reviews: {},
-  reviewLoading: {},
-  reviewRating: 5,
-  publisherModes: [],
-  publisherLoaded: false,
-  publisherLoading: false,
-  publisherUpload: null,
-  publisherReleaseMode: null,
-  publisherAppealRelease: null,
-  teams: [],
-  teamsLoaded: false,
-  teamsLoading: false,
-  teamEditing: null,
-  teamMembersTeam: null,
-  teamMembers: [],
-  teamInvitations: [],
-  teamPage: null,
-  teamPageData: null,
-  teamJoinTeam: null,
-  teamNewsTeam: null,
-  teamTransferTeam: null,
-  playerProfile: null,
-  profileUsername: null,
-  profileSeq: 0,
-  profileAfterLogin: false,
-  friends: [],
-  friendRequests: { incoming: [], outgoing: [] },
-  notifications: [],
-  notificationsUnread: 0,
-  chatKind: null,
-  chatTarget: null,
-  chatTitle: '',
-  chatMessages: [],
-  chatTimer: null,
-  publisherNewsMode: null,
-  moderationQueue: [],
-  moderationModes: [],
-  moderationReports: [],
-  moderationAppeals: [],
-  moderationAuthorApplications: [],
-  moderationReviews: [],
-  moderationHistory: [],
-  moderationLoaded: false,
-  moderationLoading: false,
-  moderationTab: 'queue',
-  moderationNoteAction: null,
-  reportModeId: null,
-  reviewReplyTarget: null
-};
+
 
 const els = {
   splash: $('splash'),
@@ -4369,273 +4282,7 @@ function bindModals() {
 
 // ---------------------------------------------------------------- утилиты
 
-function escapeHtml(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  })[c]);
-}
 
-// ---------------------------------------------------------------- кастомные списки
-
-function enhanceSelects(root = document) {
-  root.querySelectorAll('select:not([data-custom-select])').forEach(enhanceSelect);
-  syncSelectLabels();
-}
-
-function enhanceSelect(select) {
-  if (!select || select.dataset.customSelect || select.multiple) return;
-  select.dataset.customSelect = '1';
-
-  const shell = document.createElement('span');
-  shell.className = 'select-shell';
-  if (select.classList.contains('sort-select')) shell.classList.add('sort-select-shell');
-  if (select.id) shell.dataset.selectId = select.id;
-  select.parentNode.insertBefore(shell, select);
-  shell.appendChild(select);
-
-  select.classList.add('native-select');
-  select.tabIndex = -1;
-  select.setAttribute('aria-hidden', 'true');
-
-  const trigger = document.createElement('button');
-  trigger.type = 'button';
-  trigger.className = 'select-trigger';
-  trigger.setAttribute('aria-haspopup', 'listbox');
-  trigger.setAttribute('aria-expanded', 'false');
-  const label = labelForSelect(select);
-  if (label) trigger.setAttribute('aria-label', label);
-  trigger.innerHTML = '<span class="select-value"></span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4.5 6 8.5 10 4.5"/></svg>';
-  shell.appendChild(trigger);
-
-  select._customTrigger = trigger;
-  select._customShell = shell;
-
-  trigger.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleSelectMenu(select);
-  });
-  trigger.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      openSelectMenu(select);
-    } else if (event.key === 'Escape') {
-      closeSelectMenu(true);
-    }
-  });
-  select.addEventListener('change', () => syncSelectLabel(select));
-  select.addEventListener('input', () => syncSelectLabel(select));
-  syncSelectLabel(select);
-}
-
-function labelForSelect(select) {
-  try {
-    return [...(select.labels || [])].map((label) => label.textContent).join(' ').trim();
-  } catch (_) {
-    return '';
-  }
-}
-
-function syncSelectLabel(select) {
-  const trigger = select && select._customTrigger;
-  if (!trigger) return;
-  const option = select.selectedOptions && select.selectedOptions[0];
-  const value = option ? option.textContent.trim() : '—';
-  const target = trigger.querySelector('.select-value');
-  if (target && target.textContent !== value) target.textContent = value;
-  trigger.disabled = !!select.disabled;
-}
-
-function syncSelectLabels() {
-  document.querySelectorAll('select[data-custom-select]').forEach(syncSelectLabel);
-}
-
-function toggleSelectMenu(select) {
-  if (activeSelectMenu && activeSelectMenu.select === select) {
-    closeSelectMenu(true);
-    return;
-  }
-  openSelectMenu(select);
-}
-
-function openSelectMenu(select) {
-  const trigger = select && select._customTrigger;
-  if (!trigger || select.disabled) return;
-  closeSelectMenu();
-
-  const menu = document.createElement('div');
-  menu.className = 'select-menu';
-  menu.setAttribute('role', 'listbox');
-  [...select.options].forEach((option, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'select-option' + (index === select.selectedIndex ? ' selected' : '');
-    button.setAttribute('role', 'option');
-    button.setAttribute('data-index', String(index));
-    button.setAttribute('aria-selected', index === select.selectedIndex ? 'true' : 'false');
-    if (option.disabled) button.disabled = true;
-    const check = document.createElement('span');
-    check.className = 'select-option-check';
-    check.textContent = index === select.selectedIndex ? '✓' : '';
-    button.appendChild(check);
-    button.appendChild(document.createTextNode(option.textContent));
-    menu.appendChild(button);
-  });
-  document.body.appendChild(menu);
-
-  const rect = trigger.getBoundingClientRect();
-  const width = Math.max(150, Math.round(rect.width));
-  const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-  const spaceBelow = window.innerHeight - rect.bottom - 12;
-  const spaceAbove = rect.top - 12;
-  menu.style.left = `${left}px`;
-  menu.style.width = `${width}px`;
-  if (spaceBelow < 160 && spaceAbove > spaceBelow) {
-    menu.style.bottom = `${window.innerHeight - rect.top + 6}px`;
-    menu.style.maxHeight = `${Math.min(320, Math.max(120, spaceAbove))}px`;
-  } else {
-    menu.style.top = `${rect.bottom + 6}px`;
-    menu.style.maxHeight = `${Math.min(320, Math.max(120, spaceBelow))}px`;
-  }
-
-  activeSelectMenu = { select, trigger, menu };
-  trigger.classList.add('open');
-  trigger.setAttribute('aria-expanded', 'true');
-
-  menu.addEventListener('click', (event) => {
-    const option = event.target.closest('.select-option');
-    if (!option || option.disabled) return;
-    const index = Number(option.dataset.index);
-    if (!Number.isInteger(index) || !select.options[index]) return;
-    select.selectedIndex = index;
-    syncSelectLabel(select);
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-    closeSelectMenu(true);
-  });
-  menu.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      closeSelectMenu(true);
-      return;
-    }
-    if (event.key === 'Tab') {
-      closeSelectMenu();
-      return;
-    }
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-    event.preventDefault();
-    const options = [...menu.querySelectorAll('.select-option:not(:disabled)')];
-    if (!options.length) return;
-    const current = options.indexOf(document.activeElement);
-    const next = event.key === 'ArrowDown'
-      ? (current + 1 + options.length) % options.length
-      : (current - 1 + options.length) % options.length;
-    options[next].focus();
-  });
-
-  const selectedOption = menu.querySelector('.select-option.selected') || menu.querySelector('.select-option:not(:disabled)');
-  if (selectedOption) {
-    requestAnimationFrame(() => {
-      if (!activeSelectMenu || activeSelectMenu.menu !== menu) return;
-      selectedOption.focus({ preventScroll: true });
-      selectedOption.scrollIntoView({ block: 'nearest' });
-    });
-  }
-}
-
-function closeSelectMenu(restoreFocus = false) {
-  if (!activeSelectMenu) return;
-  const { trigger, menu } = activeSelectMenu;
-  trigger.classList.remove('open');
-  trigger.setAttribute('aria-expanded', 'false');
-  menu.remove();
-  activeSelectMenu = null;
-  if (restoreFocus) {
-    try { trigger.focus({ preventScroll: true }); } catch (_) {}
-  }
-}
-
-function initCustomSelects() {
-  enhanceSelects(document);
-  const observer = new MutationObserver(() => {
-    if (selectEnhanceFrame) return;
-    selectEnhanceFrame = requestAnimationFrame(() => {
-      selectEnhanceFrame = 0;
-      enhanceSelects(document);
-    });
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-  if (selectSyncTimer) clearInterval(selectSyncTimer);
-  selectSyncTimer = setInterval(syncSelectLabels, 700);
-  document.addEventListener('click', (event) => {
-    if (!activeSelectMenu) return;
-    if (event.target.closest('.select-menu') || event.target.closest('.select-trigger')) return;
-    closeSelectMenu();
-  });
-  document.addEventListener('scroll', (event) => {
-    if (!activeSelectMenu) return;
-    if (event.target.closest && event.target.closest('.select-menu')) return;
-    closeSelectMenu();
-  }, true);
-  window.addEventListener('resize', () => closeSelectMenu());
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && activeSelectMenu) closeSelectMenu(true);
-  });
-  document.addEventListener('click', (event) => {
-    const label = event.target.closest('label[for]');
-    if (!label) return;
-    const field = document.getElementById(label.htmlFor);
-    if (field && field._customTrigger) {
-      event.preventDefault();
-      field._customTrigger.focus();
-    }
-  });
-}
-
-// ---------------------------------------------------------------- textarea autosize
-
-function growTextarea(el) {
-  if (!el || el.tagName !== 'TEXTAREA' || !el.offsetParent) return;
-  const max = Math.max(80, Math.round(window.innerHeight * 0.45));
-  el.style.height = 'auto';
-  const height = Math.min(el.scrollHeight, max);
-  el.style.height = `${height}px`;
-  el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
-  el.dataset.growValue = el.value;
-  el.dataset.growWidth = String(el.clientWidth);
-}
-
-function growAllTextareas(root = document) {
-  root.querySelectorAll('textarea').forEach(growTextarea);
-}
-
-function initAutoGrowTextareas() {
-  document.addEventListener('input', (event) => {
-    if (event.target && event.target.tagName === 'TEXTAREA') growTextarea(event.target);
-  });
-  document.addEventListener('focusin', (event) => {
-    if (event.target && event.target.tagName === 'TEXTAREA') growTextarea(event.target);
-  });
-  window.addEventListener('resize', () => growAllTextareas());
-  growAllTextareas();
-  setInterval(() => {
-    document.querySelectorAll('textarea').forEach((el) => {
-      if (document.activeElement === el) return;
-      if (!el.offsetParent) return;
-      if (el.dataset.growValue === el.value && el.dataset.growWidth === String(el.clientWidth)) return;
-      growTextarea(el);
-    });
-  }, 900);
-}
-
-
-let toastTimer = null;
-function toast(msg, type = 'info') {
-  els.toast.textContent = window.I18n ? window.I18n.t(msg) : msg;
-  els.toast.className = 'show ' + type;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (els.toast.className = ''), 3200);
-}
 
 // ---------------------------------------------------------------- публикатор
 
@@ -6913,3 +6560,24 @@ async function unhideModerationMode(id, title) {
     toast('Не удалось показать режим: ' + err, 'error');
   }
 }
+
+// ---------------------------------------------------------------- debug / tests
+
+window.LavunioDebug = {
+  get S() { return S; },
+  get api() { return api; },
+  $,
+  escapeHtml,
+  toast,
+  openModal,
+  closeModals,
+  openDetail,
+  showStore,
+  showSection,
+  renderStore,
+  renderLibrary,
+  isInstalled,
+  modeAuthors,
+  openProfile,
+  openChat
+};

@@ -101,7 +101,7 @@ async function waitFor(check, timeoutMs, intervalMs = 150) {
 
     await waitFor(async () => {
       try {
-        return await evaluate(cdp, `typeof S !== 'undefined' && !S.loading && document.getElementById('splash')?.classList.contains('done')`);
+        return await evaluate(cdp, `typeof LavunioDebug !== 'undefined' && !LavunioDebug.S.loading && document.getElementById('splash')?.classList.contains('done')`);
       } catch {
         return false;
       }
@@ -110,23 +110,27 @@ async function waitFor(check, timeoutMs, intervalMs = 150) {
 
     await waitFor(async () => {
       try {
-        return (await evaluate(cdp, `typeof S !== 'undefined' && S.modes.length`)) > 0;
+        return (await evaluate(cdp, `typeof LavunioDebug !== 'undefined' && LavunioDebug.S.modes.length`)) > 0;
       } catch {
         return false;
       }
     }, 30000);
 
-    const catalog = await evaluate(cdp, `(() => ({
-      count: S.modes.length,
-      ids: S.modes.map((mode) => mode.id),
-      authors: S.modes.map((mode) => modeAuthors(mode))
-    }))()`);
+    const catalog = await evaluate(cdp, `(() => {
+      const D = window.LavunioDebug;
+      return {
+        count: D.S.modes.length,
+        ids: D.S.modes.map((mode) => mode.id),
+        authors: D.S.modes.map((mode) => D.modeAuthors(mode))
+      };
+    })()`);
     assert(catalog.count > 0, 'catalog is empty');
     assert(catalog.authors.every((authors) => authors.length > 0), 'some modes have no author');
     console.log(`PASS: catalog loaded (${catalog.count} modes)`);
 
     const settings = await evaluate(cdp, `(async () => {
-      openModal('modal-settings');
+      const D = window.LavunioDebug;
+      D.openModal('modal-settings');
       await new Promise((resolve) => setTimeout(resolve, 500));
       const advanced = document.querySelector('.settings-advanced');
       return {
@@ -135,7 +139,7 @@ async function waitFor(check, timeoutMs, intervalMs = 150) {
         tabCount: document.querySelectorAll('#modal-settings .settings-tab').length,
         hasAdvanced: !!advanced,
         advancedClosed: advanced ? !advanced.open : null,
-        hasCatalogUrl: Object.prototype.hasOwnProperty.call(S.settings || {}, 'catalogUrl'),
+        hasCatalogUrl: Object.prototype.hasOwnProperty.call(D.S.settings || {}, 'catalogUrl'),
         logsPathField: (document.getElementById('set-logs-path') || {}).value || ''
       };
     })()`);
@@ -149,16 +153,17 @@ async function waitFor(check, timeoutMs, intervalMs = 150) {
     console.log('PASS: internal settings are hidden');
     await screenshot(cdp, path.join(artifacts, 'settings.png'));
 
-    const logsPath = await evaluate(cdp, `api.getLogsPath()`);
+    const logsPath = await evaluate(cdp, `window.LavunioDebug.api.getLogsPath()`);
     assert(logsPath && fs.existsSync(logsPath), `log file is missing: ${logsPath}`);
     console.log('PASS: logging is enabled');
 
-    await evaluate(cdp, `closeModals()`);
+    await evaluate(cdp, `window.LavunioDebug.closeModals()`);
 
     const detail = await evaluate(cdp, `(async () => {
-      const mode = S.modes[0];
-      const installed = isInstalled(mode);
-      openDetail(mode.id);
+      const D = window.LavunioDebug;
+      const mode = D.S.modes[0];
+      const installed = D.isInstalled(mode);
+      D.openDetail(mode.id);
       await new Promise((resolve) => setTimeout(resolve, 500));
       const values = [...document.querySelectorAll('#detail-meta .meta-value')];
       return {
@@ -176,7 +181,7 @@ async function waitFor(check, timeoutMs, intervalMs = 150) {
     console.log('PASS: detail page fits and folder button is correct');
     await screenshot(cdp, path.join(artifacts, 'detail.png'));
 
-    await evaluate(cdp, `showStore()`);
+    await evaluate(cdp, `window.LavunioDebug.showStore()`);
     await sleep(300);
     await screenshot(cdp, path.join(artifacts, 'store.png'));
     console.log('PASS: store screenshot captured');
