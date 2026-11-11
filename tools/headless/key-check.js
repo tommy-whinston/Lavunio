@@ -36,7 +36,7 @@ function walk(dir, files = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === 'i18n') continue;
+      if (entry.name === 'i18n' || entry.name === 'vendor') continue;
       walk(full, files);
     } else if (entry.name.endsWith('.js') || entry.name.endsWith('.html')) {
       files.push(full);

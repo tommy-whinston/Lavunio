@@ -166,20 +166,22 @@ const base = {
   pickSkin: async () => 'C:\\test-skin.png',
   uploadSkin: async (path, model) => {
     window.__skinUploaded = { path, model };
-    return {
-      configured: true,
-      hasSession: true,
-      user: { ...(data.user || data.profile), skinUrl: 'https://example.com/skin.png', skinModel: model }
-    };
+    const user = { ...(data.user || data.profile), skinUrl: 'https://example.com/skin.png', skinModel: model };
+    window.__mockSkinUser = user;
+    return { configured: true, hasSession: true, user };
   },
   setSkinModel: async (model) => {
     window.__skinModel = model;
-    return {
-      configured: true,
-      hasSession: true,
-      user: { ...(data.user || data.profile), skinModel: model }
+    const current = window.__mockSkinUser || data.user || data.profile;
+    const user = {
+      ...current,
+      skinUrl: current.skinUrl || (window.__skinUploaded ? 'https://example.com/skin.png' : undefined),
+      skinModel: model
     };
+    window.__mockSkinUser = user;
+    return { configured: true, hasSession: true, user };
   },
+  skinData: async () => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACMSURBVHhe7dAhAQAwEIDA7zO3/nU+x+apAOIMktl7ntkw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmwYw2DSAwaYBDDYNYLBpAINNAxhsGsBg0wAGmw/trRIdJOWliAAAAABJRU5ErkJggg==',
   publisherMyModes: async () => data.user ? [data.mode] : [],
   adminQueue: async () => [data.queue], adminModes: async () => [data.moderationMode],
   adminReports: async () => [data.report], adminReviews: async () => [data.review],

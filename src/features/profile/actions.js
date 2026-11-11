@@ -27,6 +27,9 @@ let profileActions = {
 };
 
 let skinModalProfile = null;
+let skinViewer = null;
+let skinViewerKey = '';
+let skinViewerSeq = 0;
 
 export function configureProfileActions(actions) {
   profileActions = { ...profileActions, ...actions };
@@ -170,6 +173,13 @@ export function bindProfileView() {
   if (remove) remove.onclick = () => deleteLavunioSkin();
   const model = $('skin-modal-model');
   if (model) model.onchange = () => setSkinModel(model.value);
+  const skinModal = $('modal-skin');
+  if (skinModal) {
+    new MutationObserver(() => {
+      if (!skinViewer) return;
+      try { skinViewer.renderPaused = skinModal.hidden; } catch (_) {}
+    }).observe(skinModal, { attributes: true, attributeFilter: ['hidden'] });
+  }
 }
 
 function openSkinModal(profile) {
@@ -179,17 +189,87 @@ function openSkinModal(profile) {
   profileActions.openModal('modal-skin');
 }
 
+function skinModelHtml(profile) {
+  const model = profile.skinModel === 'slim' ? 'slim' : 'classic';
+  return `
+    <div class="skin-model ${model}" style="--skin:url('${escapeHtml(profile.skinUrl)}')" aria-label="${escapeHtml(tKey("skin"))}">
+      <span class="skin-part head"></span>
+      <span class="skin-part body"></span>
+      <span class="skin-part arm right"></span>
+      <span class="skin-part arm left"></span>
+      <span class="skin-part leg right"></span>
+      <span class="skin-part leg left"></span>
+    </div>
+  `;
+}
+
+function destroySkinViewer() {
+  if (skinViewer) {
+    try { skinViewer.dispose(); } catch (_) {}
+  }
+  skinViewer = null;
+  skinViewerKey = '';
+}
+
 function renderSkinModal() {
   const profile = skinModalProfile || (S.lavunio && S.lavunio.user);
   const preview = $('skin-modal-preview');
   if (!profile || !preview) return;
-  preview.innerHTML = profile.skinUrl
-    ? `<img src="${escapeHtml(profile.skinUrl)}" alt="${escapeHtml(tKey("skin"))}">`
-    : `<span class="skin-empty">${tKey("no.skin")}</span>`;
-  const model = $('skin-modal-model');
-  if (model) model.value = profile.skinModel === 'slim' ? 'slim' : 'classic';
+  const modelValue = profile.skinModel === 'slim' ? 'slim' : 'classic';
+  const model = modelValue === 'slim' ? 'slim' : 'default';
+  const select = $('skin-modal-model');
+  if (select) select.value = modelValue;
   const remove = $('skin-modal-delete');
   if (remove) remove.hidden = !profile.skinUrl;
+  if (!profile.skinUrl) {
+    destroySkinViewer();
+    preview.innerHTML = `<span class="skin-empty">${tKey("no.skin")}</span>`;
+    return;
+  }
+
+  const key = `${profile.skinUrl}|${model}`;
+  if (skinViewer && skinViewerKey === key) return;
+  destroySkinViewer();
+  preview.innerHTML = '<canvas id="skin-modal-canvas"></canvas>';
+  const seq = ++skinViewerSeq;
+  if (!window.skinview3d || !api.skinData) {
+    preview.innerHTML = skinModelHtml(profile);
+    return;
+  }
+  api.skinData()
+    .then((dataUrl) => {
+      if (seq !== skinViewerSeq) return null;
+      const canvas = $('skin-modal-canvas');
+      if (!canvas) return null;
+      let viewer;
+      try {
+        viewer = new window.skinview3d.SkinViewer({
+          canvas,
+          width: 240,
+          height: 240,
+          model,
+          zoom: 0.85,
+          pixelRatio: 1
+        });
+        viewer.controls.enableZoom = false;
+        viewer.autoRotate = false;
+      } catch (_) {
+        preview.innerHTML = skinModelHtml(profile);
+        return null;
+      }
+      return viewer.loadSkin(dataUrl, { model }).then(() => {
+        if (seq !== skinViewerSeq) {
+          try { viewer.dispose(); } catch (_) {}
+          return;
+        }
+        skinViewer = viewer;
+        skinViewerKey = key;
+        canvas.dataset.skinReady = '1';
+      });
+    })
+    .catch(() => {
+      if (seq === skinViewerSeq) preview.innerHTML = skinModelHtml(profile);
+    });
 }
 
 async function setSkinModel(model) {

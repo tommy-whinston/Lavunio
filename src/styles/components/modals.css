@@ -269,21 +269,36 @@ select option { background: var(--panel); color: var(--text); }
 
 .modal-skin { width: 380px; }
 .skin-modal-preview {
-  width: 132px;
-  height: 132px;
+  width: 100%;
+  height: 240px;
   display: grid;
   place-items: center;
-  margin: 8px auto 16px;
-  background: rgba(0, 0, 0, 0.24);
+  margin: 8px auto 6px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, rgba(229, 50, 43, 0.13), rgba(0, 0, 0, 0.24) 68%);
   border: 1px solid var(--border);
   border-radius: 12px;
 }
+.skin-modal-preview canvas {
+  width: 240px;
+  height: 240px;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.skin-modal-preview canvas:active { cursor: grabbing; }
 .skin-modal-preview img {
   width: 104px;
   height: 104px;
   image-rendering: pixelated;
 }
 .skin-modal-preview .skin-empty { color: var(--muted); font-size: 12px; }
+.skin-rotate-hint {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+}
 .skin-modal-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 .skin-modal-actions .btn { flex: 1; }
 

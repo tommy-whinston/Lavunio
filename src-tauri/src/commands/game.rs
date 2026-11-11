@@ -1,4 +1,9 @@
-use super::{blocking, lavunio_access_token, lavunio_api, lavunio_status_value, load_modes, publisher_request, save_lavunio_session};
+use base64::Engine;
+
+use super::{
+    blocking, lavunio_access_token, lavunio_api, lavunio_status_value, load_modes, publisher_request,
+    save_lavunio_session,
+};
 use crate::game;
 use crate::models::{GameAccount, LavunioUser};
 use crate::net;
@@ -180,6 +185,43 @@ pub async fn lavunio_set_skin_model(
     )
     .await?;
     save_lavunio_account(state.inner(), data)
+}
+
+#[tauri::command]
+pub async fn lavunio_skin_data(state: State<'_, AppState>) -> Result<String, String> {
+    let url = {
+        let session = state.store.lock().unwrap().lavunio.clone();
+        session
+            .user
+            .and_then(|user| user.skin_url)
+            .filter(|value| value.starts_with("http://") || value.starts_with("https://"))
+            .ok_or_else(|| "У аккаунта нет скина".to_string())?
+    };
+    let bytes = blocking(move || {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(15))
+            .build()
+            .map_err(|error| format!("Не удалось создать HTTP-клиент: {error}"))?;
+        let response = client
+            .get(&url)
+            .send()
+            .map_err(|error| format!("Не удалось загрузить скин: {error}"))?;
+        if !response.status().is_success() {
+            return Err(format!("Сервер скина вернул {}", response.status()));
+        }
+        response
+            .bytes()
+            .map(|bytes| bytes.to_vec())
+            .map_err(|error| format!("Не удалось прочитать скин: {error}"))
+    })
+    .await??;
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err("Файл скина больше 2 МБ".to_string());
+    }
+    Ok(format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
 }
 
 async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_only: bool) -> Value {

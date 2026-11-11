@@ -1063,4 +1063,5 @@ export const EN = {
   "choose.skin": "Choose skin",
   "skin.model.hint": "The model is applied immediately.",
   "skin.model.updated": "Skin model updated",
+  "skin.rotate.hint": "Drag to rotate",
 };

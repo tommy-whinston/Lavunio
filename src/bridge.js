@@ -58,6 +58,7 @@
     pickSkin: () => invoke("lavunio_pick_skin"),
     uploadSkin: (path, model) => invoke("lavunio_upload_skin", { path, model }),
     setSkinModel: (model) => invoke("lavunio_set_skin_model", { model }),
+    skinData: () => invoke("lavunio_skin_data"),
     deleteSkin: () => invoke("lavunio_delete_skin"),
 
     // публикатор

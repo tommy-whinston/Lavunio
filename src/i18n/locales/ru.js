@@ -1063,4 +1063,5 @@ export const RU = {
   "choose.skin": "Выбрать скин",
   "skin.model.hint": "Модель применяется сразу.",
   "skin.model.updated": "Модель скина обновлена",
+  "skin.rotate.hint": "Крути мышкой, чтобы повернуть",
 };

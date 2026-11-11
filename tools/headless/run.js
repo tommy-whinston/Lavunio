@@ -577,20 +577,51 @@ async function checkProfileEditor(cdp) {
     throw new Error('skin modal did not open: ' + JSON.stringify(skinModal));
   }
   await cdp.evaluate(`document.getElementById('skin-modal-upload').click()`);
-  await sleep(400);
+  await sleep(700);
   const skin = await cdp.evaluate(`window.__skinUploaded || null`);
   if (!skin || !skin.path) {
     throw new Error('skin upload was not triggered: ' + JSON.stringify(skin));
+  }
+  const viewer = await cdp.evaluate(`({
+    ready: !!document.querySelector('#skin-modal-canvas') && document.querySelector('#skin-modal-canvas').dataset.skinReady === '1',
+    fallback: !!document.querySelector('.skin-model')
+  })`);
+  if (!viewer.ready || viewer.fallback) {
+    throw new Error('3D skin viewer did not start: ' + JSON.stringify(viewer));
   }
   await cdp.evaluate(`(() => {
     const select = document.getElementById('skin-modal-model');
     select.value = 'slim';
     select.dispatchEvent(new Event('change', { bubbles: true }));
   })()`);
-  await sleep(350);
+  await sleep(700);
   const skinModel = await cdp.evaluate(`window.__skinModel || null`);
   if (skinModel !== 'slim') {
     throw new Error('skin model was not updated: ' + JSON.stringify(skinModel));
+  }
+  const viewerAfterModel = await cdp.evaluate(`!!(document.querySelector('#skin-modal-canvas') && document.querySelector('#skin-modal-canvas').dataset.skinReady === '1')`);
+  if (!viewerAfterModel) throw new Error('3D skin viewer did not reload after model change');
+
+  const rect = await cdp.evaluate(`(() => {
+    const canvas = document.getElementById('skin-modal-canvas');
+    if (!canvas) return null;
+    const box = canvas.getBoundingClientRect();
+    return { x: box.x, y: box.y, width: box.width, height: box.height };
+  })()`);
+  if (!rect || rect.width < 50 || rect.height < 50) {
+    throw new Error('skin viewer canvas has no size: ' + JSON.stringify(rect));
+  }
+  const clip = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 };
+  const before = await cdp.send('Page.captureScreenshot', { format: 'png', clip });
+  const startX = rect.x + rect.width / 2;
+  const startY = rect.y + rect.height / 2;
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: startX, y: startY, button: 'left', clickCount: 1 });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: startX + 70, y: startY, button: 'left', buttons: 1 });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: startX + 70, y: startY, button: 'left', clickCount: 1 });
+  await sleep(400);
+  const after = await cdp.send('Page.captureScreenshot', { format: 'png', clip });
+  if (before.data === after.data) {
+    throw new Error('skin viewer did not rotate on drag');
   }
   await cdp.evaluate(`window.LavunioDebug.closeModals()`);
 }
