@@ -1,6 +1,6 @@
 [package]
 name = "lavunio"
-version = "0.23.40"
+version = "0.23.41"
 description = "Lavunio - Minecraft mode store with Ely.by accounts"
 authors = ["TM"]
 license = "MIT"
