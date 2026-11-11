@@ -519,6 +519,39 @@ async function checkProfileEditor(cdp) {
   if (!update || update[0] !== 'tommywhinston' || update[1] !== 'Tommy_Whinston') {
     throw new Error('profile save: ' + JSON.stringify(saved));
   }
+
+  let longName = null;
+  for (const width of [1280, 860]) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false
+    });
+    await cdp.evaluate(`import('/features/profile/view.js').then((m) => {
+      const profile = { ...window.LavunioDebug.S.playerProfile, displayName: 'TOMMY_WHINSTON' };
+      m.renderProfile(profile);
+    })`);
+    await sleep(150);
+    longName = await cdp.evaluate(`(() => {
+      const title = document.querySelector('.profile-hero-main h1');
+      return title ? {
+        text: title.textContent,
+        scrollWidth: title.scrollWidth,
+        clientWidth: title.clientWidth,
+        className: title.className,
+        width: window.innerWidth,
+        flexWrap: getComputedStyle(document.querySelector('.profile-hero')).flexWrap,
+        heroWidth: document.querySelector('.profile-hero').clientWidth,
+        mainWidth: document.querySelector('.profile-hero-main').clientWidth,
+        media: matchMedia('(max-width: 720px)').matches
+      } : null;
+    })()`);
+    if (!longName || longName.text !== 'TOMMY_WHINSTON' || longName.scrollWidth > longName.clientWidth + 1) {
+      throw new Error('long nickname is truncated: ' + JSON.stringify(longName));
+    }
+  }
+  await cdp.send('Emulation.clearDeviceMetricsOverride');
 }
 
 async function runNotifications(cdp) {

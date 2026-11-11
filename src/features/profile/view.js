@@ -152,6 +152,8 @@ export function renderProfile(profile) {
     (item) => String(item.username || '').toLowerCase() === String(profile.username).toLowerCase()
   );
   const display = profile.displayName || profile.username;
+  const nameClass = String(display).length > 13 ? 'profile-name-xlong'
+    : String(display).length > 10 ? 'profile-name-long' : '';
   const stats = profile.stats || {};
 
   const actions = own
@@ -177,7 +179,7 @@ export function renderProfile(profile) {
     <div class="profile-hero">
       <div class="profile-avatar-wrap"><span class="avatar" id="profile-avatar"></span></div>
       <div class="profile-hero-main">
-        <h1>${escapeHtml(display)}</h1>
+        <h1${nameClass ? ` class="${nameClass}"` : ''}>${escapeHtml(display)}</h1>
         <div class="profile-handle">@${escapeHtml(profile.username)}</div>
         <div class="profile-badges">
           <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>

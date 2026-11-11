@@ -50,6 +50,19 @@
   overflow-wrap: normal;
   word-break: normal;
 }
+.profile-hero-main h1.profile-name-long {
+  font-size: clamp(21px, 2.3vw, 29px);
+  letter-spacing: -0.7px;
+}
+.profile-hero-main h1.profile-name-xlong {
+  font-size: clamp(20px, 2.8vw, 24px);
+  letter-spacing: -0.4px;
+}
+@media (max-width: 720px) {
+  .profile-hero { flex-wrap: wrap; align-items: flex-start; }
+  .profile-hero-main { flex: 1 1 100%; }
+  .profile-actions { flex: 1 1 100%; justify-content: flex-start; margin-top: 12px; }
+}
 .profile-handle { color: #b4aaa2; font-size: 12px; overflow-wrap: anywhere; }
 .profile-bio { max-width: 680px; margin-top: 10px; color: #d4ccc5; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .profile-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
