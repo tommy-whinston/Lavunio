@@ -267,5 +267,25 @@ select option { background: var(--panel); color: var(--text); }
 .skin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .skin-actions .btn { padding: 6px 10px; font-size: 11.5px; }
 
+.modal-skin { width: 380px; }
+.skin-modal-preview {
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  margin: 8px auto 16px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.skin-modal-preview img {
+  width: 104px;
+  height: 104px;
+  image-rendering: pixelated;
+}
+.skin-modal-preview .skin-empty { color: var(--muted); font-size: 12px; }
+.skin-modal-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.skin-modal-actions .btn { flex: 1; }
+
 .link { color: var(--accent-2); cursor: pointer; }
 .link:hover { text-decoration: underline; }

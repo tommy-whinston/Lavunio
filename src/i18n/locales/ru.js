@@ -1060,4 +1060,7 @@ export const RU = {
   "login.code.sent.to": "Код отправлен на {0}. Проверь почту.",
   "invalid.login.code": "Неверный или истёкший код входа",
   "profile.avatar.hint": "Нажми на аватарку, чтобы сменить скин",
+  "choose.skin": "Выбрать скин",
+  "skin.model.hint": "Модель применяется сразу.",
+  "skin.model.updated": "Модель скина обновлена",
 };

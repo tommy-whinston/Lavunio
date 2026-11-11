@@ -163,6 +163,25 @@ pub async fn lavunio_delete_skin(state: State<'_, AppState>) -> Result<Value, St
     save_lavunio_account(state.inner(), data)
 }
 
+#[tauri::command]
+pub async fn lavunio_set_skin_model(
+    state: State<'_, AppState>,
+    model: String,
+) -> Result<Value, String> {
+    let model = model.trim().to_lowercase();
+    if !matches!(model.as_str(), "classic" | "slim") {
+        return Err("Модель скина: classic или slim".to_string());
+    }
+    let data = publisher_request(
+        state.inner(),
+        "PUT",
+        "/v1/me/skin/model".to_string(),
+        Some(json!({ "model": model })),
+    )
+    .await?;
+    save_lavunio_account(state.inner(), data)
+}
+
 async fn start_game(app: AppHandle, state: &AppState, mode_id: &str, install_only: bool) -> Value {
     crate::logging::log(format!(
         "game: requested mode={mode_id} install_only={install_only}"

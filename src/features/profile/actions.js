@@ -26,6 +26,8 @@ let profileActions = {
   respondFriendRequest: async () => {}
 };
 
+let skinModalProfile = null;
+
 export function configureProfileActions(actions) {
   profileActions = { ...profileActions, ...actions };
 }
@@ -69,7 +71,7 @@ export function bindProfileView() {
     const avatar = event.target.closest('#profile-avatar');
     if (avatar && avatar.closest('.profile-avatar-editable')) {
       event.preventDefault();
-      await uploadLavunioSkin();
+      openSkinModal(S.playerProfile);
       return;
     }
     const teamButton = event.target.closest('[data-profile-team]');
@@ -139,7 +141,7 @@ export function bindProfileView() {
     const avatar = event.target.closest('#profile-avatar');
     if (!avatar || !avatar.closest('.profile-avatar-editable')) return;
     event.preventDefault();
-    uploadLavunioSkin();
+    openSkinModal(S.playerProfile);
   });
   els.profileContent.addEventListener('submit', async (event) => {
     const form = event.target.closest('[data-profile-form]');
@@ -162,6 +164,52 @@ export function bindProfileView() {
     }
     if (form.dataset.profileForm === 'edit') await savePlayerProfile();
   });
+  const upload = $('skin-modal-upload');
+  if (upload) upload.onclick = () => uploadLavunioSkin();
+  const remove = $('skin-modal-delete');
+  if (remove) remove.onclick = () => deleteLavunioSkin();
+  const model = $('skin-modal-model');
+  if (model) model.onchange = () => setSkinModel(model.value);
+}
+
+function openSkinModal(profile) {
+  skinModalProfile = profile || S.playerProfile || (S.lavunio && S.lavunio.user) || null;
+  if (!skinModalProfile) return;
+  renderSkinModal();
+  profileActions.openModal('modal-skin');
+}
+
+function renderSkinModal() {
+  const profile = skinModalProfile || (S.lavunio && S.lavunio.user);
+  const preview = $('skin-modal-preview');
+  if (!profile || !preview) return;
+  preview.innerHTML = profile.skinUrl
+    ? `<img src="${escapeHtml(profile.skinUrl)}" alt="${escapeHtml(tKey("skin"))}">`
+    : `<span class="skin-empty">${tKey("no.skin")}</span>`;
+  const model = $('skin-modal-model');
+  if (model) model.value = profile.skinModel === 'slim' ? 'slim' : 'classic';
+  const remove = $('skin-modal-delete');
+  if (remove) remove.hidden = !profile.skinUrl;
+}
+
+async function setSkinModel(model) {
+  if (!lavunioLoggedIn() || !api.setSkinModel) return;
+  const select = $('skin-modal-model');
+  if (select) select.disabled = true;
+  try {
+    S.lavunio = await api.setSkinModel(model);
+    skinModalProfile = S.lavunio && S.lavunio.user ? S.lavunio.user : skinModalProfile;
+    renderSkinModal();
+    profileActions.renderLavunioPane();
+    profileActions.renderAccountChip();
+    toast(tKey("skin.model.updated"), 'ok');
+    if (S.section === 'profile' && S.profileUsername) await openProfile(S.profileUsername);
+  } catch (err) {
+    toast(tKey("failed.to.save.profile") + " " + err, 'error');
+    if (select) select.value = (skinModalProfile && skinModalProfile.skinModel) || 'classic';
+  } finally {
+    if (select) select.disabled = false;
+  }
 }
 
 export async function savePlayerProfile() {
@@ -221,13 +269,15 @@ export async function uploadLavunioSkin() {
   const accountOpen = $('modal-account') && !$('modal-account').hidden;
   const modelEl = accountOpen
     ? $('lavunio-skin-model')
-    : ($('profile-skin-model') || $('lavunio-skin-model'));
-  const buttons = [$('profile-save'), $('lavunio-skin-upload')].filter(Boolean);
+    : ($('skin-modal-model') || $('lavunio-skin-model'));
+  const buttons = [$('profile-save'), $('lavunio-skin-upload'), $('skin-modal-upload')].filter(Boolean);
   buttons.forEach((button) => { button.disabled = true; });
   try {
     S.lavunio = await api.uploadSkin(path, modelEl ? modelEl.value : 'classic');
+    skinModalProfile = S.lavunio && S.lavunio.user ? S.lavunio.user : skinModalProfile;
     profileActions.renderLavunioPane();
     profileActions.renderAccountChip();
+    renderSkinModal();
     toast(tKey("skin.updated"), 'ok');
     if (S.section === 'profile' && S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {
@@ -241,8 +291,10 @@ export async function deleteLavunioSkin() {
   if (!lavunioLoggedIn()) return;
   try {
     S.lavunio = await api.deleteSkin();
+    skinModalProfile = S.lavunio && S.lavunio.user ? S.lavunio.user : skinModalProfile;
     profileActions.renderLavunioPane();
     profileActions.renderAccountChip();
+    renderSkinModal();
     toast(tKey("skin.deleted"), 'ok');
     if (S.section === 'profile' && S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {

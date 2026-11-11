@@ -89,30 +89,6 @@ export function profileRequestsHtml() {
   `;
 }
 
-export function profileSkinHtml(profile) {
-  return `
-    <div class="profile-skin">
-      <div class="skin-preview">
-        ${profile.skinUrl ? `<img id="profile-skin-img" src="${escapeHtml(profile.skinUrl)}" alt="${tKey("skin")}">` : ''}
-        ${profile.skinUrl ? '' : '<span class="skin-empty">' + tKey("no.skin") + '</span>'}
-      </div>
-      <div class="skin-controls">
-        <div class="field">
-          <label for="profile-skin-model">${tKey("skin.model")}</label>
-          <select id="profile-skin-model">
-            <option value="classic"${profile.skinModel === 'slim' ? '' : ' selected'}>Classic</option>
-            <option value="slim"${profile.skinModel === 'slim' ? ' selected' : ''}>Slim</option>
-          </select>
-        </div>
-        <div class="skin-actions">
-          <button class="btn btn-ghost" type="button" data-profile-action="skin-upload">${tKey("upload.skin")}</button>
-          <button class="btn btn-ghost" type="button" data-profile-action="skin-delete" ${profile.skinUrl ? '' : 'hidden'}>${tKey("delete.skin")}</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 export function profileEditHtml(profile) {
   return `
     <section class="profile-panel" id="profile-edit">
@@ -135,7 +111,6 @@ export function profileEditHtml(profile) {
         <div class="form-error" id="profile-error" hidden></div>
         <button class="btn btn-primary" id="profile-save" type="submit">${tKey("save")}</button>
       </form>
-      ${profileSkinHtml(profile)}
       <div class="profile-account-row">
         <button class="btn btn-ghost" type="button" data-profile-action="settings">${tKey("launcher.settings")}</button>
         <button class="btn btn-ghost" type="button" data-profile-action="logout">${tKey("sign.out.of.lavunio")}</button>

@@ -126,6 +126,7 @@ fn main() {
             commands::lavunio_game_session,
             commands::lavunio_pick_skin,
             commands::lavunio_upload_skin,
+            commands::lavunio_set_skin_model,
             commands::lavunio_delete_skin,
             commands::publisher_my_modes,
             commands::publisher_create_mode,

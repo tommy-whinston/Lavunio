@@ -567,11 +567,32 @@ async function checkProfileEditor(cdp) {
     throw new Error('skin avatar hint missing: ' + JSON.stringify(avatar));
   }
   await cdp.evaluate(`document.getElementById('profile-avatar').click()`);
+  await sleep(250);
+  const skinModal = await cdp.evaluate(`({
+    visible: !document.getElementById('modal-skin').hidden,
+    uploadButton: !!document.getElementById('skin-modal-upload'),
+    model: document.getElementById('skin-modal-model') ? document.getElementById('skin-modal-model').value : null
+  })`);
+  if (!skinModal.visible || !skinModal.uploadButton || !skinModal.model) {
+    throw new Error('skin modal did not open: ' + JSON.stringify(skinModal));
+  }
+  await cdp.evaluate(`document.getElementById('skin-modal-upload').click()`);
   await sleep(400);
   const skin = await cdp.evaluate(`window.__skinUploaded || null`);
   if (!skin || !skin.path) {
     throw new Error('skin upload was not triggered: ' + JSON.stringify(skin));
   }
+  await cdp.evaluate(`(() => {
+    const select = document.getElementById('skin-modal-model');
+    select.value = 'slim';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await sleep(350);
+  const skinModel = await cdp.evaluate(`window.__skinModel || null`);
+  if (skinModel !== 'slim') {
+    throw new Error('skin model was not updated: ' + JSON.stringify(skinModel));
+  }
+  await cdp.evaluate(`window.LavunioDebug.closeModals()`);
 }
 
 async function runNotifications(cdp) {

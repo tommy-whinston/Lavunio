@@ -806,6 +806,29 @@
     </div>
   </div>
 
+  <!-- Скин -->
+  <div class="modal-overlay" id="modal-skin" hidden role="dialog" aria-modal="true" aria-labelledby="skin-modal-title">
+    <div class="modal modal-skin">
+      <div class="modal-head">
+        <h2 id="skin-modal-title" data-i18n="skin">Скин</h2>
+        <button class="modal-close" data-close="modal-skin">✕</button>
+      </div>
+      <div class="skin-modal-preview" id="skin-modal-preview"></div>
+      <div class="field">
+        <label for="skin-modal-model" data-i18n="skin.model">Модель скина</label>
+        <select id="skin-modal-model">
+          <option value="classic">Classic</option>
+          <option value="slim">Slim</option>
+        </select>
+        <div class="hint" data-i18n="skin.model.hint">Модель применяется сразу.</div>
+      </div>
+      <div class="skin-modal-actions">
+        <button class="btn btn-primary" id="skin-modal-upload" type="button" data-i18n="choose.skin">Выбрать скин</button>
+        <button class="btn btn-ghost" id="skin-modal-delete" type="button" data-i18n="delete.skin">Удалить скин</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Команда -->
   <div class="modal-overlay" id="modal-team" hidden role="dialog" aria-modal="true" aria-labelledby="team-modal-title">
     <div class="modal">
