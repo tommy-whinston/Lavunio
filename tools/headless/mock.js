@@ -163,6 +163,15 @@ const base = {
     window.__profileUpdates.push([username, displayName, bio]);
     return { ok: true, status: 'updated' };
   },
+  pickSkin: async () => 'C:\\test-skin.png',
+  uploadSkin: async (path, model) => {
+    window.__skinUploaded = { path, model };
+    return {
+      configured: true,
+      hasSession: true,
+      user: { ...(data.user || data.profile), skinUrl: 'https://example.com/skin.png', skinModel: model }
+    };
+  },
   publisherMyModes: async () => data.user ? [data.mode] : [],
   adminQueue: async () => [data.queue], adminModes: async () => [data.moderationMode],
   adminReports: async () => [data.report], adminReviews: async () => [data.review],

@@ -66,6 +66,12 @@ export function bindProfileView() {
   if (!els.profileContent || els.profileContent.dataset.bound) return;
   els.profileContent.dataset.bound = '1';
   els.profileContent.addEventListener('click', async (event) => {
+    const avatar = event.target.closest('#profile-avatar');
+    if (avatar && avatar.closest('.profile-avatar-editable')) {
+      event.preventDefault();
+      await uploadLavunioSkin();
+      return;
+    }
     const teamButton = event.target.closest('[data-profile-team]');
     if (teamButton) {
       profileActions.openTeamPage({ slug: teamButton.dataset.profileTeam, title: teamButton.dataset.profileTeamTitle || teamButton.dataset.profileTeam });
@@ -127,6 +133,13 @@ export function bindProfileView() {
   els.profileContent.addEventListener('input', (event) => {
     const input = event.target.closest('#profile-username');
     if (input) normalizeIdInput(input);
+  });
+  els.profileContent.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const avatar = event.target.closest('#profile-avatar');
+    if (!avatar || !avatar.closest('.profile-avatar-editable')) return;
+    event.preventDefault();
+    uploadLavunioSkin();
   });
   els.profileContent.addEventListener('submit', async (event) => {
     const form = event.target.closest('[data-profile-form]');

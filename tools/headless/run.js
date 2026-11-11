@@ -552,6 +552,26 @@ async function checkProfileEditor(cdp) {
     }
   }
   await cdp.send('Emulation.clearDeviceMetricsOverride');
+
+  await cdp.evaluate(`window.LavunioDebug.openProfile('steve')`);
+  await sleep(250);
+  const avatar = await cdp.evaluate(`(() => {
+    const element = document.getElementById('profile-avatar');
+    const hint = document.querySelector('.profile-avatar-hint');
+    return {
+      role: element ? element.getAttribute('role') : null,
+      hint: hint ? hint.textContent : ''
+    };
+  })()`);
+  if (avatar.role !== 'button' || !avatar.hint) {
+    throw new Error('skin avatar hint missing: ' + JSON.stringify(avatar));
+  }
+  await cdp.evaluate(`document.getElementById('profile-avatar').click()`);
+  await sleep(400);
+  const skin = await cdp.evaluate(`window.__skinUploaded || null`);
+  if (!skin || !skin.path) {
+    throw new Error('skin upload was not triggered: ' + JSON.stringify(skin));
+  }
 }
 
 async function runNotifications(cdp) {

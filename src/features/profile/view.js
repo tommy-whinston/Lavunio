@@ -177,7 +177,10 @@ export function renderProfile(profile) {
 
   els.profileContent.innerHTML = `
     <div class="profile-hero">
-      <div class="profile-avatar-wrap"><span class="avatar" id="profile-avatar"></span></div>
+      <div class="profile-avatar-wrap${own ? ' profile-avatar-editable' : ''}">
+        <span class="avatar" id="profile-avatar"${own ? ` role="button" tabindex="0" title="${escapeHtml(tKey("profile.avatar.hint"))}"` : ''}></span>
+        ${own ? `<div class="profile-avatar-hint">${tKey("profile.avatar.hint")}</div>` : ''}
+      </div>
       <div class="profile-hero-main">
         <h1${nameClass ? ` class="${nameClass}"` : ''}>${escapeHtml(display)}</h1>
         <div class="profile-handle">@${escapeHtml(profile.username)}</div>

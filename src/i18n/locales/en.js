@@ -1059,4 +1059,5 @@ export const EN = {
   "login.code.sent": "New sign-in location: code sent to your email",
   "login.code.sent.to": "Code sent to {0}. Check your email.",
   "invalid.login.code": "Invalid or expired sign-in code",
+  "profile.avatar.hint": "Click the avatar to change your skin",
 };
