@@ -267,6 +267,14 @@ function applyLavunioSession(status, register) {
     $('modal-account').hidden = false;
     $('lavunio-verify-code').value = '';
     $('lavunio-verify-code').focus();
+    if (!register) {
+      api.lavunioResendVerification()
+        .then((next) => {
+          S.lavunio = next;
+          renderLavunioPane();
+        })
+        .catch(() => {});
+    }
   } else if (user) {
     $('modal-account').hidden = true;
   }
