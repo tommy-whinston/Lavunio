@@ -45,8 +45,8 @@
     // Lavunio ID
     lavunioStatus: () => invoke("lavunio_status"),
     lavunioRefreshProfile: () => invoke("lavunio_refresh_profile"),
-    lavunioRegister: (email, password, username, acceptTerms) =>
-      invoke("lavunio_register", { email, password, username, acceptTerms }),
+    lavunioRegister: (email, password, username, displayName, acceptTerms) =>
+      invoke("lavunio_register", { email, password, username, displayName: displayName ?? null, acceptTerms }),
     lavunioLogin: (email, password) => invoke("lavunio_login", { email, password }),
     lavunioLogout: () => invoke("lavunio_logout"),
     lavunioResendVerification: () => invoke("lavunio_resend_verification"),
@@ -77,7 +77,7 @@
     teamProfile: (slug) => invoke("team_profile", { slug }),
     teamProfilePublic: (slug) => invoke("team_profile_public", { slug }),
     playerProfile: (username) => invoke("player_profile", { username }),
-    playerUpdateProfile: (displayName, bio) => invoke("player_update_profile", { displayName, bio }),
+    playerUpdateProfile: (username, displayName, bio) => invoke("player_update_profile", { username, displayName, bio }),
     presenceHeartbeat: () => invoke("presence_heartbeat"),
     friendsList: () => invoke("friends_list"),
     friendRequests: () => invoke("friend_requests"),

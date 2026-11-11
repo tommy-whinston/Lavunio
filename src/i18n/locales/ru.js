@@ -1046,4 +1046,8 @@ export const RU = {
   "rating.5.stars": "5 звёзд",
   "size.placeholder": "58 МБ",
   "load.more": "Показать ещё",
+  "profile.id": "ID профиля",
+  "profile.id.hint": "3–20 символов: латиница и цифры. По нему тебя ищут.",
+  "profile.id.invalid": "ID: 3–20 символов, только латиница и цифры",
+  "display.name.hint": "До 16 символов.",
 };

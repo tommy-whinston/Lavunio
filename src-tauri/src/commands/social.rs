@@ -53,6 +53,7 @@ pub async fn player_profile(username: String) -> Result<Value, String> {
 #[tauri::command]
 pub async fn player_update_profile(
     state: State<'_, AppState>,
+    username: String,
     display_name: String,
     bio: String,
 ) -> Result<Value, String> {
@@ -60,7 +61,7 @@ pub async fn player_update_profile(
         state.inner(),
         "PUT",
         "/v1/me/profile".to_string(),
-        Some(json!({ "displayName": display_name, "bio": bio })),
+        Some(json!({ "username": username, "displayName": display_name, "bio": bio })),
     )
     .await
 }

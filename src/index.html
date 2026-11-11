@@ -730,8 +730,14 @@
             <input id="lavunio-password" type="password" autocomplete="current-password" placeholder="Минимум 8 символов" data-i18n-placeholder="at.least.8.characters">
           </div>
           <div class="field" id="lavunio-username-field" hidden>
-            <label for="lavunio-username" data-i18n="username">Имя пользователя</label>
-            <input id="lavunio-username" type="text" autocomplete="username" placeholder="steve">
+            <label for="lavunio-username" data-i18n="profile.id">ID профиля</label>
+            <input id="lavunio-username" type="text" autocomplete="username" maxlength="20" pattern="[a-z0-9]{3,20}" spellcheck="false" autocapitalize="none" placeholder="tommywhinston">
+            <div class="hint" data-i18n="profile.id.hint">3–20 символов: латиница и цифры. По нему тебя ищут.</div>
+          </div>
+          <div class="field" id="lavunio-display-name-field" hidden>
+            <label for="lavunio-display-name" data-i18n="display.name">Отображаемое имя</label>
+            <input id="lavunio-display-name" type="text" maxlength="16" spellcheck="false" placeholder="Tommy_Whinston">
+            <div class="hint" data-i18n="display.name.hint">До 16 символов.</div>
           </div>
           <div class="consent-row" id="lavunio-consent-row" hidden>
             <input id="lavunio-consent" type="checkbox">

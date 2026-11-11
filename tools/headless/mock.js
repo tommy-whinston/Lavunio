@@ -148,6 +148,11 @@ const base = {
   teamProfile: async () => ({ members: [{ userId: 'u1', username: 'alex', displayName: 'Alex', role: 'member' }] }),
   teamProfilePublic: async () => ({ team: data.team, stats: { modes: 1, downloads: 5, installs: 3, uniqueUsers: 2, published: 1 }, members: [{ username: 'alex', displayName: 'Alex', role: 'member' }], modes: [data.mode], news: [{ title: 'Team news', createdAt: now }], followers: 7 }),
   playerProfile: async () => data.profile,
+  playerUpdateProfile: async (username, displayName, bio) => {
+    window.__profileUpdates = window.__profileUpdates || [];
+    window.__profileUpdates.push([username, displayName, bio]);
+    return { ok: true, status: 'updated' };
+  },
   publisherMyModes: async () => data.user ? [data.mode] : [],
   adminQueue: async () => [data.queue], adminModes: async () => [data.moderationMode],
   adminReports: async () => [data.report], adminReviews: async () => [data.review],

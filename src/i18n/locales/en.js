@@ -1046,4 +1046,8 @@ export const EN = {
   "rating.5.stars": "5 stars",
   "size.placeholder": "58 MB",
   "load.more": "Load more",
+  "profile.id": "Profile ID",
+  "profile.id.hint": "3–20 characters: Latin letters and digits. Others can find you by it.",
+  "profile.id.invalid": "ID: 3–20 characters, Latin letters and digits only",
+  "display.name.hint": "Up to 16 characters.",
 };

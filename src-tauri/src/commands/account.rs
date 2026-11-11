@@ -41,6 +41,7 @@ pub async fn lavunio_register(
     email: String,
     password: String,
     username: Option<String>,
+    display_name: Option<String>,
     accept_terms: Option<bool>,
 ) -> Result<Value, String> {
     let api = lavunio_api()?;
@@ -48,6 +49,7 @@ pub async fn lavunio_register(
         "email": email,
         "password": password,
         "username": username,
+        "displayName": display_name,
         "acceptTerms": accept_terms.unwrap_or(true),
     });
     let data = blocking(move || {

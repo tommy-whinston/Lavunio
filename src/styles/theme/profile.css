@@ -39,12 +39,16 @@
 .profile-hero-main h1 {
   margin: 0 0 5px;
   font-family: 'Unbounded', sans-serif;
-  font-size: clamp(26px, 3.2vw, 40px);
+  font-size: clamp(24px, 2.8vw, 36px);
   font-weight: 800;
   letter-spacing: -1.1px;
   line-height: 1.06;
   text-transform: uppercase;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .profile-handle { color: #b4aaa2; font-size: 12px; overflow-wrap: anywhere; }
 .profile-bio { max-width: 680px; margin-top: 10px; color: #d4ccc5; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }

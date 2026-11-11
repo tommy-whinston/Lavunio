@@ -4,7 +4,7 @@ import { tKey } from '../../i18n/index.js';
 
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
-import { $, escapeHtml } from '../../core/dom.js';
+import { $, escapeHtml, normalizeIdInput } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { lavunioLoggedIn } from '../../core/lavunio.js';
 import { isOwnUsername } from '../../core/social.js';
@@ -124,6 +124,10 @@ export function bindProfileView() {
       await deleteLavunioSkin();
     }
   });
+  els.profileContent.addEventListener('input', (event) => {
+    const input = event.target.closest('#profile-username');
+    if (input) normalizeIdInput(input);
+  });
   els.profileContent.addEventListener('submit', async (event) => {
     const form = event.target.closest('[data-profile-form]');
     if (!form) return;
@@ -148,12 +152,20 @@ export function bindProfileView() {
 }
 
 export async function savePlayerProfile() {
+  const username = $('profile-username') ? $('profile-username').value.trim().toLowerCase() : '';
   const displayName = $('profile-display-name') ? $('profile-display-name').value.trim() : '';
   const bio = $('profile-bio') ? $('profile-bio').value.trim() : '';
   const error = $('profile-error');
-  if (!displayName) {
+  if (!/^[a-z0-9]{3,20}$/.test(username)) {
     if (error) {
-      error.textContent = tKey("enter.a.display.name");
+      error.textContent = tKey("profile.id.invalid");
+      error.hidden = false;
+    }
+    return;
+  }
+  if (!displayName || displayName.length > 16) {
+    if (error) {
+      error.textContent = tKey("display.name.hint");
       error.hidden = false;
     }
     return;
@@ -162,12 +174,14 @@ export async function savePlayerProfile() {
   if (button) button.disabled = true;
   if (error) error.hidden = true;
   try {
-    await api.playerUpdateProfile(displayName, bio);
+    await api.playerUpdateProfile(username, displayName, bio);
     if (api.lavunioRefreshProfile) {
       try { S.lavunio = await api.lavunioRefreshProfile(); } catch (_) {}
     }
+    if (S.lavunio && S.lavunio.user) S.profileUsername = S.lavunio.user.username;
     profileActions.renderAccountChip();
     profileActions.renderLavunioPane();
+    profileActions.loadFriends(true).catch(() => {});
     toast(tKey("profile.saved"), 'ok');
     if (S.profileUsername) await openProfile(S.profileUsername);
   } catch (err) {

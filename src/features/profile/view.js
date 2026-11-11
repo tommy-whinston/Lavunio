@@ -119,8 +119,14 @@ export function profileEditHtml(profile) {
       <h2>${tKey("profile.settings")}</h2>
       <form class="profile-edit" data-profile-form="edit" autocomplete="off">
         <div class="field">
+          <label for="profile-username">${tKey("profile.id")}</label>
+          <input id="profile-username" type="text" maxlength="20" pattern="[a-z0-9]{3,20}" spellcheck="false" autocapitalize="none" value="${escapeHtml(profile.username || '')}">
+          <div class="hint">${tKey("profile.id.hint")}</div>
+        </div>
+        <div class="field">
           <label for="profile-display-name">${tKey("display.name")}</label>
-          <input id="profile-display-name" type="text" maxlength="40" value="${escapeHtml(profile.displayName || profile.username)}">
+          <input id="profile-display-name" type="text" maxlength="16" spellcheck="false" value="${escapeHtml(profile.displayName || profile.username)}">
+          <div class="hint">${tKey("display.name.hint")}</div>
         </div>
         <div class="field">
           <label for="profile-bio">${tKey("about")}</label>

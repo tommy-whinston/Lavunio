@@ -2,7 +2,7 @@
 
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
-import { $ } from '../../core/dom.js';
+import { $, normalizeIdInput } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { lavunioName, applyLavunioAvatar } from '../../core/lavunio.js';
 import { tKey } from '../../i18n/index.js';
@@ -51,6 +51,8 @@ export function bindAccountModal() {
     renderLavunioPane();
     $('lavunio-email').focus();
   };
+  const usernameInput = $('lavunio-username');
+  if (usernameInput) usernameInput.addEventListener('input', () => normalizeIdInput(usernameInput));
   $('lavunio-logout').onclick = () => logoutLavunio();
   $('lavunio-profile').onclick = () => {
     const user = S.lavunio && S.lavunio.user;
@@ -141,6 +143,7 @@ export function renderLavunioPane() {
   } else {
     const register = !!S.lavunioRegisterMode;
     $('lavunio-username-field').hidden = !register;
+    $('lavunio-display-name-field').hidden = !register;
     if (els.consentRow) els.consentRow.hidden = !register;
     $('lavunio-password').autocomplete = register ? 'new-password' : 'current-password';
     $('lavunio-submit').textContent = register ? tKey("create.account") : tKey("sign.in");
@@ -156,7 +159,8 @@ async function submitLavunioForm() {
   const error = $('lavunio-error');
   const email = $('lavunio-email').value.trim();
   const password = $('lavunio-password').value;
-  const username = $('lavunio-username').value.trim();
+  const username = $('lavunio-username').value.trim().toLowerCase();
+  const displayName = $('lavunio-display-name').value.trim();
   const register = !!S.lavunioRegisterMode;
 
   error.hidden = true;
@@ -165,8 +169,13 @@ async function submitLavunioForm() {
     error.hidden = false;
     return;
   }
-  if (register && !username) {
-    error.textContent = tKey("choose.a.username");
+  if (register && !/^[a-z0-9]{3,20}$/.test(username)) {
+    error.textContent = tKey("profile.id.invalid");
+    error.hidden = false;
+    return;
+  }
+  if (register && displayName.length > 16) {
+    error.textContent = tKey("display.name.hint");
     error.hidden = false;
     return;
   }
@@ -187,7 +196,7 @@ async function submitLavunioForm() {
   button.textContent = register ? tKey("creating") : tKey("signing.in");
   try {
     const status = register
-      ? await api.lavunioRegister(email, password, username || null, !!(els.consent && els.consent.checked))
+      ? await api.lavunioRegister(email, password, username || null, displayName || null, !!(els.consent && els.consent.checked))
       : await api.lavunioLogin(email, password);
     S.lavunio = status;
     $('lavunio-password').value = '';
