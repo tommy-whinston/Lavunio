@@ -83,9 +83,7 @@ pub fn disk_info(state: State<'_, AppState>, path: Option<String>) -> Value {
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| store.settings.dir.clone());
-    let normalized = target
-        .trim_start_matches("\\\\?\\")
-        .to_lowercase();
+    let normalized = target.trim_start_matches("\\\\?\\").to_lowercase();
     let disks = sysinfo::Disks::new_with_refreshed_list();
     let disk = disks
         .iter()
@@ -191,4 +189,3 @@ pub fn app_open_logs() -> Result<(), String> {
 pub fn app_open_folder() -> Result<(), String> {
     open_path(&crate::store::app_data_dir())
 }
-

@@ -431,7 +431,6 @@ async function checkAuthCodes(cdp) {
 
   await cdp.evaluate(`(() => {
     window.__loginChallenge = false;
-    window.__unverifiedRegister = true;
     const S = window.LavunioDebug.S;
     S.lavunio = { configured: true, hasSession: false, user: null };
     S.lavunioRegisterMode = true;
@@ -450,10 +449,12 @@ async function checkAuthCodes(cdp) {
   await sleep(350);
   const registration = await cdp.evaluate(`({
     visible: !document.getElementById('lavunio-verify').hidden,
-    code: !!document.getElementById('lavunio-verify-code')
+    code: !!document.getElementById('lavunio-verify-code'),
+    formHidden: document.getElementById('lavunio-form').hidden,
+    user: window.LavunioDebug.S.lavunio && window.LavunioDebug.S.lavunio.user
   })`);
-  if (!registration.visible || !registration.code) {
-    throw new Error('email code prompt not shown: ' + JSON.stringify(registration));
+  if (!registration.visible || !registration.code || !registration.formHidden || registration.user) {
+    throw new Error('email code prompt not shown before login: ' + JSON.stringify(registration));
   }
   await cdp.evaluate(`(() => {
     document.getElementById('lavunio-verify-code').value = '123456';
@@ -462,7 +463,39 @@ async function checkAuthCodes(cdp) {
   await sleep(300);
   const verified = await cdp.evaluate(`!!(window.LavunioDebug.S.lavunio && window.LavunioDebug.S.lavunio.user && window.LavunioDebug.S.lavunio.user.emailVerified)`);
   if (!verified) throw new Error('email code did not verify');
-  await cdp.evaluate(`window.__unverifiedRegister = false; window.LavunioDebug.closeModals()`);
+
+  await cdp.evaluate(`(() => {
+    window.LavunioDebug.closeModals();
+    window.__loginUnverified = true;
+    const S = window.LavunioDebug.S;
+    S.lavunio = { configured: true, hasSession: false, user: null };
+    S.lavunioRegisterMode = false;
+    window.LavunioDebug.openModal('modal-account');
+    return import('/features/account/index.js').then((m) => m.renderLavunioPane());
+  })()`);
+  await sleep(200);
+  await cdp.evaluate(`(() => {
+    document.getElementById('lavunio-email').value = 'steve@example.com';
+    document.getElementById('lavunio-password').value = 'password 123';
+    document.getElementById('lavunio-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  })()`);
+  await sleep(250);
+  const loginPending = await cdp.evaluate(`({
+    visible: !document.getElementById('lavunio-verify').hidden,
+    formHidden: document.getElementById('lavunio-form').hidden,
+    user: window.LavunioDebug.S.lavunio && window.LavunioDebug.S.lavunio.user
+  })`);
+  if (!loginPending.visible || !loginPending.formHidden || loginPending.user) {
+    throw new Error('unverified login allowed before code: ' + JSON.stringify(loginPending));
+  }
+  await cdp.evaluate(`(() => {
+    document.getElementById('lavunio-verify-code').value = '123456';
+    document.getElementById('lavunio-verify-btn').click();
+  })()`);
+  await sleep(300);
+  const loginVerified = await cdp.evaluate(`!!(window.LavunioDebug.S.lavunio && window.LavunioDebug.S.lavunio.user && window.LavunioDebug.S.lavunio.user.emailVerified)`);
+  if (!loginVerified) throw new Error('unverified login did not complete after code');
+  await cdp.evaluate(`window.__loginUnverified = false; window.LavunioDebug.closeModals()`);
 }
 
 async function checkProfileEditor(cdp) {

@@ -132,16 +132,21 @@ const base = {
   lavunioStatus: async () => ({ configured: true, hasSession: !!data.user, user: data.user }),
   lavunioRefreshProfile: async () => ({ configured: true, hasSession: !!data.user, user: data.user }),
   lavunioLogin: async () => {
+    if (window.__loginUnverified) {
+      return { requiresVerification: true, email: 'steve@example.com' };
+    }
     if (window.__loginChallenge) {
       return { requiresCode: true, challengeId: 'ch1', email: 'steve@example.com' };
     }
     return { configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: true } };
   },
   lavunioVerifyLogin: async () => ({ configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: true } }),
-  lavunioRegister: async () => {
-    const user = data.user || data.profile;
-    return { configured: true, hasSession: true, user: { ...user, emailVerified: !window.__unverifiedRegister } };
+  lavunioRegister: async () => ({ requiresVerification: true, email: 'new@example.com' }),
+  lavunioVerifyRegistration: async (email, code) => {
+    if (code !== '123456') throw new Error('Неверный код');
+    return { configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: true } };
   },
+  lavunioResendRegistration: async () => ({ requiresVerification: true, email: 'new@example.com' }),
   lavunioVerifyEmail: async (code) => ({ configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: code === '123456' } }),
   lavunioLogout: async () => ({ configured: true, hasSession: false, user: null }),
   onGameEvent: async () => {}, presenceHeartbeat: async () => {},

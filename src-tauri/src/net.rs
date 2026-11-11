@@ -382,8 +382,8 @@ pub fn fetch_api_modes(api_base: &str) -> Result<Vec<Mode>, String> {
 
 pub fn fetch_api_catalog(api_base: &str, query: &CatalogQuery) -> Result<CatalogPage, String> {
     let base = format!("{}/v1/catalog", api_base.trim_end_matches('/'));
-    let mut url = Url::parse(&base)
-        .map_err(|error| format!("Некорректный адрес каталога: {error}"))?;
+    let mut url =
+        Url::parse(&base).map_err(|error| format!("Некорректный адрес каталога: {error}"))?;
     let page = query.page.max(1);
     let limit = query.limit.clamp(1, 100);
     {

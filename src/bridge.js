@@ -47,6 +47,8 @@
     lavunioRefreshProfile: () => invoke("lavunio_refresh_profile"),
     lavunioRegister: (email, password, username, displayName, acceptTerms) =>
       invoke("lavunio_register", { email, password, username, displayName: displayName ?? null, acceptTerms }),
+    lavunioVerifyRegistration: (email, code) => invoke("lavunio_verify_registration", { email, code }),
+    lavunioResendRegistration: (email) => invoke("lavunio_resend_registration", { email }),
     lavunioLogin: (email, password) => invoke("lavunio_login", { email, password }),
     lavunioVerifyLogin: (challengeId, code) => invoke("lavunio_verify_login", { challengeId, code }),
     lavunioLogout: () => invoke("lavunio_logout"),

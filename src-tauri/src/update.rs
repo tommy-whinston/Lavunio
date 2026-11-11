@@ -164,7 +164,11 @@ fn portable_url(release: &Value) -> Option<String> {
         .and_then(Value::as_array)
         .and_then(|assets| {
             assets.iter().find_map(|asset| {
-                let name = asset.get("name").and_then(Value::as_str)?.trim().to_lowercase();
+                let name = asset
+                    .get("name")
+                    .and_then(Value::as_str)?
+                    .trim()
+                    .to_lowercase();
                 if name != "lavunio.exe" {
                     return None;
                 }
@@ -223,7 +227,8 @@ fn download_file(
 }
 
 fn validate_portable(path: &PathBuf) -> Result<(), String> {
-    let meta = std::fs::metadata(path).map_err(|e| format!("Не удалось проверить обновление: {e}"))?;
+    let meta =
+        std::fs::metadata(path).map_err(|e| format!("Не удалось проверить обновление: {e}"))?;
     if meta.len() < 1_000_000 {
         return Err("Скачанный файл обновления слишком маленький".to_string());
     }
@@ -410,7 +415,9 @@ mod tests {
         );
         assert!(script.contains("Wait-Process -Id 42"));
         assert!(script.contains("new''s exe.exe"));
-        assert!(script.contains("Start-Process -FilePath 'C:\\Program Files\\Lavunio\\Lavunio.exe'"));
+        assert!(
+            script.contains("Start-Process -FilePath 'C:\\Program Files\\Lavunio\\Lavunio.exe'")
+        );
     }
 
     #[cfg(windows)]
@@ -418,8 +425,8 @@ mod tests {
     fn portable_script_replaces_target_after_process_exit() {
         use std::os::windows::process::CommandExt;
 
-        let base = std::env::temp_dir()
-            .join(format!("lavunio updater test {}", std::process::id()));
+        let base =
+            std::env::temp_dir().join(format!("lavunio updater test {}", std::process::id()));
         let _ = std::fs::remove_dir_all(&base);
         std::fs::create_dir_all(&base).unwrap();
         let source = base.join("new exe.exe");

@@ -1,4 +1,7 @@
-use super::{blocking, lavunio_access_token, lavunio_api, lavunio_status_value, parse_lavunio_session, publisher_request, save_lavunio_session};
+use super::{
+    blocking, lavunio_access_token, lavunio_api, lavunio_status_value, parse_lavunio_session,
+    publisher_request, save_lavunio_session,
+};
 use crate::models::{LavunioSession, LavunioUser};
 use crate::net;
 use crate::state::AppState;
@@ -15,9 +18,15 @@ pub async fn lavunio_status(state: State<'_, AppState>) -> Result<Value, String>
     {
         let _ = lavunio_access_token(state.inner()).await;
         let refreshed = state.store.lock().unwrap().lavunio.clone();
-        return Ok(lavunio_status_value(net::api_base_url().is_some(), &refreshed));
+        return Ok(lavunio_status_value(
+            net::api_base_url().is_some(),
+            &refreshed,
+        ));
     }
-    Ok(lavunio_status_value(net::api_base_url().is_some(), &session))
+    Ok(lavunio_status_value(
+        net::api_base_url().is_some(),
+        &session,
+    ))
 }
 
 #[tauri::command]
@@ -57,31 +66,31 @@ pub async fn lavunio_register(
     })
     .await??;
 
-    let mut session = parse_lavunio_session(&data)?;
-
-    if let Some(token) = data
+    let Some(code) = data
         .get("verificationToken")
         .and_then(Value::as_str)
         .map(str::to_string)
-    {
-        let api = lavunio_api()?;
-        let verified = blocking(move || {
-            net::api_request_json(
-                &api,
-                "POST",
-                "/v1/auth/verify-email",
-                None,
-                Some(json!({ "token": token })),
-            )
-        })
-        .await;
-        if matches!(verified, Ok(Ok(_))) {
-            if let Some(user) = session.user.as_mut() {
-                user.email_verified = true;
-            }
-        }
-    }
+    else {
+        return Ok(data);
+    };
+    let email = data
+        .get("email")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let api = lavunio_api()?;
+    let verified = blocking(move || {
+        net::api_request_json(
+            &api,
+            "POST",
+            "/v1/auth/register/verify",
+            None,
+            Some(json!({ "email": email, "code": code })),
+        )
+    })
+    .await??;
 
+    let session = parse_lavunio_session(&verified)?;
     save_lavunio_session(state.inner(), session.clone())?;
     crate::logging::log(format!(
         "lavunio: registered {}",
@@ -111,6 +120,10 @@ pub async fn lavunio_login(
         .get("requiresCode")
         .and_then(Value::as_bool)
         .unwrap_or(false)
+        || data
+            .get("requiresVerification")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
     {
         return Ok(data);
     }
@@ -151,6 +164,54 @@ pub async fn lavunio_verify_login(
             .unwrap_or("?")
     ));
     Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
+pub async fn lavunio_verify_registration(
+    state: State<'_, AppState>,
+    email: String,
+    code: String,
+) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let payload = json!({ "email": email, "code": code });
+    let data = blocking(move || {
+        net::api_request_json(
+            &api,
+            "POST",
+            "/v1/auth/register/verify",
+            None,
+            Some(payload),
+        )
+    })
+    .await??;
+
+    let session = parse_lavunio_session(&data)?;
+    save_lavunio_session(state.inner(), session.clone())?;
+    crate::logging::log(format!(
+        "lavunio: registered {}",
+        session
+            .user
+            .as_ref()
+            .map(|user| user.username.as_str())
+            .unwrap_or("?")
+    ));
+    Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
+pub async fn lavunio_resend_registration(email: String) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let payload = json!({ "email": email });
+    blocking(move || {
+        net::api_request_json(
+            &api,
+            "POST",
+            "/v1/auth/register/resend",
+            None,
+            Some(payload),
+        )
+    })
+    .await?
 }
 
 #[tauri::command]

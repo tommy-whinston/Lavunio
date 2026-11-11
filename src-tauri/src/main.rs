@@ -118,6 +118,8 @@ fn main() {
             commands::lavunio_status,
             commands::lavunio_refresh_profile,
             commands::lavunio_register,
+            commands::lavunio_verify_registration,
+            commands::lavunio_resend_registration,
             commands::lavunio_login,
             commands::lavunio_verify_login,
             commands::lavunio_logout,

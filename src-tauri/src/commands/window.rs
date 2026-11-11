@@ -106,7 +106,6 @@ pub fn win_ready(window: Window, state: State<'_, AppState>) -> Result<(), Strin
     Ok(())
 }
 
-
 pub fn save_window_size_for_event(window: &tauri::WebviewWindow, app: &AppHandle) {
     if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
         return;

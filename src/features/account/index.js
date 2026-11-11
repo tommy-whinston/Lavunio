@@ -67,6 +67,12 @@ export function bindAccountModal() {
     S.loginChallenge = null;
     renderLavunioPane();
   };
+  $('lavunio-verify-back').onclick = () => {
+    const pending = S.lavunioPending;
+    S.lavunioPending = null;
+    if (pending) S.lavunioRegisterMode = !!pending.register;
+    renderLavunioPane();
+  };
   const verifyInput = $('lavunio-verify-code');
   if (verifyInput) verifyInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') { event.preventDefault(); confirmLavunioEmail(); }
@@ -110,6 +116,7 @@ export function renderLavunioPane() {
   const available = !!(S.lavunio && S.lavunio.configured);
   const user = S.lavunio && S.lavunio.user;
   const challenge = S.loginChallenge;
+  const pending = S.lavunioPending;
   const form = $('lavunio-form');
   const signed = $('lavunio-signed');
   const current = $('lavunio-current');
@@ -121,11 +128,24 @@ export function renderLavunioPane() {
   if (hint) hint.hidden = available;
   if (current) current.hidden = !user;
   if (challengeBox) challengeBox.hidden = !challenge || !!user;
-  if (form) form.hidden = !!user || !!challenge;
+  if (form) form.hidden = !!user || !!challenge || !!pending;
   if (signed) signed.hidden = !user;
   if (challenge) {
     const text = $('lavunio-login-challenge-text');
     if (text) text.textContent = tKey("login.code.sent.to", [challenge.email || '']);
+  }
+  const verifyBox = $('lavunio-verify');
+  const needsCode = !!pending || !!(user && !user.emailVerified);
+  if (verifyBox) verifyBox.hidden = !needsCode;
+  if (needsCode) {
+    const text = $('lavunio-verify-text');
+    if (text) {
+      text.textContent = pending
+        ? tKey("code.pending.hint", [pending.email || ''])
+        : tKey("email.code.hint");
+    }
+    const back = $('lavunio-verify-back');
+    if (back) back.hidden = !pending;
   }
 
   if (user) {
@@ -148,7 +168,6 @@ export function renderLavunioPane() {
       sub.appendChild(span);
     });
     applyLavunioAvatar($('lavunio-avatar'), user);
-    $('lavunio-verify').hidden = !!user.emailVerified;
     if (user.emailVerified) $('lavunio-verify-code').value = '';
     renderAuthorApply(user);
 
@@ -163,7 +182,6 @@ export function renderLavunioPane() {
     $('lavunio-skin-model').value = user.skinModel || 'classic';
     $('lavunio-skin-delete').hidden = !user.skinUrl;
   } else {
-    $('lavunio-verify').hidden = true;
     const register = !!S.lavunioRegisterMode;
     $('lavunio-username-field').hidden = !register;
     $('lavunio-display-name-field').hidden = !register;
@@ -221,6 +239,17 @@ async function submitLavunioForm() {
     const status = register
       ? await api.lavunioRegister(email, password, username || null, displayName || null, !!(els.consent && els.consent.checked))
       : await api.lavunioLogin(email, password);
+    if (status && status.requiresVerification) {
+      S.lavunioPending = { email: status.email || email, register };
+      S.loginChallenge = null;
+      $('lavunio-password').value = '';
+      renderLavunioPane();
+      toast(tKey("email.code.sent"), 'warn');
+      const codeInput = $('lavunio-verify-code');
+      codeInput.value = '';
+      codeInput.focus();
+      return;
+    }
     if (!register && status && status.requiresCode) {
       S.loginChallenge = { id: status.challengeId, email: status.email || email };
       $('lavunio-password').value = '';
@@ -245,6 +274,7 @@ async function submitLavunioForm() {
 
 function applyLavunioSession(status, register) {
   S.loginChallenge = null;
+  S.lavunioPending = null;
   S.lavunio = status;
   $('lavunio-password').value = '';
   renderLavunioPane();
@@ -290,6 +320,7 @@ export async function logoutLavunio() {
   } catch (_) {}
   S.lavunio = { configured: true, hasSession: false, user: null };
   S.loginChallenge = null;
+  S.lavunioPending = null;
   S.lavunioRegisterMode = false;
   S.reviews = {};
   S.follows = [];
@@ -323,13 +354,21 @@ async function confirmLavunioEmail() {
   const button = $('lavunio-verify-btn');
   button.disabled = true;
   button.textContent = tKey("checking");
+  const pending = S.lavunioPending;
   try {
-    const status = await api.lavunioVerifyEmail(code);
-    S.lavunio = status;
-    input.value = '';
-    renderLavunioPane();
-    renderAccountChip();
-    toast(tKey("email.verified.2"), 'ok');
+    if (pending) {
+      const status = await api.lavunioVerifyRegistration(pending.email, code);
+      S.lavunioPending = null;
+      input.value = '';
+      applyLavunioSession(status, !!pending.register);
+    } else {
+      const status = await api.lavunioVerifyEmail(code);
+      S.lavunio = status;
+      input.value = '';
+      renderLavunioPane();
+      renderAccountChip();
+      toast(tKey("email.verified.2"), 'ok');
+    }
   } catch (err) {
     toast(tKey("invalid.email.code") + " " + err, 'error');
   } finally {
@@ -341,10 +380,15 @@ async function confirmLavunioEmail() {
 async function resendLavunioVerification() {
   const button = $('lavunio-verify-resend');
   button.disabled = true;
+  const pending = S.lavunioPending;
   try {
-    const status = await api.lavunioResendVerification();
-    S.lavunio = status;
-    renderLavunioPane();
+    if (pending) {
+      await api.lavunioResendRegistration(pending.email);
+    } else {
+      const status = await api.lavunioResendVerification();
+      S.lavunio = status;
+      renderLavunioPane();
+    }
     toast(tKey("email.sent.check.your"), 'warn');
     $('lavunio-verify-code').focus();
   } catch (err) {

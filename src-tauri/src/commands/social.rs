@@ -11,7 +11,13 @@ pub async fn teams_mine(state: State<'_, AppState>) -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn team_create(state: State<'_, AppState>, payload: Value) -> Result<Value, String> {
-    publisher_request(state.inner(), "POST", "/v1/teams".to_string(), Some(payload)).await
+    publisher_request(
+        state.inner(),
+        "POST",
+        "/v1/teams".to_string(),
+        Some(payload),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -88,19 +94,13 @@ pub async fn friend_requests(state: State<'_, AppState>) -> Result<Value, String
 }
 
 #[tauri::command]
-pub async fn friend_add(
-    state: State<'_, AppState>,
-    username: String,
-) -> Result<Value, String> {
+pub async fn friend_add(state: State<'_, AppState>, username: String) -> Result<Value, String> {
     let path = format!("/v1/me/friends/{username}");
     publisher_request(state.inner(), "POST", path, None).await
 }
 
 #[tauri::command]
-pub async fn friend_remove(
-    state: State<'_, AppState>,
-    username: String,
-) -> Result<Value, String> {
+pub async fn friend_remove(state: State<'_, AppState>, username: String) -> Result<Value, String> {
     let path = format!("/v1/me/friends/{username}");
     publisher_request(state.inner(), "DELETE", path, None).await
 }
@@ -147,10 +147,7 @@ pub async fn activity_feed() -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn chat_direct(
-    state: State<'_, AppState>,
-    username: String,
-) -> Result<Value, String> {
+pub async fn chat_direct(state: State<'_, AppState>, username: String) -> Result<Value, String> {
     let path = format!("/v1/chat/direct/{username}");
     publisher_request(state.inner(), "GET", path, None).await
 }
@@ -235,13 +232,7 @@ pub async fn team_member_role(
     role: String,
 ) -> Result<Value, String> {
     let path = format!("/v1/teams/{team_id}/members/{user_id}");
-    publisher_request(
-        state.inner(),
-        "PUT",
-        path,
-        Some(json!({ "role": role })),
-    )
-    .await
+    publisher_request(state.inner(), "PUT", path, Some(json!({ "role": role }))).await
 }
 
 #[tauri::command]

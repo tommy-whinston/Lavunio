@@ -17,13 +17,7 @@ pub async fn admin_queue(state: State<'_, AppState>) -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn admin_appeals(state: State<'_, AppState>) -> Result<Value, String> {
-    publisher_request(
-        state.inner(),
-        "GET",
-        "/v1/admin/appeals".to_string(),
-        None,
-    )
-    .await
+    publisher_request(state.inner(), "GET", "/v1/admin/appeals".to_string(), None).await
 }
 
 #[tauri::command]
@@ -96,13 +90,7 @@ pub async fn admin_reject_author_application(
     note: String,
 ) -> Result<Value, String> {
     let path = format!("/v1/admin/author-applications/{application_id}/reject");
-    publisher_request(
-        state.inner(),
-        "POST",
-        path,
-        Some(json!({ "note": note })),
-    )
-    .await
+    publisher_request(state.inner(), "POST", path, Some(json!({ "note": note }))).await
 }
 
 #[tauri::command]

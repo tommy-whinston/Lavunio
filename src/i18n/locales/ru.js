@@ -1064,4 +1064,5 @@ export const RU = {
   "skin.model.hint": "Модель применяется сразу.",
   "skin.model.updated": "Модель скина обновлена",
   "skin.rotate.hint": "Крути мышкой, чтобы повернуть",
+  "code.pending.hint": "Введи код из письма для {0}, чтобы продолжить",
 };

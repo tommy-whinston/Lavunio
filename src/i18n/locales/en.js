@@ -1064,4 +1064,5 @@ export const EN = {
   "skin.model.hint": "The model is applied immediately.",
   "skin.model.updated": "Skin model updated",
   "skin.rotate.hint": "Drag to rotate",
+  "code.pending.hint": "Enter the code sent to {0} to continue",
 };
