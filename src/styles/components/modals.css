@@ -124,8 +124,9 @@ select option { background: var(--panel); color: var(--text); }
 .acc-current .acc-sub .ok { color: var(--ok); }
 .lavunio-verify {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   margin: -6px 0 16px;
   padding: 10px 12px;
   border: 1px solid rgba(245, 166, 35, 0.32);
@@ -134,7 +135,20 @@ select option { background: var(--panel); color: var(--text); }
   color: var(--warn);
   font-size: 12px;
 }
-.lavunio-verify .link-btn { margin-left: auto; color: var(--accent-2); }
+.lavunio-code-row { display: flex; align-items: center; gap: 8px; }
+.lavunio-code-row input {
+  min-width: 0;
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  letter-spacing: 4px;
+  text-align: center;
+}
+.lavunio-verify .link-btn { margin-left: 0; color: var(--accent-2); }
 .avatar.lavunio-avatar {
   display: flex;
   align-items: center;

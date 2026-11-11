@@ -38,6 +38,7 @@ export const S = {
   pendingPlay: null,
   lavunio: null,
   lavunioRegisterMode: false,
+  loginChallenge: null,
   authorApplication: null,
   follows: [],
   feed: [],

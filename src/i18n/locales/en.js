@@ -1050,4 +1050,13 @@ export const EN = {
   "profile.id.hint": "3–20 characters: Latin letters and digits. Others can find you by it.",
   "profile.id.invalid": "ID: 3–20 characters, Latin letters and digits only",
   "display.name.hint": "Up to 16 characters.",
+  "email.code.hint": "Enter the 6-digit code from the email",
+  "resend.code": "Send the code again",
+  "email.code.sent": "Verification code sent to your email",
+  "enter.code.from.email": "Enter the 6-digit code from the email",
+  "invalid.email.code": "Invalid or expired code",
+  "login.code.required": "New sign-in location. Enter the code from the email.",
+  "login.code.sent": "New sign-in location: code sent to your email",
+  "login.code.sent.to": "Code sent to {0}. Check your email.",
+  "invalid.login.code": "Invalid or expired sign-in code",
 };

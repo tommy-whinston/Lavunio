@@ -716,8 +716,21 @@
         </div>
 
         <div class="lavunio-verify" id="lavunio-verify" hidden>
-          <span id="lavunio-verify-text" data-i18n="email.not.verified">Почта не подтверждена</span>
-          <button class="link link-btn" type="button" id="lavunio-verify-btn" data-i18n="confirm">Подтвердить</button>
+          <span id="lavunio-verify-text" data-i18n="email.code.hint">Введи 6-значный код из письма</span>
+          <div class="lavunio-code-row">
+            <input id="lavunio-verify-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+            <button class="link link-btn" type="button" id="lavunio-verify-btn" data-i18n="confirm">Подтвердить</button>
+          </div>
+          <button class="link link-btn" type="button" id="lavunio-verify-resend" data-i18n="resend.code">Отправить код ещё раз</button>
+        </div>
+
+        <div class="lavunio-verify" id="lavunio-login-challenge" hidden>
+          <span id="lavunio-login-challenge-text" data-i18n="login.code.required">Новое место входа. Введи код из письма.</span>
+          <div class="lavunio-code-row">
+            <input id="lavunio-login-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+            <button class="link link-btn" type="button" id="lavunio-login-code-btn" data-i18n="confirm">Подтвердить</button>
+            <button class="link link-btn" type="button" id="lavunio-login-cancel" data-i18n="cancel">Отмена</button>
+          </div>
         </div>
 
         <form class="acc-form" id="lavunio-form" autocomplete="on">

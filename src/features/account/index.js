@@ -60,7 +60,21 @@ export function bindAccountModal() {
     $('modal-account').hidden = true;
     openProfile(user.username);
   };
-  $('lavunio-verify-btn').onclick = () => verifyLavunioEmail();
+  $('lavunio-verify-btn').onclick = () => confirmLavunioEmail();
+  $('lavunio-verify-resend').onclick = () => resendLavunioVerification();
+  $('lavunio-login-code-btn').onclick = () => verifyLavunioLoginCode();
+  $('lavunio-login-cancel').onclick = () => {
+    S.loginChallenge = null;
+    renderLavunioPane();
+  };
+  const verifyInput = $('lavunio-verify-code');
+  if (verifyInput) verifyInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); confirmLavunioEmail(); }
+  });
+  const loginCodeInput = $('lavunio-login-code');
+  if (loginCodeInput) loginCodeInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); verifyLavunioLoginCode(); }
+  });
   $('lavunio-skin-upload').onclick = () => uploadLavunioSkin();
   $('lavunio-skin-delete').onclick = () => deleteLavunioSkin();
   const applyBtn = $('author-apply-btn');
@@ -95,17 +109,24 @@ export function renderAccountModal() {
 export function renderLavunioPane() {
   const available = !!(S.lavunio && S.lavunio.configured);
   const user = S.lavunio && S.lavunio.user;
+  const challenge = S.loginChallenge;
   const form = $('lavunio-form');
   const signed = $('lavunio-signed');
   const current = $('lavunio-current');
   const hint = $('lavunio-api-hint');
   const error = $('lavunio-error');
+  const challengeBox = $('lavunio-login-challenge');
 
   if (!form) return;
   if (hint) hint.hidden = available;
   if (current) current.hidden = !user;
-  if (form) form.hidden = !!user;
+  if (challengeBox) challengeBox.hidden = !challenge || !!user;
+  if (form) form.hidden = !!user || !!challenge;
   if (signed) signed.hidden = !user;
+  if (challenge) {
+    const text = $('lavunio-login-challenge-text');
+    if (text) text.textContent = tKey("login.code.sent.to", [challenge.email || '']);
+  }
 
   if (user) {
     $('lavunio-name').textContent = lavunioName(user);
@@ -128,6 +149,7 @@ export function renderLavunioPane() {
     });
     applyLavunioAvatar($('lavunio-avatar'), user);
     $('lavunio-verify').hidden = !!user.emailVerified;
+    if (user.emailVerified) $('lavunio-verify-code').value = '';
     renderAuthorApply(user);
 
     const skinImg = $('lavunio-skin-img');
@@ -141,6 +163,7 @@ export function renderLavunioPane() {
     $('lavunio-skin-model').value = user.skinModel || 'classic';
     $('lavunio-skin-delete').hidden = !user.skinUrl;
   } else {
+    $('lavunio-verify').hidden = true;
     const register = !!S.lavunioRegisterMode;
     $('lavunio-username-field').hidden = !register;
     $('lavunio-display-name-field').hidden = !register;
@@ -198,25 +221,17 @@ async function submitLavunioForm() {
     const status = register
       ? await api.lavunioRegister(email, password, username || null, displayName || null, !!(els.consent && els.consent.checked))
       : await api.lavunioLogin(email, password);
-    S.lavunio = status;
-    $('lavunio-password').value = '';
-    renderLavunioPane();
-    renderAccountChip();
-    accountActions.loadFollows();
-    accountActions.heartbeatPresence();
-    loadNotifications();
-    accountActions.loadFriends(true);
-    accountActions.updateSocialNav();
-    const name = status && status.user ? lavunioName(status.user) : '';
-    toast(register ? tKey("lavunio.account.created") : tKey("app.welcome.back", [name || tKey("player")]), 'ok');
-    if (status && status.user && !status.user.emailVerified) {
-      toast(tKey("email.not.verified"), 'warn');
+    if (!register && status && status.requiresCode) {
+      S.loginChallenge = { id: status.challengeId, email: status.email || email };
+      $('lavunio-password').value = '';
+      renderLavunioPane();
+      toast(tKey("login.code.sent"), 'warn');
+      const codeInput = $('lavunio-login-code');
+      codeInput.value = '';
+      codeInput.focus();
+      return;
     }
-    if (status && status.user) $('modal-account').hidden = true;
-    if (S.profileAfterLogin && status && status.user) {
-      S.profileAfterLogin = false;
-      openProfile(status.user.username);
-    }
+    applyLavunioSession(status, register);
   } catch (err) {
     error.textContent = String(err || tKey("failed.to.sign.in"));
     error.hidden = false;
@@ -228,11 +243,46 @@ async function submitLavunioForm() {
   }
 }
 
+function applyLavunioSession(status, register) {
+  S.loginChallenge = null;
+  S.lavunio = status;
+  $('lavunio-password').value = '';
+  renderLavunioPane();
+  renderAccountChip();
+  accountActions.loadFollows();
+  accountActions.heartbeatPresence();
+  loadNotifications();
+  accountActions.loadFriends(true);
+  accountActions.updateSocialNav();
+  const user = status && status.user;
+  const needsCode = !!(user && !user.emailVerified);
+  const name = user ? lavunioName(user) : '';
+  toast(
+    needsCode
+      ? tKey("email.code.sent")
+      : (register ? tKey("lavunio.account.created") : tKey("app.welcome.back", [name || tKey("player")])),
+    needsCode ? 'warn' : 'ok'
+  );
+  if (needsCode) {
+    $('modal-account').hidden = false;
+    $('lavunio-verify-code').value = '';
+    $('lavunio-verify-code').focus();
+  } else if (user) {
+    $('modal-account').hidden = true;
+  }
+  if (S.profileAfterLogin && user) {
+    S.profileAfterLogin = false;
+    openProfile(user.username);
+  }
+}
+
 export async function logoutLavunio() {
   try {
     await api.lavunioLogout();
   } catch (_) {}
   S.lavunio = { configured: true, hasSession: false, user: null };
+  S.loginChallenge = null;
+  S.lavunioRegisterMode = false;
   S.reviews = {};
   S.follows = [];
   S.feed = [];
@@ -254,24 +304,68 @@ export async function logoutLavunio() {
   toast(tKey("you.signed.out.of"), 'ok');
 }
 
-async function verifyLavunioEmail() {
+async function confirmLavunioEmail() {
+  const input = $('lavunio-verify-code');
+  const code = input.value.trim();
+  if (!/^\d{6}$/.test(code)) {
+    toast(tKey("enter.code.from.email"), 'error');
+    input.focus();
+    return;
+  }
   const button = $('lavunio-verify-btn');
   button.disabled = true;
-  button.textContent = tKey("sending");
+  button.textContent = tKey("checking");
+  try {
+    const status = await api.lavunioVerifyEmail(code);
+    S.lavunio = status;
+    input.value = '';
+    renderLavunioPane();
+    renderAccountChip();
+    toast(tKey("email.verified.2"), 'ok');
+  } catch (err) {
+    toast(tKey("invalid.email.code") + " " + err, 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = tKey("confirm");
+  }
+}
+
+async function resendLavunioVerification() {
+  const button = $('lavunio-verify-resend');
+  button.disabled = true;
   try {
     const status = await api.lavunioResendVerification();
     S.lavunio = status;
     renderLavunioPane();
-    const verified = !!(status && status.user && status.user.emailVerified);
-    toast(
-      verified ? tKey("email.verified.2") : tKey("email.sent.check.your"),
-      verified ? 'ok' : 'warn'
-    );
+    toast(tKey("email.sent.check.your"), 'warn');
+    $('lavunio-verify-code').focus();
   } catch (err) {
     toast(tKey("failed.to.verify.email") + " " + err, 'error');
   } finally {
     button.disabled = false;
-    button.textContent = tKey("confirm");
+  }
+}
+
+async function verifyLavunioLoginCode() {
+  const challenge = S.loginChallenge;
+  if (!challenge) return;
+  const input = $('lavunio-login-code');
+  const code = input.value.trim();
+  if (!/^\d{6}$/.test(code)) {
+    toast(tKey("enter.code.from.email"), 'error');
+    input.focus();
+    return;
+  }
+  const button = $('lavunio-login-code-btn');
+  button.disabled = true;
+  try {
+    const status = await api.lavunioVerifyLogin(challenge.id, code);
+    input.value = '';
+    applyLavunioSession(status, false);
+  } catch (err) {
+    toast(tKey("invalid.login.code") + " " + err, 'error');
+  } finally {
+    button.disabled = false;
   }
 }
 

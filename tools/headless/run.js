@@ -382,6 +382,89 @@ async function checkRegistrationFields(cdp) {
   await cdp.evaluate(`window.LavunioDebug.S.lavunioRegisterMode = false; window.LavunioDebug.closeModals()`);
 }
 
+async function checkAuthCodes(cdp) {
+  await cdp.evaluate(`window.LavunioDebug.closeModals(); window.__loginChallenge = true; window.LavunioDebug.S.lavunio = { configured: true, hasSession: false, user: null }; window.LavunioDebug.openModal('modal-account')`);
+  await sleep(180);
+  const fields = await cdp.evaluate(`(() => {
+    const login = document.getElementById('lavunio-login-code');
+    const verify = document.getElementById('lavunio-verify-code');
+    return {
+      loginCode: !!login,
+      loginMax: login ? login.maxLength : null,
+      loginMode: login ? login.getAttribute('inputmode') : null,
+      verifyCode: !!verify,
+      verifyMax: verify ? verify.maxLength : null
+    };
+  })()`);
+  if (!fields.loginCode || fields.loginMax !== 6 || fields.loginMode !== 'numeric') {
+    throw new Error('login code field: ' + JSON.stringify(fields));
+  }
+  if (!fields.verifyCode || fields.verifyMax !== 6) {
+    throw new Error('email code field: ' + JSON.stringify(fields));
+  }
+
+  await cdp.evaluate(`(() => {
+    document.getElementById('lavunio-email').value = 'steve@example.com';
+    document.getElementById('lavunio-password').value = 'password 123';
+    document.getElementById('lavunio-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  })()`);
+  await sleep(250);
+  const challenge = await cdp.evaluate(`({
+    visible: !document.getElementById('lavunio-login-challenge').hidden,
+    formHidden: document.getElementById('lavunio-form').hidden
+  })`);
+  if (!challenge.visible || !challenge.formHidden) {
+    throw new Error('login challenge not shown: ' + JSON.stringify(challenge));
+  }
+  await cdp.evaluate(`(() => {
+    document.getElementById('lavunio-login-code').value = '123456';
+    document.getElementById('lavunio-login-code-btn').click();
+  })()`);
+  await sleep(350);
+  const logged = await cdp.evaluate(`({
+    user: window.LavunioDebug.S.lavunio && window.LavunioDebug.S.lavunio.user,
+    modal: document.getElementById('modal-account').hidden
+  })`);
+  if (!logged.user || !logged.modal) {
+    throw new Error('login code did not log in: ' + JSON.stringify(logged));
+  }
+
+  await cdp.evaluate(`(() => {
+    window.__loginChallenge = false;
+    window.__unverifiedRegister = true;
+    const S = window.LavunioDebug.S;
+    S.lavunio = { configured: true, hasSession: false, user: null };
+    S.lavunioRegisterMode = true;
+    window.LavunioDebug.openModal('modal-account');
+    return import('/features/account/index.js').then((m) => m.renderLavunioPane());
+  })()`);
+  await sleep(200);
+  await cdp.evaluate(`(() => {
+    document.getElementById('lavunio-email').value = 'new@example.com';
+    document.getElementById('lavunio-password').value = 'password 123';
+    document.getElementById('lavunio-username').value = 'newplayer';
+    document.getElementById('lavunio-display-name').value = 'New Player';
+    document.getElementById('lavunio-consent').checked = true;
+    document.getElementById('lavunio-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  })()`);
+  await sleep(350);
+  const registration = await cdp.evaluate(`({
+    visible: !document.getElementById('lavunio-verify').hidden,
+    code: !!document.getElementById('lavunio-verify-code')
+  })`);
+  if (!registration.visible || !registration.code) {
+    throw new Error('email code prompt not shown: ' + JSON.stringify(registration));
+  }
+  await cdp.evaluate(`(() => {
+    document.getElementById('lavunio-verify-code').value = '123456';
+    document.getElementById('lavunio-verify-btn').click();
+  })()`);
+  await sleep(300);
+  const verified = await cdp.evaluate(`!!(window.LavunioDebug.S.lavunio && window.LavunioDebug.S.lavunio.user && window.LavunioDebug.S.lavunio.user.emailVerified)`);
+  if (!verified) throw new Error('email code did not verify');
+  await cdp.evaluate(`window.__unverifiedRegister = false; window.LavunioDebug.closeModals()`);
+}
+
 async function checkProfileEditor(cdp) {
   await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.openProfile('steve')`);
   await sleep(300);
@@ -486,6 +569,7 @@ async function runScenario(cdp, scenario) {
   await check(cdp, results, 'settings/account', () => checkStaticPanels(cdp));
   if (scenario === 'guest') {
     await check(cdp, results, 'registration ID/nickname', () => checkRegistrationFields(cdp));
+    await check(cdp, results, 'email/login codes', () => checkAuthCodes(cdp));
   }
   if (scenario === 'player') {
     await check(cdp, results, 'profile ID/nickname', () => checkProfileEditor(cdp));

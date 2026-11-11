@@ -107,10 +107,43 @@ pub async fn lavunio_login(
     })
     .await??;
 
+    if data
+        .get("requiresCode")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        return Ok(data);
+    }
     let session = parse_lavunio_session(&data)?;
     save_lavunio_session(state.inner(), session.clone())?;
     crate::logging::log(format!(
         "lavunio: logged in {}",
+        session
+            .user
+            .as_ref()
+            .map(|user| user.username.as_str())
+            .unwrap_or("?")
+    ));
+    Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
+pub async fn lavunio_verify_login(
+    state: State<'_, AppState>,
+    challenge_id: String,
+    code: String,
+) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let payload = json!({ "challengeId": challenge_id, "code": code });
+    let data = blocking(move || {
+        net::api_request_json(&api, "POST", "/v1/auth/login/verify", None, Some(payload))
+    })
+    .await??;
+
+    let session = parse_lavunio_session(&data)?;
+    save_lavunio_session(state.inner(), session.clone())?;
+    crate::logging::log(format!(
+        "lavunio: logged in from new place {}",
         session
             .user
             .as_ref()
@@ -202,5 +235,26 @@ pub async fn lavunio_resend_verification(state: State<'_, AppState>) -> Result<V
     }
 
     save_lavunio_session(state.inner(), session.clone())?;
+    Ok(lavunio_status_value(true, &session))
+}
+
+#[tauri::command]
+pub async fn lavunio_verify_email(
+    state: State<'_, AppState>,
+    code: String,
+) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let payload = json!({ "token": code });
+    blocking(move || {
+        net::api_request_json(&api, "POST", "/v1/auth/verify-email", None, Some(payload))
+    })
+    .await??;
+
+    let mut session = state.store.lock().unwrap().lavunio.clone();
+    if let Some(user) = session.user.as_mut() {
+        user.email_verified = true;
+    }
+    save_lavunio_session(state.inner(), session.clone())?;
+    crate::logging::log("lavunio: email verified");
     Ok(lavunio_status_value(true, &session))
 }

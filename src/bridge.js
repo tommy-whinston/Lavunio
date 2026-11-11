@@ -48,8 +48,10 @@
     lavunioRegister: (email, password, username, displayName, acceptTerms) =>
       invoke("lavunio_register", { email, password, username, displayName: displayName ?? null, acceptTerms }),
     lavunioLogin: (email, password) => invoke("lavunio_login", { email, password }),
+    lavunioVerifyLogin: (challengeId, code) => invoke("lavunio_verify_login", { challengeId, code }),
     lavunioLogout: () => invoke("lavunio_logout"),
     lavunioResendVerification: () => invoke("lavunio_resend_verification"),
+    lavunioVerifyEmail: (code) => invoke("lavunio_verify_email", { code }),
     lavunioGameSession: () => invoke("lavunio_game_session"),
 
     // скины Lavunio

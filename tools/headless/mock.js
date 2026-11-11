@@ -131,8 +131,18 @@ const base = {
   checkUpdate: async () => { if (data.offline) throw new Error('offline'); return { available: false }; }, onUpdateProgress: async () => () => {},
   lavunioStatus: async () => ({ configured: true, hasSession: !!data.user, user: data.user }),
   lavunioRefreshProfile: async () => ({ configured: true, hasSession: !!data.user, user: data.user }),
-  lavunioLogin: async () => ({ configured: true, hasSession: true, user: data.user || data.profile }),
-  lavunioRegister: async () => ({ configured: true, hasSession: true, user: data.user || data.profile }),
+  lavunioLogin: async () => {
+    if (window.__loginChallenge) {
+      return { requiresCode: true, challengeId: 'ch1', email: 'steve@example.com' };
+    }
+    return { configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: true } };
+  },
+  lavunioVerifyLogin: async () => ({ configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: true } }),
+  lavunioRegister: async () => {
+    const user = data.user || data.profile;
+    return { configured: true, hasSession: true, user: { ...user, emailVerified: !window.__unverifiedRegister } };
+  },
+  lavunioVerifyEmail: async (code) => ({ configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: code === '123456' } }),
   lavunioLogout: async () => ({ configured: true, hasSession: false, user: null }),
   onGameEvent: async () => {}, presenceHeartbeat: async () => {},
   notificationsList: async () => ({ items: data.user ? [{ id: 'n1', kind: 'mode', title: 'Night Demon updated', body: 'Version 1.0.0', createdAt: now, readAt: null, linkType: 'mode', linkId: 'night-demon' }] : [], unread: data.user ? 1 : 0 }),
