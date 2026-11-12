@@ -619,80 +619,137 @@
 
   <!-- Настройки -->
   <div class="modal-overlay" id="modal-settings" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
-    <div class="modal">
+    <div class="modal modal-settings">
       <div class="modal-head">
         <h2 id="settings-title" data-i18n="settings">Настройки</h2>
         <button class="modal-close" data-close="modal-settings">✕</button>
       </div>
 
-      <div id="settings-minecraft" class="settings-pane">
-        <div class="field">
-          <label for="set-lang" data-i18n="language">Язык</label>
-          <select id="set-lang">
-            <option value="ru" data-i18n="russian">Русский</option>
-            <option value="en">English</option>
-          </select>
-          <div class="hint" data-i18n="launcher.interface.language">Язык интерфейса</div>
-        </div>
-
-        <div class="field">
-          <label><span data-i18n="memory">Оперативная память:</span> <output id="ram-out">4 ГБ</output></label>
-          <input type="range" id="set-ram" min="2" max="32" step="1" value="4">
-          <div class="hint" data-i18n="how.much.ram.to">Сколько ОЗУ отдать игре. 4–8 ГБ — нормально для сборок</div>
-        </div>
-
-        <div class="field">
-          <label data-i18n="game.folder">Папка игры</label>
-          <select id="set-dir-select"></select>
-          <div class="row">
-            <input type="text" id="set-dir" readonly>
-            <button class="btn btn-ghost" id="btn-choose-dir" data-i18n="another.folder">Другая папка</button>
-            <button class="btn btn-ghost" id="btn-open-dir" data-i18n="open">Открыть</button>
+      <div class="settings-shell">
+        <nav class="settings-nav">
+          <button class="settings-nav-item active" type="button" data-settings-tab="profile" data-i18n="settings.profile">Профиль</button>
+          <button class="settings-nav-item" type="button" data-settings-tab="launcher" data-i18n="settings.launcher">Лаунчер</button>
+          <button class="settings-nav-item" type="button" data-settings-tab="minecraft" data-i18n="settings.minecraft">Minecraft</button>
+          <div class="settings-nav-spacer"></div>
+          <div class="settings-nav-legal">
+            <a href="#" data-legal="terms" data-i18n="terms">Условия</a>
+            <a href="#" data-legal="privacy" data-i18n="privacy">Конфиденциальность</a>
+            <a href="#" data-legal="rules" data-i18n="rules">Правила</a>
           </div>
-          <div class="hint" id="settings-disk-info">Свободно: — · Библиотека: —</div>
-        </div>
+        </nav>
 
-        <div class="field">
-          <label data-i18n="game.window">Окно игры</label>
-          <div class="row">
-            <input type="number" id="set-width" min="400" max="3840" placeholder="925">
-            <span class="times">×</span>
-            <input type="number" id="set-height" min="300" max="2160" placeholder="530">
-            <label class="check"><input type="checkbox" id="set-fullscreen"> <span data-i18n="fullscreen">Полный экран</span></label>
-          </div>
-        </div>
-
-        <details class="settings-advanced">
-          <summary data-i18n="advanced">Дополнительно</summary>
-          <div class="field">
-            <label data-i18n="java.path">Путь к Java</label>
-            <input type="text" id="set-java" placeholder="Автоматически" data-i18n-placeholder="automatic">
-            <div class="hint" data-i18n="leave.empty.and.the">Оставь пустым — лаунчер найдёт подходящую Java сам. Указывай путь, только если нужно выбрать конкретную версию.</div>
-          </div>
-          <div class="field">
-            <label class="check standalone"><input type="checkbox" id="set-jvm-flags" checked> <span data-i18n="optimized.jvm.flags.g1gc">Оптимизированные JVM-флаги (G1GC)</span></label>
-            <div class="hint" data-i18n="fewer.stutters.and.more">Меньше лагов и стабильнее запуск. Отключи, если Java не стартует или сборка несовместима.</div>
-          </div>
-          <div class="field">
-            <label data-i18n="logs">Логи</label>
-            <div class="row">
-              <input type="text" id="set-logs-path" readonly>
-              <button class="btn btn-ghost" id="btn-open-logs" type="button" data-i18n="open.folder">Открыть папку</button>
+        <div class="settings-body">
+          <section class="settings-section" data-settings-pane="profile">
+            <div class="settings-section-head">
+              <h3 data-i18n="settings.profile">Профиль</h3>
+              <p data-i18n="settings.profile.subtitle">Аккаунт Lavunio, ник, ID и скин.</p>
             </div>
-            <div class="hint" data-i18n="logs.are.stored.locally">Логи хранятся локально и помогают найти причину ошибки.</div>
-          </div>
-        </details>
+            <div id="settings-profile-guest">
+              <div class="settings-empty">
+                <b data-i18n="settings.profile.guest">Войди в Lavunio ID</b>
+                <span data-i18n="settings.profile.guest.hint">Чтобы менять ник, ID и скин, нужен аккаунт Lavunio.</span>
+                <button class="btn btn-primary" id="settings-profile-login" type="button" data-i18n="sign.in">Войти</button>
+              </div>
+            </div>
+            <div id="settings-profile-signed" hidden>
+              <div class="settings-profile-card">
+                <span class="avatar" id="settings-profile-avatar"></span>
+                <div>
+                  <b id="settings-profile-name"></b>
+                  <span id="settings-profile-handle"></span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="settings-profile-username" data-i18n="profile.id">ID профиля</label>
+                <input id="settings-profile-username" type="text" maxlength="20" pattern="[a-z0-9]{3,20}" spellcheck="false" autocapitalize="none">
+                <div class="hint" data-i18n="profile.id.hint">3–20 символов: латиница и цифры. По нему тебя ищут.</div>
+              </div>
+              <div class="field">
+                <label for="settings-profile-display" data-i18n="display.name">Отображаемое имя</label>
+                <input id="settings-profile-display" type="text" maxlength="16" spellcheck="false">
+                <div class="hint" data-i18n="display.name.hint">До 16 символов.</div>
+              </div>
+              <div class="field">
+                <label for="settings-profile-bio" data-i18n="about">О себе</label>
+                <textarea id="settings-profile-bio" rows="3" maxlength="500"></textarea>
+              </div>
+              <div class="form-error" id="settings-profile-error" hidden></div>
+              <div class="settings-actions">
+                <button class="btn btn-primary" id="settings-profile-save" type="button" data-i18n="save">Сохранить</button>
+                <button class="btn btn-ghost" id="settings-profile-skin" type="button" data-i18n="change.skin">Сменить скин</button>
+                <button class="btn btn-ghost" id="settings-profile-open" type="button" data-i18n="open.profile">Открыть профиль</button>
+                <button class="btn btn-ghost" id="settings-profile-logout" type="button" data-i18n="sign.out.of.lavunio">Выйти из Lavunio</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-section" data-settings-pane="launcher" hidden>
+            <div class="settings-section-head">
+              <h3 data-i18n="settings.launcher">Лаунчер</h3>
+              <p data-i18n="settings.launcher.subtitle">Язык, папка игры и логи.</p>
+            </div>
+            <div class="field">
+              <label for="set-lang" data-i18n="language">Язык</label>
+              <select id="set-lang">
+                <option value="ru" data-i18n="russian">Русский</option>
+                <option value="en">English</option>
+              </select>
+              <div class="hint" data-i18n="launcher.interface.language">Язык интерфейса</div>
+            </div>
+            <div class="field">
+              <label data-i18n="game.folder">Папка игры</label>
+              <select id="set-dir-select"></select>
+              <div class="row">
+                <input type="text" id="set-dir" readonly>
+                <button class="btn btn-ghost" id="btn-choose-dir" data-i18n="another.folder">Другая папка</button>
+                <button class="btn btn-ghost" id="btn-open-dir" data-i18n="open">Открыть</button>
+              </div>
+              <div class="hint" id="settings-disk-info">Свободно: — · Библиотека: —</div>
+            </div>
+            <div class="field">
+              <label data-i18n="logs">Логи</label>
+              <div class="row">
+                <input type="text" id="set-logs-path" readonly>
+                <button class="btn btn-ghost" id="btn-open-logs" type="button" data-i18n="open.folder">Открыть папку</button>
+              </div>
+              <div class="hint" data-i18n="logs.are.stored.locally">Логи хранятся локально и помогают найти причину ошибки.</div>
+            </div>
+          </section>
+
+          <section class="settings-section" data-settings-pane="minecraft" hidden>
+            <div class="settings-section-head">
+              <h3 data-i18n="settings.minecraft">Minecraft</h3>
+              <p data-i18n="settings.minecraft.subtitle">Память, окно и Java.</p>
+            </div>
+            <div class="field">
+              <label><span data-i18n="memory">Оперативная память:</span> <output id="ram-out">4 ГБ</output></label>
+              <input type="range" id="set-ram" min="2" max="32" step="1" value="4">
+              <div class="hint" data-i18n="how.much.ram.to">Сколько ОЗУ отдать игре. 4–8 ГБ — нормально для сборок</div>
+            </div>
+            <div class="field">
+              <label data-i18n="game.window">Окно игры</label>
+              <div class="row">
+                <input type="number" id="set-width" min="400" max="3840" placeholder="925">
+                <span class="times">×</span>
+                <input type="number" id="set-height" min="300" max="2160" placeholder="530">
+                <label class="check"><input type="checkbox" id="set-fullscreen"> <span data-i18n="fullscreen">Полный экран</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label data-i18n="java.path">Путь к Java</label>
+              <input type="text" id="set-java" placeholder="Автоматически" data-i18n-placeholder="automatic">
+              <div class="hint" data-i18n="leave.empty.and.the">Оставь пустым — лаунчер найдёт подходящую Java сам. Указывай путь, только если нужно выбрать конкретную версию.</div>
+            </div>
+            <div class="field">
+              <label class="check standalone"><input type="checkbox" id="set-jvm-flags" checked> <span data-i18n="optimized.jvm.flags.g1gc">Оптимизированные JVM-флаги (G1GC)</span></label>
+              <div class="hint" data-i18n="fewer.stutters.and.more">Меньше лагов и стабильнее запуск. Отключи, если Java не стартует или сборка несовместима.</div>
+            </div>
+          </section>
+        </div>
       </div>
 
-      <div class="settings-legal">
-        <a href="#" data-legal="terms" data-i18n="terms">Условия</a>
-        <span>·</span>
-        <a href="#" data-legal="privacy" data-i18n="privacy">Конфиденциальность</a>
-        <span>·</span>
-        <a href="#" data-legal="rules" data-i18n="rules">Правила</a>
-      </div>
-
-      <div class="modal-foot">
+      <div class="modal-foot settings-foot">
+        <span class="hint" id="settings-foot-hint" data-i18n="settings.foot.hint">Изменения применяются после сохранения.</span>
         <button class="btn btn-primary" id="btn-save-settings" data-i18n="save">Сохранить</button>
       </div>
     </div>

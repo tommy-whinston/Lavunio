@@ -85,6 +85,58 @@
   font-size: clamp(20px, 2.8vw, 24px);
   letter-spacing: -0.4px;
 }
+.profile-feed { margin: 0 0 16px; }
+.profile-feed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.profile-feed-head h2 { margin: 0; }
+.profile-feed-count {
+  min-width: 24px;
+  padding: 3px 8px;
+  border: 1px solid #2e2e2e;
+  border-radius: 999px;
+  color: #b4aaa2;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+.profile-post-form { margin-bottom: 14px; }
+.profile-post-form textarea { min-height: 72px; resize: vertical; }
+.profile-post-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+.profile-post-form-foot .hint { margin: 0; }
+.profile-post-form-foot .btn { min-height: 32px; padding: 6px 12px; font-size: 11px; }
+.profile-posts { display: flex; flex-direction: column; gap: 10px; }
+.profile-post {
+  padding: 12px;
+  border: 1px solid #242424;
+  border-radius: 9px;
+  background: #0f0f0f;
+}
+.profile-post-head { display: flex; align-items: center; gap: 10px; }
+.profile-post-head .avatar { width: 32px; height: 32px; font-size: 12px; border-radius: 7px; }
+.profile-post-copy { flex: 1; min-width: 0; }
+.profile-post-copy b { display: block; font-size: 12px; }
+.profile-post-copy span { color: #837a72; font-size: 10.5px; }
+.profile-post-delete { width: 26px; height: 26px; font-size: 11px; color: #837a72; }
+.profile-post-delete:hover { color: #ff9c8b; background: rgba(229, 50, 43, 0.12); }
+.profile-post-body {
+  margin-top: 10px;
+  color: #d4ccc5;
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.profile-posts-more { margin-top: 12px; width: 100%; }
 @media (max-width: 720px) {
   .profile-hero { flex-wrap: wrap; align-items: flex-start; }
   .profile-hero-main { flex: 1 1 100%; }

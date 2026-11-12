@@ -57,6 +57,39 @@ pub async fn player_profile(username: String) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub async fn player_posts(
+    username: String,
+    offset: Option<i64>,
+    limit: Option<i64>,
+) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let offset = offset.unwrap_or(0).max(0);
+    let limit = limit.unwrap_or(20).clamp(1, 50);
+    let path = format!("/v1/users/{username}/posts?offset={offset}&limit={limit}");
+    blocking(move || net::api_request_json(&api, "GET", &path, None, None)).await?
+}
+
+#[tauri::command]
+pub async fn profile_post_create(
+    state: State<'_, AppState>,
+    body: String,
+) -> Result<Value, String> {
+    publisher_request(
+        state.inner(),
+        "POST",
+        "/v1/me/posts".to_string(),
+        Some(json!({ "body": body })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn profile_post_delete(state: State<'_, AppState>, id: String) -> Result<Value, String> {
+    let path = format!("/v1/me/posts/{id}");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}
+
+#[tauri::command]
 pub async fn player_update_profile(
     state: State<'_, AppState>,
     username: String,

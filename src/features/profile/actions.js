@@ -6,10 +6,10 @@ import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $, escapeHtml, normalizeIdInput } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
-import { lavunioLoggedIn } from '../../core/lavunio.js';
+import { lavunioLoggedIn, applyLavunioAvatar } from '../../core/lavunio.js';
 import { isOwnUsername } from '../../core/social.js';
 import { toast } from '../../ui/toast.js';
-import { renderProfile } from './view.js';
+import { renderProfile, profilePostHtml } from './view.js';
 
 let profileActions = {
   showView: () => {},
@@ -58,12 +58,88 @@ export async function openProfile(username) {
       } catch (_) {}
       if (seq !== S.profileSeq) return;
     }
+    S.profilePosts = [];
+    S.profilePostsTotal = 0;
+    S.profilePostsHasMore = false;
     renderProfile(profile);
+    loadProfilePosts(profile.username, true).catch(() => {});
   } catch (err) {
     if (seq !== S.profileSeq) return;
     if (els.profileContent) {
       els.profileContent.innerHTML = `<div class="mod-empty">${tKey("failed.to.load.profile")} ${escapeHtml(String(err))}</div>`;
     }
+  }
+}
+
+export async function loadProfilePosts(username, reset = false) {
+  const target = username || S.profileUsername;
+  if (!target || !api.playerPosts) return;
+  const seq = ++S.profilePostsSeq;
+  const offset = reset ? 0 : (S.profilePosts || []).length;
+  try {
+    const data = await api.playerPosts(target, offset, 20);
+    if (seq !== S.profilePostsSeq) return;
+    const items = Array.isArray(data && data.items) ? data.items : [];
+    S.profilePosts = reset ? items : [...(S.profilePosts || []), ...items];
+    S.profilePostsTotal = Number(data && data.total) || S.profilePosts.length;
+    S.profilePostsHasMore = S.profilePosts.length < S.profilePostsTotal;
+    renderProfilePosts();
+  } catch (_) {
+    if (seq === S.profilePostsSeq && reset) renderProfilePosts();
+  }
+}
+
+function renderProfilePosts() {
+  const list = $('profile-posts');
+  if (!list) return;
+  const posts = S.profilePosts || [];
+  list.innerHTML = posts.length
+    ? posts.map(profilePostHtml).join('')
+    : `<div class="profile-empty">${tKey("no.posts.yet")}</div>`;
+  const profile = S.playerProfile || {};
+  list.querySelectorAll('[data-post-avatar]').forEach((el) => {
+    applyLavunioAvatar(el, profile);
+  });
+  const count = $('profile-posts-count');
+  if (count) count.textContent = String(Number(S.profilePostsTotal) || 0);
+  const more = $('profile-posts-more');
+  if (more) more.hidden = !S.profilePostsHasMore;
+}
+
+async function createProfilePost() {
+  const input = $('profile-post-body');
+  if (!input || !api.profilePostCreate) return;
+  const body = input.value.trim();
+  if (!body) return;
+  const button = $('profile-post-submit');
+  if (button) button.disabled = true;
+  try {
+    await api.profilePostCreate(body);
+    input.value = '';
+    const length = $('profile-post-length');
+    if (length) length.textContent = '0/1000';
+    await loadProfilePosts(S.profileUsername, true);
+    toast(tKey("post.published"), 'ok');
+  } catch (err) {
+    toast(tKey("failed.to.publish.post") + " " + err, 'error');
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function deleteProfilePost(id) {
+  const confirmed = await profileActions.askConfirm(
+    tKey("delete.post"),
+    tKey("delete.post.warning"),
+    tKey("delete")
+  );
+  if (!confirmed) return;
+  try {
+    await api.profilePostDelete(id);
+    await loadProfilePosts(S.profileUsername, true);
+    toast(tKey("post.deleted"), 'ok');
+  } catch (err) {
+    toast(tKey("failed.to.delete.post") + " " + err, 'error');
   }
 }
 
@@ -129,6 +205,10 @@ export function bindProfileView() {
     } else if (action === 'accept-request' || action === 'decline-request') {
       await profileActions.respondFriendRequest(button.dataset.id, action === 'accept-request' ? 'accept' : 'decline');
       if (S.playerProfile) await openProfile(S.playerProfile.username);
+    } else if (action === 'delete-post') {
+      await deleteProfilePost(button.dataset.postId);
+    } else if (action === 'posts-more') {
+      await loadProfilePosts(S.profileUsername, false);
     } else if (action === 'skin-upload') {
       await uploadLavunioSkin();
     } else if (action === 'skin-delete') {
@@ -138,6 +218,10 @@ export function bindProfileView() {
   els.profileContent.addEventListener('input', (event) => {
     const input = event.target.closest('#profile-username');
     if (input) normalizeIdInput(input);
+    if (event.target.id === 'profile-post-body') {
+      const length = $('profile-post-length');
+      if (length) length.textContent = `${event.target.value.length}/1000`;
+    }
   });
   els.profileContent.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -150,6 +234,10 @@ export function bindProfileView() {
     const form = event.target.closest('[data-profile-form]');
     if (!form) return;
     event.preventDefault();
+    if (form.dataset.profileForm === 'post') {
+      await createProfilePost();
+      return;
+    }
     if (form.dataset.profileForm === 'friend') {
       const input = $('profile-friend-name');
       const username = input ? input.value.trim() : '';
@@ -182,7 +270,7 @@ export function bindProfileView() {
   }
 }
 
-function openSkinModal(profile) {
+export function openSkinModal(profile) {
   skinModalProfile = profile || S.playerProfile || (S.lavunio && S.lavunio.user) || null;
   if (!skinModalProfile) return;
   renderSkinModal();

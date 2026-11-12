@@ -525,6 +525,23 @@ async function checkProfileEditor(cdp) {
     throw new Error('profile name wraps: ' + JSON.stringify(fields));
   }
 
+  const feed = await cdp.evaluate(`({
+    composer: !!document.getElementById('profile-post-body'),
+    list: !!document.getElementById('profile-posts'),
+    count: !!document.getElementById('profile-posts-count')
+  })`);
+  if (!feed.composer || !feed.list || !feed.count) {
+    throw new Error('profile feed missing: ' + JSON.stringify(feed));
+  }
+  await cdp.evaluate(`(() => {
+    const input = document.getElementById('profile-post-body');
+    input.value = 'Hello from the profile feed';
+    input.closest('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  })()`);
+  await sleep(350);
+  const postCount = await cdp.evaluate(`document.querySelectorAll('#profile-posts .profile-post').length`);
+  if (!postCount) throw new Error('profile post was not created');
+
   await cdp.evaluate(`(() => {
     document.getElementById('profile-username').value = 'Tommy_Whinston';
     document.querySelector('[data-profile-form="edit"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

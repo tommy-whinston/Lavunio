@@ -163,6 +163,27 @@ const base = {
   teamProfile: async () => ({ members: [{ userId: 'u1', username: 'alex', displayName: 'Alex', role: 'member' }] }),
   teamProfilePublic: async () => ({ team: data.team, stats: { modes: 1, downloads: 5, installs: 3, uniqueUsers: 2, published: 1 }, members: [{ username: 'alex', displayName: 'Alex', role: 'member' }], modes: [data.mode], news: [{ title: 'Team news', createdAt: now }], followers: 7 }),
   playerProfile: async () => data.profile,
+  playerPosts: async (username, offset, limit) => {
+    const posts = window.__profilePosts || [];
+    return { items: posts, total: posts.length, offset: offset || 0, limit: limit || 20 };
+  },
+  profilePostCreate: async (body) => {
+    const post = {
+      id: 'post-' + Date.now(),
+      body,
+      createdAt: now,
+      username: data.profile.username,
+      displayName: data.profile.displayName,
+      skinUrl: '',
+      skinModel: 'classic'
+    };
+    window.__profilePosts = [post, ...(window.__profilePosts || [])];
+    return post;
+  },
+  profilePostDelete: async (id) => {
+    window.__profilePosts = (window.__profilePosts || []).filter((post) => post.id !== id);
+    return { ok: true };
+  },
   playerUpdateProfile: async (username, displayName, bio) => {
     window.__profileUpdates = window.__profileUpdates || [];
     window.__profileUpdates.push([username, displayName, bio]);

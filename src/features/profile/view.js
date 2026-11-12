@@ -119,6 +119,49 @@ export function profileEditHtml(profile) {
   `;
 }
 
+export function profilePostHtml(post) {
+  const own = isOwnUsername(post.username);
+  return `
+    <article class="profile-post">
+      <div class="profile-post-head">
+        <span class="avatar" data-post-avatar="${escapeHtml(post.username)}"></span>
+        <div class="profile-post-copy">
+          <b>${escapeHtml(post.displayName || post.username)}</b>
+          <span>@${escapeHtml(post.username)} · ${escapeHtml(formatDateTime(post.createdAt))}</span>
+        </div>
+        ${own ? `<button class="icon-btn profile-post-delete" type="button" title="${tKey("delete")}" data-profile-action="delete-post" data-post-id="${escapeHtml(post.id)}">✕</button>` : ''}
+      </div>
+      <div class="profile-post-body">${escapeHtml(post.body).replace(/\n/g, '<br>')}</div>
+    </article>
+  `;
+}
+
+export function profileFeedHtml(profile) {
+  const own = isOwnUsername(profile.username);
+  const posts = S.profilePosts || [];
+  return `
+    <section class="profile-panel profile-feed">
+      <div class="profile-feed-head">
+        <h2>${tKey("posts")}</h2>
+        <span class="profile-feed-count" id="profile-posts-count">${Number(S.profilePostsTotal) || 0}</span>
+      </div>
+      ${own ? `
+        <form class="profile-post-form" data-profile-form="post">
+          <textarea id="profile-post-body" maxlength="1000" rows="3" placeholder="${tKey("share.something")}"></textarea>
+          <div class="profile-post-form-foot">
+            <span class="hint" id="profile-post-length">0/1000</span>
+            <button class="btn btn-primary" id="profile-post-submit" type="submit">${tKey("publish")}</button>
+          </div>
+        </form>
+      ` : ''}
+      <div class="profile-posts" id="profile-posts">
+        ${posts.length ? posts.map(profilePostHtml).join('') : `<div class="profile-empty">${tKey("no.posts.yet")}</div>`}
+      </div>
+      <button class="btn btn-ghost profile-posts-more" id="profile-posts-more" type="button" data-profile-action="posts-more" ${S.profilePostsHasMore ? '' : 'hidden'}>${tKey("load.more")}</button>
+    </section>
+  `;
+}
+
 export function renderProfile(profile) {
   if (!profile || !els.profileContent) return;
   const own = isOwnUsername(profile.username);
@@ -133,9 +176,6 @@ export function renderProfile(profile) {
 
   const actions = own
     ? `
-      <button class="icon-btn" type="button" title="${tKey("settings")}" data-profile-action="settings">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.3 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
-      </button>
       <button class="btn btn-primary" type="button" data-profile-action="messages">${tKey("messages.title")}</button>
       <button class="btn btn-ghost" type="button" data-profile-action="edit">${tKey("edit")}</button>
       <button class="btn btn-ghost" type="button" data-profile-action="logout">${tKey("sign.out")}</button>
@@ -176,6 +216,8 @@ export function renderProfile(profile) {
       <div class="profile-stat"><span>${tKey("installs")}</span><b>${Number(stats.installs) || 0}</b></div>
       <div class="profile-stat"><span>${tKey("teams.2")}</span><b>${(profile.teams || []).length}</b></div>
     </div>
+
+    ${profileFeedHtml(profile)}
 
     <div class="profile-layout">
       <div class="profile-main">
@@ -232,6 +274,9 @@ export function renderProfile(profile) {
   els.profileContent.querySelectorAll('[data-avatar-friend]').forEach((el) => {
     const friendItem = friendByUsername(el.dataset.avatarFriend);
     if (friendItem) applyLavunioAvatar(el, friendItem);
+  });
+  els.profileContent.querySelectorAll('[data-post-avatar]').forEach((el) => {
+    applyLavunioAvatar(el, profile);
   });
 }
 

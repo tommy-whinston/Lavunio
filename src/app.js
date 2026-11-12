@@ -10,7 +10,7 @@ import { els } from './core/elements.js';
 import { configureCatalogGrid } from './features/catalog/grid.js';
 import { renderLibrary } from './features/library/view.js';
 import { renderProfile } from './features/profile/view.js';
-import { configureProfileActions, openProfile, bindProfileView } from './features/profile/actions.js';
+import { configureProfileActions, openProfile, bindProfileView, openSkinModal } from './features/profile/actions.js';
 import { configureSettings, bindSettings, fillSettingsForm, applyRamLimit } from './features/settings/view.js';
 import { configureTeams, bindTeams, renderTeams, loadTeams, loadTeamInvitations, openTeamPage } from './features/teams/index.js';
 import { configurePublisher, bindPublisher, loadPublisher, renderPublisher } from './features/publisher/index.js';
@@ -79,7 +79,15 @@ configureProfileActions({
   respondFriendRequest
 });
 
-configureSettings({ closeModals });
+configureSettings({
+  closeModals,
+  openProfile,
+  openAccount: () => openModal('modal-account'),
+  openSkin: openSkinModal,
+  logoutLavunio,
+  renderAccountChip,
+  renderLavunioPane
+});
 
 configureUpdates({ finishSplash });
 
