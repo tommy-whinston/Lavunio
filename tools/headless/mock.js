@@ -158,10 +158,38 @@ const base = {
   chatDirect: async () => [{ id: 'c1', senderId: 'steve', senderUsername: 'steve', senderDisplayName: 'Steve', body: 'Hi', createdAt: now }],
   chatTeam: async () => [],
   teamsMine: async () => data.user ? [data.team] : [],
+  teamsList: async () => ({
+    items: [{
+      ...data.team,
+      membersCount: 2,
+      modesCount: 1,
+      downloads: 5,
+      followers: 7,
+      following: false,
+      permissions: {}
+    }],
+    total: 1
+  }),
   teamsPending: async () => [],
   teamInvitations: async () => data.user ? [{ id: 'inv1', teamTitle: 'My Team', inviterName: 'Alex', role: 'member' }] : [],
-  teamProfile: async () => ({ members: [{ userId: 'u1', username: 'alex', displayName: 'Alex', role: 'member' }] }),
-  teamProfilePublic: async () => ({ team: data.team, stats: { modes: 1, downloads: 5, installs: 3, uniqueUsers: 2, published: 1 }, members: [{ username: 'alex', displayName: 'Alex', role: 'member' }], modes: [data.mode], news: [{ title: 'Team news', createdAt: now }], followers: 7 }),
+  teamProfile: async () => ({
+    team: data.team,
+    role: 'owner',
+    following: false,
+    permissions: { manage_team: true, manage_members: true, manage_modes: true, manage_news: true },
+    members: [{ userId: 'u1', username: 'alex', displayName: 'Alex', role: 'member', permissions: {} }]
+  }),
+  teamProfilePublic: async () => ({
+    team: data.team,
+    stats: { modes: 1, downloads: 5, installs: 3, uniqueUsers: 2, published: 1 },
+    members: [{ userId: 'u1', username: 'alex', displayName: 'Alex', role: 'member', permissions: {} }],
+    modes: [data.mode],
+    news: [{ title: 'Team news', createdAt: now }],
+    followers: 7,
+    role: data.user ? 'owner' : null,
+    following: false,
+    permissions: data.user ? { manage_team: true, manage_members: true, manage_modes: true, manage_news: true } : {}
+  }),
   playerProfile: async () => data.profile,
   playerPosts: async (username, offset, limit) => {
     const posts = window.__profilePosts || [];

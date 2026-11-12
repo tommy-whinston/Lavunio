@@ -153,6 +153,7 @@ fn main() {
             commands::admin_approve_author_application,
             commands::admin_reject_author_application,
             commands::teams_mine,
+            commands::teams_list,
             commands::team_create,
             commands::team_update,
             commands::team_archive,

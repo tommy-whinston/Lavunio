@@ -137,6 +137,12 @@
           </svg>
           <span data-i18n="nav.library">Библиотека</span>
         </button>
+        <button class="side-link" data-section="team" id="side-team">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5c2.6.3 4.5 2.4 4.5 5.5"/>
+          </svg>
+          <span data-i18n="nav.team">Команды</span>
+        </button>
         </div>
 
         <div class="side-group" id="side-group-manage" role="group" aria-label="Управление" hidden data-i18n-aria="nav.management">
@@ -146,12 +152,6 @@
             <path d="M12 16V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v4.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V15"/>
           </svg>
           <span data-i18n="nav.publishing">Публикация</span>
-        </button>
-        <button class="side-link" data-section="team" id="side-team" hidden>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5c2.6.3 4.5 2.4 4.5 5.5"/>
-          </svg>
-          <span data-i18n="nav.team">Команда</span>
         </button>
         <button class="side-link" data-section="moderation" id="side-moderator" hidden>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -360,28 +360,41 @@
     </section>
 
     <section id="team-view" hidden>
-      <div class="library-head publisher-head">
+      <div class="library-head publisher-head team-directory-head">
         <div class="dashboard-copy">
           <div class="eyebrow">Lavunio</div>
-          <h1 data-i18n="nav.team">Команда</h1>
-          <p data-i18n="team.profile.members.and">Профиль команды, участники и режимы.</p>
-        </div>
-        <div class="publisher-head-actions">
+          <h1 data-i18n="teams">Команды</h1>
+          <p data-i18n="teams.directory.subtitle">Находи команды, смотри их режимы и подписывайся на обновления.</p>
           <div class="dashboard-stats">
-            <div class="dash-stat"><span data-i18n="teams">Команд</span><b id="team-stat-count">0</b></div>
+            <div class="dash-stat"><span data-i18n="teams">Команды</span><b id="team-stat-count">0</b></div>
+            <div class="dash-stat"><span data-i18n="teams.mine">Мои команды</span><b id="team-stat-mine">0</b></div>
           </div>
-          <button class="btn btn-primary" id="team-new" type="button" data-i18n="new.team">Новая команда</button>
+          <button class="btn btn-primary" id="team-new" type="button" data-i18n="new.team">Создать команду</button>
         </div>
       </div>
 
-      <div class="publisher-toolbar">
-        <div class="hint" id="team-hint">Загрузка…</div>
+      <div class="team-toolbar">
+        <div class="team-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/></svg>
+          <input id="team-search" type="text" placeholder="Поиск команд" data-i18n-placeholder="search.teams">
+        </div>
+        <select id="team-sort">
+          <option value="popular" data-i18n="popular">Популярные</option>
+          <option value="new" data-i18n="new.2">Новые</option>
+          <option value="name" data-i18n="by.name">По названию</option>
+        </select>
+        <div class="team-filter-tabs" id="team-filter-tabs">
+          <button class="team-filter active" type="button" data-team-filter="all" data-i18n="all">Все</button>
+          <button class="team-filter" type="button" data-team-filter="mine" data-i18n="teams.mine">Мои</button>
+          <button class="team-filter" type="button" data-team-filter="following" data-i18n="subscriptions">Подписки</button>
+        </div>
         <button class="btn btn-ghost" id="team-refresh" type="button" data-i18n="messages.refresh">Обновить</button>
       </div>
 
       <div id="team-invitations" class="team-invites" hidden></div>
+      <div class="hint" id="team-hint"></div>
 
-      <div id="team-list" class="publisher-list"></div>
+      <div id="team-list" class="team-grid"></div>
 
       <div class="empty" id="team-empty" hidden>
         <div class="empty-icon">
@@ -390,8 +403,9 @@
           </svg>
         </div>
         <h3 data-i18n="no.teams.yet">Команд пока нет</h3>
-        <p data-i18n="create.a.team.to">Создай команду, чтобы публиковать режимы от её имени.</p>
+        <p data-i18n="teams.directory.empty">Попробуй изменить запрос или создай свою команду.</p>
       </div>
+      <button class="btn btn-ghost team-more" id="team-more" type="button" data-i18n="load.more" hidden>Показать ещё</button>
     </section>
 
     <section id="publisher-view" hidden>
@@ -902,8 +916,9 @@
             <input id="team-title" type="text" maxlength="100" placeholder="Например, Night Studio" data-i18n-placeholder="for.example.night.studio">
           </div>
           <div class="field">
-            <label for="team-slug">Slug</label>
-            <input id="team-slug" type="text" maxlength="64" placeholder="night-studio">
+            <label for="team-slug" data-i18n="team.id">ID команды</label>
+            <input id="team-slug" type="text" maxlength="64" placeholder="tmteam">
+            <div class="hint" data-i18n="team.id.hint">Короткий ID для ссылки и поиска, например tmteam.</div>
           </div>
         </div>
         <div class="field">
@@ -958,6 +973,8 @@
             <select id="team-invite-role">
               <option value="publisher" data-i18n="publisher">Публикатор</option>
               <option value="designer" data-i18n="designer">Дизайнер</option>
+              <option value="builder" data-i18n="team.role.builder">Билдер</option>
+              <option value="modeler" data-i18n="team.role.modeler">Моделлер</option>
               <option value="member" selected data-i18n="member">Участник</option>
               <option value="admin" data-i18n="administrator">Администратор</option>
             </select>

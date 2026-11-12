@@ -10,6 +10,54 @@ pub async fn teams_mine(state: State<'_, AppState>) -> Result<Value, String> {
 }
 
 #[tauri::command]
+pub async fn teams_list(
+    state: State<'_, AppState>,
+    query: Option<String>,
+    sort: Option<String>,
+    filter: Option<String>,
+    offset: Option<i64>,
+    limit: Option<i64>,
+) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let session = state.store.lock().unwrap().lavunio.clone();
+    let offset = offset.unwrap_or(0).max(0);
+    let limit = limit.unwrap_or(24).clamp(1, 60);
+    let q = query.unwrap_or_default();
+    let sort = sort.unwrap_or_else(|| "popular".to_string());
+    let filter = filter.unwrap_or_else(|| "all".to_string());
+    let path = format!(
+        "/v1/teams?q={}&sort={}&filter={}&offset={}&limit={}",
+        urlencode(&q),
+        urlencode(&sort),
+        urlencode(&filter),
+        offset,
+        limit
+    );
+    blocking(move || {
+        let token = if session.access_token.is_empty() {
+            None
+        } else {
+            Some(session.access_token.as_str())
+        };
+        net::api_request_json(&api, "GET", &path, token, None)
+    })
+    .await?
+}
+
+fn urlencode(value: &str) -> String {
+    value
+        .bytes()
+        .map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (byte as char).to_string()
+            }
+            b' ' => "%20".to_string(),
+            _ => format!("%{byte:02X}"),
+        })
+        .collect()
+}
+
+#[tauri::command]
 pub async fn team_create(state: State<'_, AppState>, payload: Value) -> Result<Value, String> {
     publisher_request(
         state.inner(),
@@ -43,10 +91,22 @@ pub async fn team_profile(state: State<'_, AppState>, slug: String) -> Result<Va
 }
 
 #[tauri::command]
-pub async fn team_profile_public(slug: String) -> Result<Value, String> {
+pub async fn team_profile_public(
+    state: State<'_, AppState>,
+    slug: String,
+) -> Result<Value, String> {
     let api = lavunio_api()?;
+    let session = state.store.lock().unwrap().lavunio.clone();
     let path = format!("/v1/teams/{slug}");
-    blocking(move || net::api_request_json(&api, "GET", &path, None, None)).await?
+    blocking(move || {
+        let token = if session.access_token.is_empty() {
+            None
+        } else {
+            Some(session.access_token.as_str())
+        };
+        net::api_request_json(&api, "GET", &path, token, None)
+    })
+    .await?
 }
 
 #[tauri::command]
@@ -263,9 +323,16 @@ pub async fn team_member_role(
     team_id: String,
     user_id: String,
     role: String,
+    permissions: Option<Value>,
 ) -> Result<Value, String> {
     let path = format!("/v1/teams/{team_id}/members/{user_id}");
-    publisher_request(state.inner(), "PUT", path, Some(json!({ "role": role }))).await
+    publisher_request(
+        state.inner(),
+        "PUT",
+        path,
+        Some(json!({ "role": role, "permissions": permissions })),
+    )
+    .await
 }
 
 #[tauri::command]

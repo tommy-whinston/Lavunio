@@ -498,6 +498,33 @@ async function checkAuthCodes(cdp) {
   await cdp.evaluate(`window.__loginUnverified = false; window.LavunioDebug.closeModals()`);
 }
 
+async function checkTeamsDirectory(cdp) {
+  await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.showSection('team')`);
+  await sleep(400);
+  const page = await cdp.evaluate(`({
+    cards: document.querySelectorAll('#team-list .team-card').length,
+    search: !!document.getElementById('team-search'),
+    sort: !!document.getElementById('team-sort'),
+    filters: document.querySelectorAll('[data-team-filter]').length,
+    create: !!document.getElementById('team-new')
+  })`);
+  if (!page.cards || !page.search || !page.sort || page.filters < 3 || !page.create) {
+    throw new Error('team directory: ' + JSON.stringify(page));
+  }
+  await cdp.evaluate(`document.querySelector('#team-list [data-team-action="page"]').click()`);
+  await sleep(350);
+  const profile = await cdp.evaluate(`({
+    visible: !document.getElementById('modal-team-page').hidden,
+    actions: document.querySelectorAll('#team-page-content [data-team-page-action]').length,
+    modes: document.querySelectorAll('#team-page-content [data-team-mode]').length,
+    settings: !!document.querySelector('#team-page-content [data-team-page-action="settings"]')
+  })`);
+  if (!profile.visible || !profile.actions || !profile.modes) {
+    throw new Error('team profile: ' + JSON.stringify(profile));
+  }
+  await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.showSection('store')`);
+}
+
 async function checkProfileEditor(cdp) {
   await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.openProfile('steve')`);
   await sleep(300);
@@ -728,6 +755,7 @@ async function runScenario(cdp, scenario) {
   }
   if (scenario === 'player') {
     await check(cdp, results, 'profile ID/nickname', () => checkProfileEditor(cdp));
+    await check(cdp, results, 'teams directory', () => checkTeamsDirectory(cdp));
   }
 
   if (scenario === 'admin') {

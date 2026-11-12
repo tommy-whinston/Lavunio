@@ -115,7 +115,9 @@ configureTeams({
   openDetail,
   publisherAllowed,
   openModal,
-  askConfirm
+  askConfirm,
+  loggedIn: lavunioLoggedIn,
+  openAccount: () => openModal('modal-account')
 });
 
 configurePublisher({
@@ -457,7 +459,6 @@ function showView(section) {
 
 function showSection(section) {
   if (section === 'publisher' && !publisherAllowed()) section = 'store';
-  if (section === 'team' && !publisherAllowed()) section = 'store';
   if (section === 'moderation' && !moderatorAllowed()) section = 'store';
   if ((section === 'profile' || section === 'messages') && !lavunioLoggedIn()) {
     S.profileAfterLogin = section === 'profile';
@@ -653,10 +654,8 @@ function updatePublisherNav() {
   const allowed = publisherAllowed();
   const button = $('side-publisher');
   if (button) button.hidden = !allowed;
-  const teamButton = $('side-team');
-  if (teamButton) teamButton.hidden = !allowed;
   updateSideGroups();
-  if (!allowed && (S.section === 'publisher' || S.section === 'team')) {
+  if (!allowed && S.section === 'publisher') {
     S.section = 'store';
     S.view = 'store';
     if (els.storeView) els.storeView.hidden = false;

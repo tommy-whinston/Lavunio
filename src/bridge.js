@@ -77,6 +77,13 @@
     adminApproveAuthorApplication: (applicationId) => invoke("admin_approve_author_application", { applicationId }),
     adminRejectAuthorApplication: (applicationId, note) => invoke("admin_reject_author_application", { applicationId, note }),
     teamsMine: () => invoke("teams_mine"),
+    teamsList: (query) => invoke("teams_list", {
+      query: query?.q || null,
+      sort: query?.sort || null,
+      filter: query?.filter || null,
+      offset: query?.offset ?? null,
+      limit: query?.limit ?? null
+    }),
     teamCreate: (payload) => invoke("team_create", { payload }),
     teamUpdate: (teamId, payload) => invoke("team_update", { teamId, payload }),
     teamArchive: (teamId) => invoke("team_archive", { teamId }),
@@ -104,7 +111,7 @@
     teamInvite: (teamId, username, role) => invoke("team_invite", { teamId, username, role }),
     teamInvitationAccept: (invitationId) => invoke("team_invitation_accept", { invitationId }),
     teamInvitationDecline: (invitationId) => invoke("team_invitation_decline", { invitationId }),
-    teamMemberRole: (teamId, userId, role) => invoke("team_member_role", { teamId, userId, role }),
+    teamMemberRole: (teamId, userId, role, permissions) => invoke("team_member_role", { teamId, userId, role, permissions: permissions ?? null }),
     teamMemberRemove: (teamId, userId) => invoke("team_member_remove", { teamId, userId }),
     teamJoin: (teamId, message) => invoke("team_join", { teamId, message }),
     teamJoinRequests: (teamId) => invoke("team_join_requests", { teamId }),

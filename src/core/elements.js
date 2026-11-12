@@ -30,6 +30,7 @@ export const els = {
   teamEmpty: $('team-empty'),
   teamHint: $('team-hint'),
   teamStatCount: $('team-stat-count'),
+  teamStatMine: $('team-stat-mine'),
   teamInvitations: $('team-invitations'),
   teamMembersList: $('team-members-list'),
   teamMembersHint: $('team-members-hint'),
