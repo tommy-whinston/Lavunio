@@ -1,7 +1,7 @@
 {
   "name": "lavunio",
   "productName": "Lavunio",
-  "version": "0.23.43",
+  "version": "0.23.44",
   "private": true,
   "description": "Lavunio - Minecraft mode store with Ely.by accounts (Tauri)",
   "scripts": {
