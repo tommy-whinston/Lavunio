@@ -24,7 +24,7 @@
   height: 22px;
   display: block;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 0;
 }
 .brand-name {
   font-size: 14px;
@@ -123,7 +123,7 @@
   min-width: 15px;
   height: 15px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--accent);
   color: #fff;
   font-size: 10px;

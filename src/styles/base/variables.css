@@ -34,12 +34,12 @@
   --border-strong: rgba(255, 255, 255, 0.12);
   --scrim: rgba(8, 8, 10, 0.72);
 
-  /* Скругления: 4 — бейджи, 6 — мелкие элементы, 8 — кнопки и поля, 12 — карточки, 16 — модалки */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Скругления отключены: интерфейс собран на острых углах */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
 
   --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.28);
   --shadow: 0 16px 48px rgba(0, 0, 0, 0.45);

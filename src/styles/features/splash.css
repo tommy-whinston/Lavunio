@@ -92,7 +92,7 @@
   margin-top: 4px;
   overflow: hidden;
   background: var(--panel-3);
-  border-radius: 2px;
+  border-radius: 0;
 }
 #splash-progress-bar {
   width: 0;
@@ -164,7 +164,7 @@
   height: 2px;
   overflow: hidden;
   background: var(--panel-3);
-  border-radius: 2px;
+  border-radius: 0;
 }
 #splash-update-bar {
   width: 0;

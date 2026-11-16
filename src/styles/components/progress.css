@@ -5,7 +5,7 @@
   height: 4px;
   margin-top: 10px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--panel-3);
 }
 .progress-bar {

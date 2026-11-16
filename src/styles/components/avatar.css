@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: min(12px, calc(var(--avatar-size) * 0.25));
+  border-radius: 0;
   background: var(--panel-3);
   color: var(--text);
   font-size: calc(var(--avatar-size) * 0.4);

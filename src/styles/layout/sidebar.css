@@ -63,7 +63,7 @@
   top: 9px;
   bottom: 9px;
   width: 2px;
-  border-radius: 0 2px 2px 0;
+  border-radius: 0;
   background: var(--accent);
 }
 .side-link svg {
@@ -79,7 +79,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--accent);
   color: #fff;
   font-size: var(--fs-xs);
