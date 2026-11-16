@@ -1,19 +1,36 @@
-/* Lavunio CSS entry: base styles. Order matters. */
+/* Lavunio: единая точка входа стилей. Порядок важен: база → каркас → компоненты → разделы. */
 @import url("styles/base/fonts.css");
 @import url("styles/base/variables.css");
+@import url("styles/base/base.css");
+@import url("styles/base/animations.css");
+@import url("styles/base/responsive.css");
+
 @import url("styles/layout/topbar.css");
+@import url("styles/layout/sidebar.css");
 @import url("styles/layout/shell.css");
-@import url("styles/features/detail-base.css");
+
+@import url("styles/components/buttons.css");
+@import url("styles/components/forms.css");
+@import url("styles/components/select.css");
 @import url("styles/components/modals.css");
 @import url("styles/components/toast.css");
-@import url("styles/base/responsive.css");
-@import url("styles/features/splash.css");
-@import url("styles/layout/sidebar.css");
-@import url("styles/features/updates.css");
-@import url("styles/features/detail-info.css");
-@import url("styles/base/animations.css");
+@import url("styles/components/tabs.css");
+@import url("styles/components/badges.css");
+@import url("styles/components/avatar.css");
+@import url("styles/components/progress.css");
 @import url("styles/components/update-chip.css");
-@import url("styles/features/auto-update.css");
-@import url("styles/features/detail-meta.css");
-@import url("styles/features/splash-update.css");
-@import url("styles/features/splash-animation.css");
+
+@import url("styles/features/store.css");
+@import url("styles/features/cards.css");
+@import url("styles/features/library.css");
+@import url("styles/features/detail.css");
+@import url("styles/features/profile.css");
+@import url("styles/features/messages.css");
+@import url("styles/features/notifications.css");
+@import url("styles/features/settings.css");
+@import url("styles/features/account.css");
+@import url("styles/features/updates.css");
+@import url("styles/features/splash.css");
+@import url("styles/features/teams.css");
+@import url("styles/features/publisher.css");
+@import url("styles/features/moderation.css");

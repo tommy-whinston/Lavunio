@@ -1,0 +1,140 @@
+/* ============ ПОЛЯ И ФОРМЫ ============ */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="email"],
+input[type="url"],
+input[type="search"],
+select,
+textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: var(--fs-base);
+  outline: none;
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+input::placeholder,
+textarea::placeholder { color: var(--muted-2); }
+input:hover,
+select:hover,
+textarea:hover { border-color: var(--border-strong); }
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+input[readonly] {
+  color: var(--muted);
+  cursor: default;
+}
+input[readonly]:hover { border-color: var(--border); }
+
+select {
+  appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1ab' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+select option {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+textarea {
+  resize: none;
+  overflow-y: hidden;
+  min-height: 40px;
+  max-height: 45vh;
+  line-height: 1.5;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+input[type="color"] {
+  width: 56px;
+  height: 36px;
+  padding: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+.field > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+.field output {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.row input[type="number"] {
+  width: 96px;
+  text-align: center;
+}
+.times { color: var(--muted-2); }
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: var(--fs-base);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.field > label.check {
+  display: flex;
+  margin-bottom: 0;
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 500;
+}
+
+.hint {
+  margin-top: 6px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.hint.center { text-align: center; }
+
+.form-error {
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}

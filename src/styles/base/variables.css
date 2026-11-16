@@ -1,55 +1,63 @@
-/* ============ БАЗА ============ */
+/* ============ ТОКЕНЫ ============ */
 :root {
-  --bg: #131315;
-  --bg-soft: #17171a;
-  --panel: #1b1b1f;
-  --panel-2: #232328;
-  --panel-3: #2b2b31;
-  --text: #f3f3f5;
-  --muted: #9b9ba3;
-  --muted-2: #6f6f78;
-  --accent: #0d8cff;
-  --accent-2: #00c2ff;
-  --accent-soft: rgba(13, 140, 255, 0.14);
-  --ok: #2bd67b;
-  --warn: #f5a623;
-  --danger: #ff5c6c;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --radius: 10px;
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+
+  /* Поверхности: от фона к элементам — тонкий переход, без теней и свечения */
+  --bg: #101013;
+  --bg-soft: #131316;
+  --panel: #18181c;
+  --panel-2: #1f1f25;
+  --panel-3: #28282f;
+
+  /* Текст */
+  --text: #ededf1;
+  --muted: #a1a1ab;
+  --muted-2: #7a7a85;
+
+  /* Акцент — приглушённый красный, только для главных действий и активных состояний */
+  --accent: #cf4a43;
+  --accent-2: #ee7b72;
+  --accent-hover: #d95a52;
+  --accent-soft: rgba(207, 74, 67, 0.14);
+  --accent-line: rgba(207, 74, 67, 0.45);
+
+  /* Статусы */
+  --ok: #4fb286;
+  --warn: #d9a13f;
+  --danger: #e0676a;
+  --ok-soft: rgba(79, 178, 134, 0.12);
+  --warn-soft: rgba(217, 161, 63, 0.12);
+  --danger-soft: rgba(224, 103, 106, 0.12);
+
+  /* Линии */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --scrim: rgba(8, 8, 10, 0.72);
+
+  /* Скругления: 4 — бейджи, 6 — мелкие элементы, 8 — кнопки и поля, 12 — карточки, 16 — модалки */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+
+  /* Типографика */
+  --font: 'Golos Text', 'Segoe UI', system-ui, sans-serif;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 22px;
+
+  /* Движение */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 150ms;
+
+  /* Геометрия каркаса */
+  --topbar-h: 52px;
+  --sidebar-w: 216px;
 }
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-[hidden] { display: none !important; }
-
-html, body {
-  height: 100%;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Golos Text', 'Segoe UI', sans-serif;
-  font-size: 14px;
-  user-select: none;
-  -webkit-font-smoothing: antialiased;
-}
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 480px at 88% -10%, rgba(0, 194, 255, 0.07), transparent 62%),
-    radial-gradient(760px 420px at -6% 110%, rgba(13, 140, 255, 0.08), transparent 60%);
-}
-
-button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; }
-input, textarea, select { font-family: inherit; }
-a { color: inherit; }
-::selection { background: rgba(13, 140, 255, 0.35); }
-
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 8px; border: 3px solid var(--bg); }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.24); }

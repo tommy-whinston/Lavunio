@@ -1,0 +1,359 @@
+/* ============ ПРОФИЛЬ ИГРОКА ============ */
+
+/* ---- Шапка профиля ---- */
+.profile-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.profile-avatar-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.profile-avatar-wrap .avatar { --avatar-size: 92px; }
+.profile-avatar-editable #profile-avatar {
+  cursor: pointer;
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+.profile-avatar-editable #profile-avatar:hover,
+.profile-avatar-editable #profile-avatar:focus-visible {
+  border-radius: min(12px, calc(var(--avatar-size) * 0.25));
+  box-shadow: 0 0 0 2px var(--accent-line);
+}
+.profile-avatar-hint {
+  max-width: 140px;
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  text-align: center;
+}
+
+.profile-hero-main {
+  flex: 1;
+  min-width: 0;
+}
+.profile-hero-main h1 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-hero-main h1.profile-name-long { font-size: 22px; }
+.profile-hero-main h1.profile-name-xlong { font-size: 20px; }
+.profile-handle {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-base);
+  overflow-wrap: anywhere;
+}
+
+.profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.profile-badge.online {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.profile-badge.role {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+}
+
+.profile-bio {
+  max-width: 640px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.profile-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---- Статистика ---- */
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+.profile-stat {
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.profile-stat span {
+  display: block;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+}
+.profile-stat b {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Лента записей ---- */
+.profile-feed { margin-bottom: 20px; }
+.profile-feed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.profile-feed-head h2 { margin: 0; }
+.profile-feed-count {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.profile-post-form { margin-bottom: 14px; }
+.profile-post-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+.profile-post-form-foot .hint { margin: 0; }
+.profile-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.profile-post {
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.profile-post-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.profile-post-head .avatar { --avatar-size: 30px; }
+.profile-post-copy {
+  flex: 1;
+  min-width: 0;
+}
+.profile-post-copy b {
+  display: block;
+  font-size: var(--fs-base);
+  font-weight: 500;
+}
+.profile-post-copy span {
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+}
+.profile-post-delete {
+  width: 26px;
+  height: 26px;
+  font-size: var(--fs-sm);
+}
+.profile-post-body {
+  margin-top: 10px;
+  color: var(--text);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.profile-posts-more {
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* ---- Две колонки ---- */
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+.profile-main,
+.profile-side { min-width: 0; }
+
+.profile-panel {
+  padding: 16px;
+  margin-bottom: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.profile-panel:last-child { margin-bottom: 0; }
+.profile-panel h2 {
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.profile-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--fs-base);
+  text-align: left;
+  transition: background var(--dur);
+}
+.profile-mode-row:hover { background: var(--panel-2); }
+.profile-mode-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-mode-row b {
+  flex-shrink: 0;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+/* ---- Друзья и заявки ---- */
+.profile-friend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  transition: background var(--dur);
+}
+.profile-friend:hover { background: var(--panel-2); }
+.profile-friend .avatar { --avatar-size: 30px; }
+.profile-friend-copy {
+  flex: 1;
+  min-width: 0;
+}
+.profile-friend-copy b {
+  display: block;
+  overflow: hidden;
+  font-size: var(--fs-base);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-friend-copy span {
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+}
+.profile-friend-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+.profile-friend-actions .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.profile-add-friend {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.profile-add-friend input { flex: 1; min-width: 0; }
+
+.profile-request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-base);
+}
+.profile-request-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+/* ---- Информация и редактирование ---- */
+.profile-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-base);
+}
+.profile-info-row:last-child { border-bottom: 0; }
+.profile-info-row span { color: var(--muted); }
+.profile-info-row b { font-weight: 500; text-align: right; }
+
+.profile-edit { margin-top: 4px; }
+.profile-account-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.profile-empty {
+  padding: 12px 4px;
+  color: var(--muted-2);
+  font-size: var(--fs-base);
+}
+
+@media (max-width: 900px) {
+  .profile-hero { flex-wrap: wrap; gap: 16px; }
+  .profile-hero-main { flex: 1 1 100%; }
+  .profile-actions { flex: 1 1 100%; justify-content: flex-start; }
+  .profile-layout { grid-template-columns: minmax(0, 1fr); }
+  .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

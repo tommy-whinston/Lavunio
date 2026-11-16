@@ -1,0 +1,60 @@
+/* ============ ТЕГИ И БЕЙДЖИ ============ */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.tags span {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-xs);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mode-status {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-xs);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.mode-status.development {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.mode-status.crowdfunding {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+}
+
+.tag-pill {
+  --tag-color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--tag-color) 14%, transparent);
+  color: var(--tag-color);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tag-pill.release { --tag-color: #7fa6f0; }
+.tag-pill.hotfix { --tag-color: var(--danger); }
+.tag-pill.content { --tag-color: #b396ea; }
+.tag-pill.balance { --tag-color: var(--ok); }
+.tag-pill.fix { --tag-color: var(--warn); }
+.tag-pill.tech { --tag-color: var(--muted); }

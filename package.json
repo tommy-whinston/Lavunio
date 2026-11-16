@@ -3,12 +3,13 @@
   "productName": "Lavunio",
   "version": "0.23.45",
   "private": true,
-  "description": "Lavunio - Minecraft mode store with Ely.by accounts (Tauri)",
+  "description": "Lavunio - Minecraft mode store with Lavunio ID accounts (Tauri)",
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
     "smoke": "node tools/smoke/smoke.js",
+    "shots": "node tools/shots/shots.js",
     "test:headless": "node tools/headless/run.js",
     "release": "node tools/release/release.js"
   },

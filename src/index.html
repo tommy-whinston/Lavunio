@@ -5,7 +5,6 @@
   <meta name="color-scheme" content="dark">
   <title>Lavunio</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="theme.css">
 </head>
 <body>
   <div id="splash">
@@ -69,8 +68,6 @@
       </span>
       <span class="brand-name">Lavunio</span>
     </div>
-    <div class="nav-drag" data-tauri-drag-region></div>
-
     <label class="search-box">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <circle cx="11" cy="11" r="6.5"/><path d="M16 16 L21 21"/>
@@ -78,15 +75,17 @@
       <input id="search-input" type="text" placeholder="Поиск режимов" aria-label="Поиск режимов" data-i18n-placeholder="topbar.search" autocomplete="off" spellcheck="false" data-i18n-aria="topbar.search">
     </label>
 
-    <button class="icon-btn" id="btn-refresh" title="Обновить список режимов" aria-label="Обновить список режимов" data-i18n-title="topbar.refresh">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
-      </svg>
-    </button>
+    <div class="nav-drag" data-tauri-drag-region></div>
 
     <button class="update-chip" id="update-chip" hidden type="button">
       <span class="update-chip-dot"></span>
       <span id="update-chip-text">Обновление</span>
+    </button>
+
+    <button class="icon-btn" id="btn-refresh" title="Обновить список режимов" aria-label="Обновить список режимов" data-i18n-title="topbar.refresh">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
+      </svg>
     </button>
 
     <div class="notif-wrap">

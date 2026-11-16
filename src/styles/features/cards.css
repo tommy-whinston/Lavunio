@@ -1,0 +1,356 @@
+/* ============ КАРТОЧКА РЕЖИМА ============ */
+
+.mode-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  cursor: pointer;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.mode-card:hover,
+.mode-card:focus-within {
+  border-color: var(--border-strong);
+}
+
+/* ---- Обложка 16:9 ---- */
+.card-media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.card-media > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--dur) var(--ease);
+}
+.mode-card:hover .card-media > img {
+  transform: scale(1.02);
+}
+
+/* ---- Статус поверх обложки ---- */
+.card-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.card-badge.playing {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  color: var(--ok);
+}
+.card-badge.update {
+  border-color: var(--accent-line);
+  color: var(--accent-2);
+}
+.card-badge.installed {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.card-badge.library {
+  color: var(--muted-2);
+}
+.card-badge.new {
+  color: var(--muted-2);
+}
+
+/* ---- Кнопка меню на обложке ---- */
+.card-menu-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease),
+    color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.mode-card:hover .card-menu-btn,
+.card-menu-btn:focus-visible {
+  opacity: 1;
+}
+.card-menu-btn:hover {
+  background: var(--panel-3);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/* ---- Круглая кнопка запуска ---- */
+.card-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--panel-2);
+  color: var(--text);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease),
+    color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.card-play svg {
+  width: 17px;
+  height: 17px;
+}
+.mode-card:hover .card-play,
+.mode-card:focus-within .card-play {
+  opacity: 1;
+  visibility: visible;
+}
+.mode-card:hover .card-play:disabled {
+  opacity: 0.45;
+}
+.card-play:hover {
+  background: var(--panel-3);
+  color: var(--accent-2);
+}
+.card-play.state-update {
+  color: var(--accent-2);
+}
+.card-play.state-running {
+  color: var(--ok);
+}
+.card-play:disabled {
+  cursor: default;
+}
+
+/* ---- Прогресс внизу обложки ---- */
+.card-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  height: 3px;
+  background: var(--panel-3);
+}
+.card-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+  transition: width 150ms linear;
+}
+
+/* ---- Тело карточки ---- */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 14px 14px;
+}
+
+.card-title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-sub {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-author {
+  margin-top: 2px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Скриншоты ---- */
+.card-shots {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.card-shots img {
+  width: 56px;
+  height: 32px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--panel-2);
+}
+
+.card-status-row {
+  margin-top: 10px;
+}
+
+.card-release {
+  margin-top: 8px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+}
+
+.card-desc {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Подвал карточки ---- */
+.card-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.card-installs,
+.card-size {
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.card-foot > :last-child {
+  margin-left: auto;
+}
+
+.card-state {
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-state.state-install {
+  color: var(--muted);
+}
+.card-state.state-update {
+  color: var(--accent-2);
+}
+.card-state.state-ready {
+  color: var(--text);
+}
+.card-state.state-running {
+  color: var(--ok);
+}
+
+/* ---- Контекстное меню карточки ---- */
+.card-context,
+.card-menu {
+  z-index: 400;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-context {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 208px;
+}
+
+/* Внутрикарточный вариант меню (legacy) */
+.card-menu {
+  position: absolute;
+  top: 44px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+}
+
+.card-context button,
+.card-menu button {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.card-context button:hover,
+.card-menu button:hover {
+  background: var(--panel-3);
+}
+.card-context button.primary,
+.card-menu button.primary {
+  color: var(--accent-2);
+}
+.card-context button.danger,
+.card-menu button.danger {
+  color: var(--danger);
+}
+.card-context button.danger:hover,
+.card-menu button.danger:hover {
+  background: var(--danger-soft);
+}
+
+/* На сенсорных экранах наведения нет — показываем кнопку всегда */
+@media (hover: none) {
+  .card-play {
+    opacity: 1;
+    visibility: visible;
+  }
+  .card-menu-btn {
+    opacity: 1;
+  }
+}

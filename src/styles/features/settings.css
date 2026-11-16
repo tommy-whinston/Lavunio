@@ -1,0 +1,220 @@
+/* ============ НАСТРОЙКИ ============ */
+
+/* Модалка: ширина ~820px, высота ограничена, содержимое прокручивается внутри */
+.modal-settings {
+  width: 820px;
+  max-width: 100%;
+  height: min(640px, 88vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Каркас: навигация слева, содержимое справа */
+.settings-shell {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 20px;
+}
+
+.settings-nav {
+  width: 168px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  text-align: left;
+  transition: background var(--dur), color var(--dur);
+}
+.settings-nav-item:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.settings-nav-item.active {
+  background: var(--panel-2);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.settings-nav-spacer {
+  flex: 1 1 auto;
+  min-height: 12px;
+}
+
+.settings-nav-legal {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 12px;
+}
+.settings-nav-legal a {
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  text-decoration: none;
+  transition: color var(--dur);
+}
+.settings-nav-legal a:hover { color: var(--accent-2); }
+
+/* Содержимое */
+.settings-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-section-head h3 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.settings-section-head p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.settings-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.settings-profile-card .avatar { --avatar-size: 40px; }
+.settings-profile-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.settings-profile-card > div b {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.settings-profile-card > div span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.settings-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px;
+  text-align: center;
+}
+.settings-empty b {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.settings-empty span {
+  max-width: 320px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.settings-empty .btn { margin-top: 4px; }
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Подвал модалки */
+.settings-foot {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.settings-foot .hint { margin-top: 0; }
+#settings-foot-hint {
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+}
+
+/* Состояния полей */
+#settings-disk-info { margin-top: 8px; }
+#settings-disk-info.warn { color: var(--warn); }
+
+#ram-out {
+  margin-left: 2px;
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-body .row { flex-wrap: wrap; }
+.settings-body .row input[type="text"] {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.settings-body #set-width,
+.settings-body #set-height {
+  flex: 0 0 96px;
+  width: 96px;
+  text-align: center;
+}
+.settings-body .check.standalone {
+  font-weight: 400;
+  color: var(--text);
+}
+
+/* Узкое окно: навигация становится строкой */
+@media (max-width: 720px) {
+  .modal-settings {
+    height: auto;
+    max-height: 88vh;
+  }
+  .settings-shell { flex-direction: column; gap: 12px; }
+  .settings-nav {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding-right: 0;
+    padding-bottom: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .settings-nav-item {
+    flex: 0 0 auto;
+    width: auto;
+  }
+  .settings-nav-spacer { display: none; }
+  .settings-nav-legal {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    padding-top: 0;
+    padding-left: 8px;
+  }
+}

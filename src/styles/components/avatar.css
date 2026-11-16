@@ -1,0 +1,29 @@
+/* ============ АВАТАРЫ ============ */
+/* Размер задаётся через --avatar-size на элементе. Для скина показывается голова (8×8 пикселей в текстуре 64×64). */
+.avatar {
+  --avatar-size: 32px;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: min(12px, calc(var(--avatar-size) * 0.25));
+  background: var(--panel-3);
+  color: var(--text);
+  font-size: calc(var(--avatar-size) * 0.4);
+  font-weight: 600;
+  line-height: 1;
+  background-repeat: no-repeat;
+  background-size: calc(var(--avatar-size) * 8) auto;
+  background-position: calc(var(--avatar-size) * -1) calc(var(--avatar-size) * -1);
+  image-rendering: pixelated;
+}
+.avatar.loaded {
+  background-color: var(--panel-2);
+}
+.avatar.lavunio-avatar {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+}

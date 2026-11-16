@@ -1,24 +1,26 @@
-/* ============ ТОСТ ============ */
+/* ============ УВЕДОМЛЕНИЕ ============ */
 #toast {
   position: fixed;
   left: 50%;
-  bottom: 28px;
-  transform: translateX(-50%) translateY(80px);
+  bottom: 24px;
   z-index: 100;
-  padding: 12px 20px;
-  border-radius: 9px;
-  background: rgba(27, 27, 31, 0.97);
+  max-width: min(520px, 80vw);
+  padding: 10px 14px;
+  background: var(--panel-3);
   border: 1px solid var(--border-strong);
-  border-left: 3px solid var(--accent-2);
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  font-size: var(--fs-base);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.25s;
-  max-width: 70vw;
+  transform: translate(-50%, 12px);
+  transition: transform 0.2s var(--ease), opacity 0.2s var(--ease);
 }
-#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-#toast.ok { border-left-color: var(--ok); }
-#toast.warn { border-left-color: var(--warn); }
-#toast.error { border-left-color: var(--danger); }
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+#toast.ok { box-shadow: inset 2px 0 0 var(--ok), var(--shadow-sm); }
+#toast.warn { box-shadow: inset 2px 0 0 var(--warn), var(--shadow-sm); }
+#toast.error { box-shadow: inset 2px 0 0 var(--danger), var(--shadow-sm); }

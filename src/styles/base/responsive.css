@@ -1,25 +1,28 @@
-/* ============ АДАПТИВ ============ */
+/* ============ АДАПТИВ КАРКАСА ============ */
 @media (max-width: 1080px) {
-  #sidebar { width: 180px; }
-  #app { padding: 22px 22px 34px; }
-  .search-box { width: 220px; }
-  .grid { gap: 16px; }
-  .detail-layout { grid-template-columns: minmax(0, 1fr) 300px; }
-  .changelog-section { max-width: min(640px, calc(100% - 326px)); }
+  :root { --sidebar-w: 192px; }
+  #app { padding: 22px 24px 40px; }
+  .search-box { width: 240px; }
 }
 
 @media (max-width: 900px) {
-  #sidebar { width: 64px; padding: 18px 8px; }
-  .side-link { justify-content: center; padding: 12px 0; }
-  .side-link span { display: none; }
-  .side-link.active::before { display: none; }
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .skeleton-grid { grid-template-columns: repeat(2, 1fr); }
-  .detail-layout { grid-template-columns: 1fr; }
-  .detail-side { order: -1; }
-  .side-card { position: static; }
-  .detail-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .requirements { grid-template-columns: 1fr; }
-  .changelog-section { max-width: 100%; }
-  .search-box kbd { display: none; }
+  :root { --sidebar-w: 64px; }
+  #sidebar .side-group-label,
+  .side-link span,
+  .side-badge-text,
+  .sidebar-profile-copy,
+  .sidebar-foot { display: none; }
+  .side-link { justify-content: center; padding: 0; }
+  .side-link.active::before { left: -10px; }
+  .side-nav { padding: 12px 8px; }
+  .sidebar-profile { flex-direction: column; margin: 8px 6px 0; padding: 6px 0; }
+  .sidebar-profile-main { justify-content: center; }
+  .sidebar-profile-actions { flex-direction: column; }
+  .search-box { width: 200px; }
+}
+
+@media (max-width: 640px) {
+  .brand-name { display: none; }
+  .search-box { width: 150px; }
+  #app { padding: 16px; }
 }

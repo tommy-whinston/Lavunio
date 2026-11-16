@@ -1,0 +1,91 @@
+/* ============ КНОПКИ ============ */
+.btn {
+  height: 34px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--dur), border-color var(--dur), color var(--dur);
+}
+.btn:disabled {
+  background: var(--panel-3);
+  border-color: transparent;
+  color: var(--muted-2);
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+.btn-ghost {
+  background: var(--panel-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--panel-3);
+  border-color: var(--border-strong);
+}
+
+.btn-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) { background: rgba(224, 103, 106, 0.2); }
+
+.btn-small {
+  height: 30px;
+  padding: 0 10px;
+  font-size: var(--fs-sm);
+}
+.btn-big {
+  height: 40px;
+  padding: 0 20px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.btn-block { width: 100%; }
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  color: var(--muted);
+  transition: background var(--dur), color var(--dur);
+}
+.icon-btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.icon-btn:disabled {
+  color: var(--muted-2);
+  cursor: default;
+}
+.icon-btn.spinning svg { animation: spin 0.9s linear infinite; }
+
+.link,
+.link-btn {
+  color: var(--accent-2);
+  cursor: pointer;
+}
+.link:hover,
+.link-btn:hover { text-decoration: underline; }
+.link-btn {
+  padding: 0;
+  font: inherit;
+  background: none;
+  border: 0;
+}

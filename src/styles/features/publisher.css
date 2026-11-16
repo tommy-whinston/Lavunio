@@ -1,0 +1,219 @@
+/* ============ ПУБЛИКАЦИЯ ============ */
+
+/* ---- Панель раздела ---- */
+.publisher-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+.publisher-toolbar .hint {
+  margin: 0;
+  min-width: 0;
+}
+
+/* ---- Прогресс загрузки ---- */
+.publisher-progress {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.publisher-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.publisher-progress-head b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.publisher-progress .progress { margin-top: 8px; }
+
+/* ---- Список режимов ---- */
+.publisher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---- Карточка режима ---- */
+.pub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: left;
+}
+.pub-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.pub-card-head > div { min-width: 0; }
+.pub-title {
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pub-sub {
+  margin-top: 2px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pub-cover {
+  width: 100%;
+  height: 168px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.pub-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+}
+.pub-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.pub-stats b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Статусы ---- */
+.pub-status {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  flex-shrink: 0;
+  border-radius: var(--radius-xs);
+  background: var(--panel-3);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pub-status.draft {
+  background: var(--panel-3);
+  color: var(--muted);
+}
+.pub-status.pending {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.pub-status.published {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.pub-status.rejected {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.pub-status.hidden {
+  background: var(--panel-3);
+  color: var(--muted-2);
+}
+
+/* ---- Релизы ---- */
+.pub-releases {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pub-release {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.pub-release-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.pub-release-version {
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+.pub-release-channel {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-xs);
+  background: var(--panel-3);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+.pub-release-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pub-uploading {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.pub-empty-release {
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+/* ---- Формы публикатора ---- */
+.pub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+#pub-appeal-info,
+#pub-news-mode,
+#pub-release-mode { margin-bottom: 16px; }
+
+@media (max-width: 640px) {
+  .pub-grid { grid-template-columns: minmax(0, 1fr); }
+  .pub-cover { height: 132px; }
+}

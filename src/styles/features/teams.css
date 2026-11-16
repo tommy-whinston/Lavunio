@@ -1,0 +1,485 @@
+/* ============ КОМАНДЫ ============ */
+
+/* ---- Панель инструментов ---- */
+.team-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.team-search {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+.team-search:hover { border-color: var(--border-strong); }
+.team-search:focus-within {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.team-search svg {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+.team-search input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.team-search input:hover { border-color: transparent; }
+.team-search input:focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+#team-sort { width: 168px; }
+.team-toolbar .select-shell { width: 168px; }
+
+#team-refresh { margin-left: auto; }
+
+/* ---- Приглашения ---- */
+.team-invites {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.team-invite-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.team-invite-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.team-invite-copy b {
+  font-size: var(--fs-base);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-invite-copy span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.team-invite-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+#team-hint { margin-bottom: 16px; }
+
+/* ---- Сетка команд ---- */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* ---- Карточка команды ---- */
+.team-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--dur), background var(--dur);
+}
+.team-card:hover {
+  border-color: var(--border-strong);
+  background: var(--panel-2);
+}
+.team-card-banner {
+  height: 104px;
+  background-color: var(--panel-2);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--border);
+}
+.team-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px 16px;
+}
+.team-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.team-card-avatar {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background-color: var(--panel-3);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: 1;
+}
+.team-card-avatar.image { background-color: var(--panel-2); }
+.team-card-copy {
+  flex: 1;
+  min-width: 0;
+}
+.team-card-title {
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-card-slug {
+  margin-top: 1px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-verified {
+  color: var(--accent-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.team-role-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  flex-shrink: 0;
+  border-radius: var(--radius-xs);
+  background: var(--panel-3);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.team-card-description {
+  color: var(--muted);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.team-card-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+}
+.team-card-stats b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.team-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.team-more {
+  display: flex;
+  width: fit-content;
+  margin: 20px auto 0;
+}
+
+/* ---- Страница команды ---- */
+#team-page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.team-page-banner {
+  height: 132px;
+  background-color: var(--panel-2);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.team-page-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+.team-page-avatar {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background-color: var(--panel-3);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  color: var(--text);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1;
+}
+.team-page-avatar.image { background-color: var(--panel-2); }
+.team-page-hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+.team-page-hero-copy h3 {
+  color: var(--text);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-page-hero-copy p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+}
+.team-page-links {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.team-page-stats {
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.team-page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.team-page-heading {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+#team-page-requests:empty { display: none; }
+#team-page-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ---- Режимы команды ---- */
+.team-mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.team-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--fs-base);
+  text-align: left;
+  transition: background var(--dur), color var(--dur);
+}
+.team-mode-row:hover { background: var(--panel-3); }
+.team-mode-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-mode-row b {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ---- Новости команды ---- */
+.team-news-list {
+  display: flex;
+  flex-direction: column;
+}
+.team-news-list .session-row,
+#team-page-requests .session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-base);
+}
+.team-news-list .session-row:last-child,
+#team-page-requests .session-row:last-child { border-bottom: 0; }
+.team-news-list .session-row > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-news-list .session-row b {
+  flex-shrink: 0;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  white-space: nowrap;
+}
+#team-page-requests .session-row > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#team-page-requests .session-row > span:last-child {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* ---- Участники ---- */
+.team-members-list {
+  display: flex;
+  flex-direction: column;
+}
+.team-member-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.team-member-row:last-child { border-bottom: 0; }
+.team-member-row .grow {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.team-member-row .name {
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-member-row .sub {
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-member-row select {
+  width: auto;
+  min-width: 140px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 30px 0 10px;
+  font-size: var(--fs-sm);
+}
+.team-member-perms {
+  flex: 1 0 100%;
+}
+.team-member-perms summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--dur);
+}
+.team-member-perms summary:hover { color: var(--text); }
+.team-member-perms[open] summary { margin-bottom: 8px; }
+.team-perm-grid {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.team-perm-grid .btn { margin-left: auto; }
+
+/* ---- Формы команд ---- */
+#team-form .pub-grid,
+#team-invite-form .pub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+#team-members-hint,
+#team-join-info { margin-bottom: 16px; }
+
+@media (max-width: 640px) {
+  .team-grid { grid-template-columns: minmax(0, 1fr); }
+  #team-form .pub-grid,
+  #team-invite-form .pub-grid { grid-template-columns: minmax(0, 1fr); }
+  #team-refresh { margin-left: 0; }
+}

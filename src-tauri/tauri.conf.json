@@ -22,7 +22,7 @@
         "fullscreen": false,
         "center": true,
         "visible": true,
-        "backgroundColor": "#080808",
+        "backgroundColor": "#101013",
         "shadow": false,
         "theme": "Dark"
       }
@@ -44,7 +44,7 @@
     ],
     "publisher": "Lavunio",
     "shortDescription": "Lavunio",
-    "longDescription": "Lavunio — магазин режимов Minecraft с поддержкой аккаунтов Ely.by",
+    "longDescription": "Lavunio — магазин режимов Minecraft с аккаунтами Lavunio ID",
     "copyright": "© Lavunio",
     "category": "Game",
     "windows": {
