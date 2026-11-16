@@ -146,8 +146,7 @@ async function waitFor(check, timeoutMs, intervalMs = 150) {
     assert(!settings.hasCatalogInput, 'catalog URL input is still visible');
     assert(!settings.hasDataDirInput, 'data dir input is still visible');
     assert(settings.tabCount === 0, 'settings tabs are still visible');
-    assert(settings.hasAdvanced, 'advanced settings section is missing');
-    assert(settings.advancedClosed, 'advanced settings must be closed by default');
+    assert(!settings.hasAdvanced, 'advanced settings section must not be shown');
     assert(!settings.hasCatalogUrl, 'catalogUrl must not be stored in settings');
     assert(settings.logsPathField, 'logs path is empty');
     console.log('PASS: internal settings are hidden');
