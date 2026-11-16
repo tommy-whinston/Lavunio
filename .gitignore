@@ -10,3 +10,4 @@
 *.log
 /screenshot*.png
 /tools/smoke/artifacts/
+/tools/shots/artifacts/
