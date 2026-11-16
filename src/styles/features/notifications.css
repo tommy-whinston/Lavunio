@@ -1,12 +1,12 @@
 /* ============ УВЕДОМЛЕНИЯ ============ */
+
 .notif-popover {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 80;
-  width: min(380px, calc(100vw - 32px));
-  max-height: min(520px, calc(100vh - 88px));
-  overflow-y: auto;
+  z-index: 30;
+  width: 340px;
+  max-width: calc(100vw - 24px);
   padding: 8px;
   background: var(--panel-2);
   border: 1px solid var(--border-strong);
@@ -19,58 +19,83 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 8px 10px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 4px 6px 10px;
 }
 .notif-pop-head b {
   font-size: var(--fs-md);
   font-weight: 600;
 }
 
+#notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+/* ---- Элемент уведомления ---- */
 .notif-popover .notification-item {
   position: relative;
   display: block;
   width: 100%;
-  margin-bottom: 4px;
-  padding: 10px 12px 10px 16px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  padding: 8px 10px 8px 22px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  box-shadow: none;
   text-align: left;
-  transition: background var(--dur), border-color var(--dur);
+  transition: background var(--dur);
 }
-.notif-popover .notification-item:last-child { margin-bottom: 0; }
-.notif-popover .notification-item:hover {
-  background: var(--panel-3);
-}
-.notif-popover .notification-item.read { opacity: 0.55; }
-.notif-popover .notification-item:not(.read)::before {
-  content: '';
+.notif-popover .notification-item:hover { background: var(--panel-3); }
+
+/* Точка непрочитанного */
+.notif-popover .notification-item::before {
+  content: "";
   position: absolute;
-  top: 15px;
-  left: 5px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+  top: 14px;
+  left: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
   background: var(--accent);
 }
+.notif-popover .notification-item.read::before { background: transparent; }
+
+/* Текст внутри карточки уведомления */
 .notif-popover .notification-item .pub-title {
   font-size: var(--fs-base);
   font-weight: 500;
-  white-space: normal;
+  color: var(--text);
 }
+.notif-popover .notification-item.read .pub-title { color: var(--muted); }
 .notif-popover .notification-item .mod-changelog {
-  margin-top: 4px;
-  padding: 0;
-  background: none;
-  border: 0;
-  color: var(--muted);
+  margin-top: 2px;
   font-size: var(--fs-sm);
-  line-height: 1.4;
+  color: var(--muted);
+  line-height: 1.45;
 }
 .notif-popover .notification-item .pub-meta {
-  margin-top: 6px;
-  color: var(--muted-2);
+  margin-top: 4px;
   font-size: var(--fs-xs);
+  color: var(--muted-2);
+}
+
+.notif-popover #notifications-list .mod-empty {
+  padding: 20px 12px;
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+/* ---- Узкое окно: панель на всю ширину ---- */
+@media (max-width: 560px) {
+  .notif-popover {
+    position: fixed;
+    top: calc(var(--topbar-h) + 8px);
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
 }
