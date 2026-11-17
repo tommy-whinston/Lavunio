@@ -4,7 +4,7 @@ import { tKey } from '../../i18n/index.js';
 
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
-import { $, escapeHtml, normalizeIdInput } from '../../core/dom.js';
+import { $, escapeHtml } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { lavunioLoggedIn, applyLavunioAvatar } from '../../core/lavunio.js';
 import { isOwnUsername } from '../../core/social.js';
@@ -170,8 +170,9 @@ export function bindProfileView() {
     if (action === 'settings') {
       profileActions.openModal('modal-settings');
     } else if (action === 'edit') {
-      const panel = $('profile-edit');
-      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      profileActions.openModal('modal-settings');
+      const tab = document.querySelector('#modal-settings [data-settings-tab="profile"]');
+      if (tab) tab.click();
     } else if (action === 'logout') {
       profileActions.logoutLavunio();
     } else if (action === 'messages') {
@@ -216,8 +217,6 @@ export function bindProfileView() {
     }
   });
   els.profileContent.addEventListener('input', (event) => {
-    const input = event.target.closest('#profile-username');
-    if (input) normalizeIdInput(input);
     if (event.target.id === 'profile-post-body') {
       const length = $('profile-post-length');
       if (length) length.textContent = `${event.target.value.length}/1000`;
@@ -253,7 +252,6 @@ export function bindProfileView() {
       }
       return;
     }
-    if (form.dataset.profileForm === 'edit') await savePlayerProfile();
   });
   const upload = $('skin-modal-upload');
   if (upload) upload.onclick = () => uploadLavunioSkin();
@@ -380,49 +378,6 @@ async function setSkinModel(model) {
   }
 }
 
-export async function savePlayerProfile() {
-  const username = $('profile-username') ? $('profile-username').value.trim().toLowerCase() : '';
-  const displayName = $('profile-display-name') ? $('profile-display-name').value.trim() : '';
-  const bio = $('profile-bio') ? $('profile-bio').value.trim() : '';
-  const error = $('profile-error');
-  if (!/^[a-z0-9]{3,20}$/.test(username)) {
-    if (error) {
-      error.textContent = tKey("profile.id.invalid");
-      error.hidden = false;
-    }
-    return;
-  }
-  if (!displayName || displayName.length > 16) {
-    if (error) {
-      error.textContent = tKey("display.name.hint");
-      error.hidden = false;
-    }
-    return;
-  }
-  const button = $('profile-save');
-  if (button) button.disabled = true;
-  if (error) error.hidden = true;
-  try {
-    await api.playerUpdateProfile(username, displayName, bio);
-    if (api.lavunioRefreshProfile) {
-      try { S.lavunio = await api.lavunioRefreshProfile(); } catch (_) {}
-    }
-    if (S.lavunio && S.lavunio.user) S.profileUsername = S.lavunio.user.username;
-    profileActions.renderAccountChip();
-    profileActions.renderLavunioPane();
-    profileActions.loadFriends(true).catch(() => {});
-    toast(tKey("profile.saved"), 'ok');
-    if (S.profileUsername) await openProfile(S.profileUsername);
-  } catch (err) {
-    if (error) {
-      error.textContent = String(err || tKey("failed.to.save.profile"));
-      error.hidden = false;
-    }
-  } finally {
-    if (button) button.disabled = false;
-  }
-}
-
 export async function uploadLavunioSkin() {
   if (!lavunioLoggedIn()) return;
   let path;
@@ -438,7 +393,7 @@ export async function uploadLavunioSkin() {
   const modelEl = accountOpen
     ? $('lavunio-skin-model')
     : ($('skin-modal-model') || $('lavunio-skin-model'));
-  const buttons = [$('profile-save'), $('lavunio-skin-upload'), $('skin-modal-upload')].filter(Boolean);
+  const buttons = [$('lavunio-skin-upload'), $('skin-modal-upload')].filter(Boolean);
   buttons.forEach((button) => { button.disabled = true; });
   try {
     S.lavunio = await api.uploadSkin(path, modelEl ? modelEl.value : 'classic');

@@ -807,8 +807,6 @@ export const RU = {
   "add.friend": "Добавить в друзья",
   "remove.friend.2": "Удалить из друзей",
   "message": "Написать",
-  "profile.settings": "Настройки профиля",
-  "launcher.settings": "Настройки лаунчера",
   "information": "Информация",
   "friend.requests": "Заявки в друзья",
   "direct.chat.with.2": "Личный чат с",

@@ -89,36 +89,6 @@ export function profileRequestsHtml() {
   `;
 }
 
-export function profileEditHtml(profile) {
-  return `
-    <section class="profile-panel" id="profile-edit">
-      <h2>${tKey("profile.settings")}</h2>
-      <form class="profile-edit" data-profile-form="edit" autocomplete="off">
-        <div class="field">
-          <label for="profile-username">${tKey("profile.id")}</label>
-          <input id="profile-username" type="text" maxlength="20" pattern="[a-z0-9]{3,20}" spellcheck="false" autocapitalize="none" value="${escapeHtml(profile.username || '')}">
-          <div class="hint">${tKey("profile.id.hint")}</div>
-        </div>
-        <div class="field">
-          <label for="profile-display-name">${tKey("display.name")}</label>
-          <input id="profile-display-name" type="text" maxlength="16" spellcheck="false" value="${escapeHtml(profile.displayName || profile.username)}">
-          <div class="hint">${tKey("display.name.hint")}</div>
-        </div>
-        <div class="field">
-          <label for="profile-bio">${tKey("about")}</label>
-          <textarea id="profile-bio" rows="3" maxlength="500" placeholder="${tKey("a.few.words.about")}">${escapeHtml(profile.bio || '')}</textarea>
-        </div>
-        <div class="form-error" id="profile-error" hidden></div>
-        <button class="btn btn-primary" id="profile-save" type="submit">${tKey("save")}</button>
-      </form>
-      <div class="profile-account-row">
-        <button class="btn btn-ghost" type="button" data-profile-action="settings">${tKey("launcher.settings")}</button>
-        <button class="btn btn-ghost" type="button" data-profile-action="logout">${tKey("sign.out.of.lavunio")}</button>
-      </div>
-    </section>
-  `;
-}
-
 export function profilePostHtml(post) {
   const own = isOwnUsername(post.username);
   return `
@@ -235,7 +205,6 @@ export function renderProfile(profile) {
               </button>
             `).join('') || '<div class="profile-empty">' + tKey("library.is.empty") + '</div>'}
           </section>
-          ${profileEditHtml(profile)}
         ` : ''}
       </div>
       <aside class="profile-side">

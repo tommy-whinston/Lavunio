@@ -281,22 +281,6 @@
   line-height: 1.45;
 }
 
-/* ---- Форма профиля ---- */
-.profile-edit {
-  display: flex;
-  flex-direction: column;
-}
-.profile-edit > .btn { align-self: flex-start; }
-
-.profile-account-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
 /* ---- Лента постов ---- */
 .profile-feed { gap: 12px; }
 .profile-feed-head {

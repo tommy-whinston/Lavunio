@@ -807,8 +807,6 @@ export const EN = {
   "add.friend": "Add friend",
   "remove.friend.2": "Remove friend",
   "message": "Message",
-  "profile.settings": "Profile settings",
-  "launcher.settings": "Launcher settings",
   "information": "Information",
   "friend.requests": "Friend requests",
   "direct.chat.with.2": "Direct chat with",

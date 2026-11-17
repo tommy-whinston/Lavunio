@@ -529,28 +529,35 @@ async function checkProfileEditor(cdp) {
   await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.openProfile('steve')`);
   await sleep(300);
   const fields = await cdp.evaluate(`(() => {
-    const id = document.getElementById('profile-username');
-    const name = document.getElementById('profile-display-name');
     const title = document.querySelector('.profile-hero-main h1');
     const style = title ? getComputedStyle(title) : null;
     return {
-      id: !!id,
-      idMax: id ? id.maxLength : null,
-      idPattern: id ? id.getAttribute('pattern') : null,
-      nameMax: name ? name.maxLength : null,
+      hasEditForm: !!document.querySelector('[data-profile-form="edit"]'),
       whiteSpace: style ? style.whiteSpace : null,
       overflow: style ? style.textOverflow : null
     };
   })()`);
-  if (!fields.id || fields.idMax !== 20 || fields.idPattern !== '[a-z0-9]{3,20}') {
-    throw new Error('profile ID field: ' + JSON.stringify(fields));
-  }
-  if (fields.nameMax !== 16) {
-    throw new Error('profile nickname limit: ' + JSON.stringify(fields));
+  if (fields.hasEditForm) {
+    throw new Error('profile edit form must live in settings: ' + JSON.stringify(fields));
   }
   if (fields.whiteSpace !== 'nowrap' || fields.overflow !== 'ellipsis') {
     throw new Error('profile name wraps: ' + JSON.stringify(fields));
   }
+
+  await cdp.evaluate(`(() => {
+    const edit = document.querySelector('[data-profile-action="edit"]');
+    if (edit) edit.click();
+  })()`);
+  await sleep(300);
+  const editor = await cdp.evaluate(`({
+    settingsOpen: !document.getElementById('modal-settings').hidden,
+    profileTab: !!document.querySelector('#modal-settings [data-settings-tab="profile"].active'),
+    profilePane: !document.querySelector('#modal-settings [data-settings-pane="profile"]').hidden
+  })`);
+  if (!editor.settingsOpen || !editor.profileTab || !editor.profilePane) {
+    throw new Error('profile edit should open settings on the profile tab: ' + JSON.stringify(editor));
+  }
+  await cdp.evaluate(`window.LavunioDebug.closeModals()`);
 
   const feed = await cdp.evaluate(`({
     composer: !!document.getElementById('profile-post-body'),
@@ -568,34 +575,6 @@ async function checkProfileEditor(cdp) {
   await sleep(350);
   const postCount = await cdp.evaluate(`document.querySelectorAll('#profile-posts .profile-post').length`);
   if (!postCount) throw new Error('profile post was not created');
-
-  await cdp.evaluate(`(() => {
-    document.getElementById('profile-username').value = 'Tommy_Whinston';
-    document.querySelector('[data-profile-form="edit"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  })()`);
-  await sleep(150);
-  const invalid = await cdp.evaluate(`({
-    hidden: document.getElementById('profile-error').hidden,
-    updates: (window.__profileUpdates || []).length
-  })`);
-  if (invalid.hidden || invalid.updates !== 0) {
-    throw new Error('invalid profile ID accepted: ' + JSON.stringify(invalid));
-  }
-
-  await cdp.evaluate(`(() => {
-    document.getElementById('profile-username').value = 'tommywhinston';
-    document.getElementById('profile-display-name').value = 'Tommy_Whinston';
-    document.querySelector('[data-profile-form="edit"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  })()`);
-  await sleep(500);
-  const saved = await cdp.evaluate(`({
-    updates: window.__profileUpdates || [],
-    error: document.getElementById('profile-error') ? document.getElementById('profile-error').textContent : ''
-  })`);
-  const update = saved.updates[0];
-  if (!update || update[0] !== 'tommywhinston' || update[1] !== 'Tommy_Whinston') {
-    throw new Error('profile save: ' + JSON.stringify(saved));
-  }
 
   let longName = null;
   for (const width of [1280, 860]) {
@@ -703,6 +682,60 @@ async function checkProfileEditor(cdp) {
   await cdp.evaluate(`window.LavunioDebug.closeModals()`);
 }
 
+async function checkSettingsProfile(cdp) {
+  await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.openModal('modal-settings')`);
+  await sleep(300);
+  const fields = await cdp.evaluate(`(() => {
+    const id = document.getElementById('settings-profile-username');
+    const name = document.getElementById('settings-profile-display');
+    return {
+      id: !!id,
+      idMax: id ? id.maxLength : null,
+      idPattern: id ? id.getAttribute('pattern') : null,
+      nameMax: name ? name.maxLength : null,
+      save: !!document.getElementById('settings-profile-save')
+    };
+  })()`);
+  if (!fields.id || fields.idMax !== 20 || fields.idPattern !== '[a-z0-9]{3,20}') {
+    throw new Error('profile ID field: ' + JSON.stringify(fields));
+  }
+  if (fields.nameMax !== 16) {
+    throw new Error('profile nickname limit: ' + JSON.stringify(fields));
+  }
+  if (!fields.save) {
+    throw new Error('profile save button is missing: ' + JSON.stringify(fields));
+  }
+
+  await cdp.evaluate(`(() => {
+    document.getElementById('settings-profile-username').value = 'Tommy_Whinston';
+    document.getElementById('settings-profile-save').click();
+  })()`);
+  await sleep(200);
+  const invalid = await cdp.evaluate(`({
+    hidden: document.getElementById('settings-profile-error').hidden,
+    updates: (window.__profileUpdates || []).length
+  })`);
+  if (invalid.hidden || invalid.updates !== 0) {
+    throw new Error('invalid profile ID accepted: ' + JSON.stringify(invalid));
+  }
+
+  await cdp.evaluate(`(() => {
+    document.getElementById('settings-profile-username').value = 'tommywhinston';
+    document.getElementById('settings-profile-display').value = 'Tommy_Whinston';
+    document.getElementById('settings-profile-save').click();
+  })()`);
+  await sleep(500);
+  const saved = await cdp.evaluate(`({
+    updates: window.__profileUpdates || [],
+    error: document.getElementById('settings-profile-error') ? document.getElementById('settings-profile-error').textContent : ''
+  })`);
+  const update = saved.updates[0];
+  if (!update || update[0] !== 'tommywhinston' || update[1] !== 'Tommy_Whinston') {
+    throw new Error('profile save: ' + JSON.stringify(saved));
+  }
+  await cdp.evaluate(`window.LavunioDebug.closeModals()`);
+}
+
 async function runNotifications(cdp) {
   await cdp.evaluate(`import('/features/notifications/index.js').then((m) => { m.openNotifications(); })`);
   await sleep(200);
@@ -755,6 +788,7 @@ async function runScenario(cdp, scenario) {
   }
   if (scenario === 'player') {
     await check(cdp, results, 'profile ID/nickname', () => checkProfileEditor(cdp));
+    await check(cdp, results, 'settings profile', () => checkSettingsProfile(cdp));
     await check(cdp, results, 'teams directory', () => checkTeamsDirectory(cdp));
   }
 
