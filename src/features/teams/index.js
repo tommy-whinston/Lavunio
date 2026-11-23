@@ -38,6 +38,10 @@ export function bindTeams() {
       teamActions.openAccount();
       return;
     }
+    if ((S.teams || []).length > 0) {
+      toast(tKey("teams.one.only"), 'info');
+      return;
+    }
     openTeamModal(null);
   };
   const refresh = $('team-refresh');
@@ -98,6 +102,12 @@ export function bindTeams() {
     };
   }
   const page = $('team-page-content');
+  if (page) page.addEventListener('submit', (event) => {
+    const form = event.target.closest('[data-team-news-form]');
+    if (!form) return;
+    event.preventDefault();
+    submitTeamNewsInline();
+  });
   if (page) page.onclick = (event) => {
     const tabButton = event.target.closest('button[data-team-tab]');
     if (tabButton) {
@@ -231,9 +241,14 @@ function teamCardHtml(team) {
 
 export function renderTeams() {
   if (!els.teamList) return;
-  const teams = S.teamDirectory || [];
+  const mineIds = new Set((S.teams || []).map((team) => team.id));
+  const teams = (S.teamDirectory || [])
+    .slice()
+    .sort((a, b) => (mineIds.has(b.id) ? 1 : 0) - (mineIds.has(a.id) ? 1 : 0));
   if (els.teamStatCount) els.teamStatCount.textContent = String(Number(S.teamDirectoryTotal) || 0);
   if (els.teamStatMine) els.teamStatMine.textContent = String((S.teams || []).length);
+  const newButton = $('team-new');
+  if (newButton) newButton.hidden = (S.teams || []).length > 0;
   if (els.teamHint) {
     els.teamHint.textContent = S.teamsLoading && !S.teamsLoaded
       ? tKey("loading.2")
@@ -772,7 +787,7 @@ export function renderTeamPage(team, profile) {
   const following = !!(profile && profile.following);
   const actions = [];
   if (manage) actions.push({ action: 'settings', label: '⚙', className: 'icon-btn' });
-  if (newsManage) actions.push({ action: 'news', label: tKey("common.news") });
+  if (manage) actions.push({ action: 'edit', label: tKey("edit.team") });
   if (!isMember && teamActions.loggedIn()) {
     actions.push({ action: following ? 'unfollow' : 'follow', label: following ? tKey("teams.unsubscribe") : tKey("follow") });
   } else if (isMember && following) {
@@ -826,6 +841,15 @@ export function renderTeamPage(team, profile) {
     </div>
 
     <section class="team-section" data-team-section="news">
+      ${newsManage ? `
+        <form class="profile-panel team-panel team-news-form" data-team-news-form>
+          <textarea id="team-news-input" rows="3" maxlength="5000" placeholder="${tKey("what.is.new")}"></textarea>
+          <div class="team-news-form-foot">
+            <span class="hint">${tKey("teams.news.hint")}</span>
+            <button class="btn btn-primary" type="submit">${tKey("publish")}</button>
+          </div>
+        </form>
+      ` : ''}
       <div class="profile-panel team-panel">
         <div class="team-news-list">
           ${news.map((item) => `
@@ -887,6 +911,29 @@ export function selectTeamTab(tab) {
   document.querySelectorAll('#team-page-content [data-team-section]').forEach((section) => {
     section.classList.toggle('tab-hidden', section.dataset.teamSection !== S.teamPageTab);
   });
+}
+
+export async function submitTeamNewsInline() {
+  const team = S.teamPage;
+  const input = $('team-news-input');
+  if (!team || !input) return;
+  const text = input.value.trim();
+  if (text.length < 3) {
+    toast(tKey("fill.in.the.title"), 'error');
+    return;
+  }
+  const title = (text.split('\n')[0] || text).slice(0, 120);
+  const button = document.querySelector('.team-news-form button[type="submit"]');
+  if (button) button.disabled = true;
+  try {
+    await api.teamCreateNews(team.id, title, text);
+    toast(tKey("teams.news.published"), 'ok');
+    await openTeamPage(team);
+  } catch (err) {
+    toast(tKey("failed.to.publish.news") + ' ' + err, 'error');
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 export function openTeamNews(team) {

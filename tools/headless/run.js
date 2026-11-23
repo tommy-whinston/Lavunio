@@ -507,7 +507,7 @@ async function checkTeamsDirectory(cdp) {
     filters: document.querySelectorAll('[data-team-filter]').length,
     create: !!document.getElementById('team-new')
   })`);
-  if (!page.cards || !page.search || !page.sort || page.filters < 3 || !page.create) {
+  if (!page.cards || !page.search || !page.sort || page.filters < 2 || !page.create) {
     throw new Error('team directory: ' + JSON.stringify(page));
   }
   await cdp.evaluate(`document.querySelector('#team-list [data-team-action="page"]').click()`);

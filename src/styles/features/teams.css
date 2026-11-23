@@ -408,6 +408,21 @@
 .team-member-row .select-shell { width: 160px; }
 .team-member-row .select-trigger { height: 32px; font-size: var(--fs-sm); }
 
+/* ---- Лента новостей ---- */
+.team-news-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.team-news-form textarea { min-height: 72px; }
+.team-news-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.team-news-form-foot .hint { margin: 0; }
+
 /* ---- Режимы команды ---- */
 .team-mode-list {
   display: flex;

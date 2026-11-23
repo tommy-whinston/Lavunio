@@ -985,6 +985,8 @@ export const EN = {
   "team.verify.hint": "A verified team mark in the catalog and on mode pages.",
   "team.verify": "Verify",
   "team.archive.hint": "The team will be hidden from the catalog and members will lose access.",
+  "teams.news.hint": "The first line becomes the title.",
+  "teams.one.only": "You can create only one team.",
   "teams.confirm.archive.title": "Archive team?",
   "teams.confirm.archive.text": "Team \"{0}\" will be hidden. Modes and history will be preserved.",
   "teams.ownership.transferred": "Ownership transferred",
