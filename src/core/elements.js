@@ -133,6 +133,8 @@ export const els = {
   detailAuthorAvatar: $('detail-author-avatar'),
   detailAuthorName: $('detail-author-name'),
   detailAuthorSub: $('detail-author-sub'),
+  detailTeamLink: $('detail-team-link'),
+  detailTeamLinkName: $('detail-team-link-name'),
   detailAuthorModes: $('detail-author-modes'),
   detailAuthorFollow: $('detail-author-follow'),
   detailAuthorProfile: $('detail-author-profile'),

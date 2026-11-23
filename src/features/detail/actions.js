@@ -414,13 +414,18 @@ export function renderDetail() {
   els.detailAuthorSection.hidden = !authorName;
   if (authorName) {
     els.detailAuthorName.textContent = authorName;
-    const authorSub = author && author.verified ? tKey("verified.author") : tKey("mode.author");
-    els.detailAuthorSub.innerHTML = team && team.slug
-      ? `<span>${escapeHtml(authorSub)}</span> · <button class="team-ref" type="button" data-detail-team-ref="${escapeHtml(team.slug)}">${escapeHtml(team.title)}${team.verified ? ' <span class="team-verified">✓</span>' : ''}</button>`
-      : escapeHtml(authorSub);
+    els.detailAuthorSub.textContent = author && author.verified ? tKey("verified.author") : tKey("mode.author");
     const avatar = els.detailAuthorAvatar;
     avatar.textContent = authorName[0].toUpperCase();
     avatar.style.backgroundImage = author && author.avatar ? `url("${author.avatar}")` : '';
+  }
+  if (els.detailTeamLink) {
+    const hasTeam = !!(team && team.slug);
+    els.detailTeamLink.hidden = !hasTeam;
+    els.detailTeamLink.dataset.detailTeamRef = hasTeam ? team.slug : '';
+    if (els.detailTeamLinkName) {
+      els.detailTeamLinkName.textContent = hasTeam ? `${team.title}${team.verified ? ' ✓' : ''}` : '';
+    }
   }
   const canFollow = !!(apiReady && author && author.id && S.lavunio.user && S.lavunio.user.username !== author.id);
   els.detailAuthorFollow.hidden = !canFollow;
