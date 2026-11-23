@@ -6,6 +6,8 @@
   inset: 0;
   display: flex;
   min-height: 0;
+  max-width: none;
+  margin: 0;
 }
 
 .messages-layout {
