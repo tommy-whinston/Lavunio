@@ -99,6 +99,11 @@ export function bindTeams() {
   }
   const page = $('team-page-content');
   if (page) page.onclick = (event) => {
+    const tabButton = event.target.closest('button[data-team-tab]');
+    if (tabButton) {
+      selectTeamTab(tabButton.dataset.teamTab);
+      return;
+    }
     const backButton = event.target.closest('[data-team-page-back]');
     if (backButton) {
       closeTeamPage();
@@ -113,7 +118,6 @@ export function bindTeams() {
     }
     const requestButton = event.target.closest('button[data-team-request]');
     if (requestButton) {
-      resolveTeamJoinRequest(requestButton.dataset.id, requestButton.dataset.teamRequest);
       return;
     }
     const button = event.target.closest('button[data-team-page-action]');
@@ -121,18 +125,29 @@ export function bindTeams() {
     const team = S.teamPage;
     if (!team) return;
     const action = button.dataset.teamPageAction;
-    if (action === 'members') openTeamMembers(team);
-    else if (action === 'join-requests') showTeamJoinRequests(team);
+    if (action === 'settings' || action === 'edit') openTeamSettings(team, 'overview');
+    else if (action === 'members') openTeamSettings(team, 'members');
     else if (action === 'news') openTeamNews(team);
-    else if (action === 'edit' || action === 'settings') openTeamModal(team);
     else if (action === 'transfer') openTeamTransfer(team);
     else if (action === 'follow') followTeam(team);
     else if (action === 'unfollow') unfollowTeam(team);
-    else if (action === 'join') openTeamJoin(team);
     else if (action === 'verify') toggleTeamVerified(team);
   };
-  const joinForm = $('team-join-form');
-  if (joinForm) joinForm.onsubmit = (event) => { event.preventDefault(); submitTeamJoin(); };
+  const settingsModal = $('modal-team-settings');
+  if (settingsModal) {
+    settingsModal.addEventListener('click', (event) => {
+      const tab = event.target.closest('[data-team-settings-tab]');
+      if (tab) setTeamSettingsTab(tab.dataset.teamSettingsTab);
+    });
+  }
+  const settingsSave = $('team-settings-save');
+  if (settingsSave) settingsSave.onclick = () => saveTeamSettings();
+  const settingsTransfer = $('team-settings-transfer');
+  if (settingsTransfer) settingsTransfer.onclick = () => openTeamTransfer(S.teamSettingsTeam || S.teamPage);
+  const settingsArchive = $('team-settings-archive');
+  if (settingsArchive) settingsArchive.onclick = () => archiveTeam(S.teamSettingsTeam || S.teamPage);
+  const settingsVerify = $('team-settings-verify');
+  if (settingsVerify) settingsVerify.onclick = () => toggleTeamVerified(S.teamSettingsTeam || S.teamPage);
   const newsForm = $('team-news-form');
   if (newsForm) newsForm.onsubmit = (event) => { event.preventDefault(); submitTeamNews(); };
   const transferForm = $('team-transfer-form');
@@ -279,32 +294,31 @@ export async function loadTeams(force = false, append = false) {
 }
 
 export function openTeamModal(team) {
-  S.teamEditing = team || null;
-  $('team-modal-title').textContent = team ? tKey("edit.team") : tKey("new.team");
-  $('team-submit').textContent = team ? tKey("save") : tKey("create.team");
-  $('team-title').value = team ? team.title : '';
-  $('team-slug').value = team ? team.slug : '';
-  $('team-slug').dataset.touched = team ? '1' : '';
-  $('team-description').value = team ? team.description : '';
-  $('team-links').value = team && team.links ? team.links : '';
-  $('team-avatar').value = team && team.avatarUrl ? team.avatarUrl : '';
-  $('team-banner').value = team && team.bannerUrl ? team.bannerUrl : '';
-  $('team-join-mode').value = team && team.joinMode ? team.joinMode : 'invite';
+  if (team) {
+    openTeamSettings(team, 'overview');
+    return;
+  }
+  S.teamEditing = null;
+  $('team-modal-title').textContent = tKey("new.team");
+  $('team-submit').textContent = tKey("create.team");
+  $('team-title').value = '';
+  $('team-slug').value = '';
+  $('team-slug').dataset.touched = '';
+  $('team-avatar').value = '';
   $('team-error').hidden = true;
   teamActions.openModal('modal-team');
   setTimeout(() => $('team-title').focus(), 50);
 }
 
 export async function submitTeam() {
-  const editing = S.teamEditing;
   const payload = {
     slug: $('team-slug').value.trim(),
     title: $('team-title').value.trim(),
-    description: $('team-description').value.trim(),
-    links: $('team-links').value.trim(),
+    description: '',
+    links: '',
     avatarUrl: $('team-avatar').value.trim() || null,
-    bannerUrl: $('team-banner').value.trim() || null,
-    joinMode: $('team-join-mode').value
+    bannerUrl: null,
+    joinMode: 'invite'
   };
   const error = $('team-error');
   if (!payload.title) {
@@ -321,21 +335,136 @@ export async function submitTeam() {
   button.disabled = true;
   error.hidden = true;
   try {
-    const result = editing
-      ? await api.teamUpdate(editing.id, payload)
-      : await api.teamCreate(payload);
+    const result = await api.teamCreate(payload);
     $('modal-team').hidden = true;
     S.teamsLoaded = false;
-    toast(editing ? tKey("teams.updated") : tKey("teams.created"), 'ok');
+    toast(tKey("teams.created"), 'ok');
     await loadTeams(true);
     if (result && result.slug) {
-      openTeamPage(editing ? { ...editing, ...result } : { ...result, role: 'owner' });
+      const created = { ...result, role: 'owner' };
+      await openTeamPage(created);
+      openTeamSettings(created, 'overview');
     }
   } catch (err) {
     error.textContent = String(err || tKey("teams.failed.save"));
     error.hidden = false;
   } finally {
     button.disabled = false;
+  }
+}
+
+/* ---- Настройки команды ---- */
+
+const TEAM_ROLE_ORDER = ['owner', 'admin', 'publisher', 'designer', 'builder', 'modeler', 'member'];
+
+export function setTeamSettingsTab(tab) {
+  const allowed = ['overview', 'roles', 'members', 'danger'];
+  S.teamSettingsTab = allowed.includes(tab) ? tab : 'overview';
+  document.querySelectorAll('[data-team-settings-tab]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.teamSettingsTab === S.teamSettingsTab);
+  });
+  document.querySelectorAll('[data-team-settings-pane]').forEach((pane) => {
+    pane.hidden = pane.dataset.teamSettingsPane !== S.teamSettingsTab;
+  });
+}
+
+function fillTeamSettings(team) {
+  const set = (id, value) => {
+    const el = $(id);
+    if (el) el.value = value || '';
+  };
+  set('team-settings-name', team.title);
+  set('team-settings-slug', team.slug);
+  set('team-settings-description', team.description);
+  set('team-settings-links', team.links);
+  set('team-settings-avatar', team.avatarUrl);
+  set('team-settings-banner', team.bannerUrl);
+  const error = $('team-settings-error');
+  if (error) error.hidden = true;
+}
+
+function renderTeamRoles() {
+  const box = $('team-roles-table');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="team-roles-head">
+      <span>${tKey("role")}</span>
+      ${TEAM_PERMISSIONS.map(([, label]) => `<span>${tKey(label)}</span>`).join('')}
+    </div>
+    ${TEAM_ROLE_ORDER.map((role) => {
+      const perms = ROLE_DEFAULT_PERMISSIONS[role] || {};
+      return `
+        <div class="team-roles-row">
+          <span class="team-roles-name">${escapeHtml(teamRoleName(role))}</span>
+          ${TEAM_PERMISSIONS.map(([key]) => `<span class="team-roles-mark${perms[key] ? ' on' : ''}">${perms[key] ? '✓' : '—'}</span>`).join('')}
+        </div>`;
+    }).join('')}
+  `;
+}
+
+function updateTeamDanger(team) {
+  const user = S.lavunio && S.lavunio.user;
+  const transfer = $('team-settings-transfer');
+  if (transfer) transfer.hidden = !(team && team.role === 'owner');
+  const verifyRow = $('team-settings-verify-row');
+  const isAdmin = !!(user && user.role === 'admin');
+  if (verifyRow) verifyRow.hidden = !isAdmin;
+  const verify = $('team-settings-verify');
+  if (verify) verify.textContent = team && team.verified ? tKey("teams.remove.verified") : tKey("team.verify");
+}
+
+export function openTeamSettings(team, tab) {
+  if (!team) return;
+  S.teamSettingsTeam = team;
+  fillTeamSettings(team);
+  renderTeamRoles();
+  updateTeamDanger(team);
+  teamActions.openModal('modal-team-settings');
+  setTeamSettingsTab(tab || 'overview');
+  void loadTeamMembersFor(team);
+}
+
+export async function saveTeamSettings() {
+  const team = S.teamSettingsTeam;
+  if (!team) return;
+  const error = $('team-settings-error');
+  const showError = (text) => {
+    if (!error) return;
+    error.textContent = text;
+    error.hidden = false;
+  };
+  const payload = {
+    title: $('team-settings-name').value.trim(),
+    slug: $('team-settings-slug').value.trim(),
+    description: $('team-settings-description').value.trim(),
+    links: $('team-settings-links').value.trim(),
+    avatarUrl: $('team-settings-avatar').value.trim() || null,
+    bannerUrl: $('team-settings-banner').value.trim() || null,
+    joinMode: 'invite'
+  };
+  if (!payload.title) {
+    showError(tKey("enter.a.team.name"));
+    return;
+  }
+  if (!/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(payload.slug)) {
+    showError(tKey("slug.3.64.characters"));
+    return;
+  }
+  const button = $('team-settings-save');
+  if (button) button.disabled = true;
+  if (error) error.hidden = true;
+  try {
+    const result = await api.teamUpdate(team.id, payload);
+    S.teamsLoaded = false;
+    toast(tKey("teams.updated"), 'ok');
+    await loadTeams(true);
+    const next = { ...team, ...(result || {}), ...payload };
+    S.teamSettingsTeam = next;
+    if (S.teamPage && S.teamPage.id === team.id) await openTeamPage(next);
+  } catch (err) {
+    showError(String(err || tKey("teams.failed.save")));
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 
@@ -468,27 +597,48 @@ function permissionsHtml(member) {
   `;
 }
 
+const TEAM_ROLE_NAME_KEYS = {
+  owner: 'owner',
+  admin: 'administrator',
+  publisher: 'publisher',
+  designer: 'designer',
+  builder: 'team.role.builder',
+  modeler: 'team.role.modeler',
+  member: 'member'
+};
+
+function teamRoleName(role) {
+  return tKey(TEAM_ROLE_NAME_KEYS[role] || role);
+}
+
 export function memberRoleOptions(current) {
   return ['admin', 'publisher', 'designer', 'builder', 'modeler', 'member'].map((role) =>
-    `<option value="${role}" ${role === current ? 'selected' : ''}>${escapeHtml(teamRoleLabel(role))}</option>`
+    `<option value="${role}" ${role === current ? 'selected' : ''}>${escapeHtml(teamRoleName(role))}</option>`
   ).join('');
 }
 
-export async function openTeamMembers(team) {
+export function openTeamMembers(team) {
+  openTeamSettings(team, 'members');
+}
+
+async function loadTeamMembersFor(team) {
   if (!team) return;
   S.teamMembersTeam = team;
-  $('team-members-title').textContent = tKey("pattern.members.x", [team.title]);
-  $('team-members-hint').textContent = tKey("loading.2");
-  $('team-members-list').innerHTML = '';
-  $('team-invite-form').hidden = true;
-  teamActions.openModal('modal-team-members');
+  const hint = $('team-members-hint');
+  if (hint) hint.textContent = tKey("loading.2");
+  if (els.teamMembersList) els.teamMembersList.innerHTML = '';
+  const invite = $('team-invite-form');
+  if (invite) invite.hidden = true;
   try {
     const profile = await api.teamProfile(team.slug);
     const members = Array.isArray(profile && profile.members) ? profile.members : [];
     S.teamMembers = members;
     renderTeamMembers(team, members);
+    if (profile && profile.team) {
+      S.teamSettingsTeam = { ...team, ...profile.team, role: profile.role || team.role };
+    }
   } catch (err) {
-    $('team-members-hint').textContent = tKey("teams.failed.load.members") + ' ' + err;
+    if (hint) hint.textContent = tKey("teams.failed.load.members") + ' ' + err;
   }
 }
 
@@ -616,25 +766,14 @@ export function renderTeamPage(team, profile) {
   const role = profile && profile.role ? profile.role : (team.role || null);
   const pageTeam = { ...team, role, permissions: (profile && profile.permissions) || {} };
   const manage = canManageTeam(pageTeam);
-  const membersManage = canManageMembers(pageTeam);
   const newsManage = role === 'owner' || role === 'admin'
     || !!(pageTeam.permissions && pageTeam.permissions.manage_news);
   const isMember = !!role;
   const following = !!(profile && profile.following);
-  const user = S.lavunio && S.lavunio.user;
   const actions = [];
   if (manage) actions.push({ action: 'settings', label: '⚙', className: 'icon-btn' });
-  if (membersManage) {
-    actions.push({ action: 'members', label: tKey("members") });
-    if (data.joinMode !== 'invite') actions.push({ action: 'join-requests', label: tKey("applications") });
-  }
   if (newsManage) actions.push({ action: 'news', label: tKey("common.news") });
-  if (role === 'owner') actions.push({ action: 'transfer', label: tKey("transfer.ownership") });
-  if (user && user.role === 'admin') {
-    actions.push({ action: 'verify', label: data.verified ? tKey("teams.remove.verified") : tKey("confirm") });
-  }
   if (!isMember && teamActions.loggedIn()) {
-    if (data.joinMode !== 'invite') actions.push({ action: 'join', label: data.joinMode === 'open' ? tKey("teams.join") : tKey("teams.apply") });
     actions.push({ action: following ? 'unfollow' : 'follow', label: following ? tKey("teams.unsubscribe") : tKey("follow") });
   } else if (isMember && following) {
     actions.push({ action: 'unfollow', label: tKey("teams.unsubscribe") });
@@ -668,8 +807,8 @@ export function renderTeamPage(team, profile) {
           ${following ? `<span class="profile-badge team-badge">${tKey("teams.subscribed")}</span>` : ''}
         </div>
         <div class="profile-bio team-bio">${escapeHtml(data.description || tKey("no.description"))}</div>
-        <div class="team-actions">${actionHtml}</div>
       </div>
+      <div class="profile-actions team-actions">${actionHtml}</div>
     </div>
 
     <div class="profile-stats team-stats">
@@ -680,128 +819,74 @@ export function renderTeamPage(team, profile) {
       <div class="profile-stat team-stat"><span>${tKey("followers")}</span><b>${Number(profile && profile.followers) || 0}</b></div>
     </div>
 
-    <div class="profile-layout team-layout">
-      <div class="profile-main team-main">
-        <section class="profile-panel team-panel">
-          <h2>${tKey("modes")}</h2>
-          <div class="team-mode-list">
-            ${modes.map((mode) => `
-              <button class="profile-mode-row team-mode-row" type="button" data-team-mode="${escapeHtml(mode.slug)}">
-                <span>${escapeHtml(mode.title)}</span>
-                <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
-              </button>
-            `).join('') || '<div class="hint">' + tKey("no.published.modes.yet.2") + '</div>'}
-          </div>
-        </section>
-
-        <section class="profile-panel team-panel">
-          <h2>${tKey("members")}</h2>
-          <div class="team-members-list">
-            ${members.map((member) => `
-              <div class="team-member-row">
-                <div class="grow">
-                  <div class="name">${escapeHtml(member.displayName || member.username)}</div>
-                  <div class="sub">@${escapeHtml(member.username)} · ${escapeHtml(teamRoleLabel(member.role))}</div>
-                </div>
-              </div>
-            `).join('') || '<div class="hint">' + tKey("teams.no.members") + '</div>'}
-          </div>
-        </section>
-
-        <div id="team-page-requests"></div>
-      </div>
-
-      <aside class="profile-side team-side">
-        <section class="profile-panel team-panel">
-          <h2>${tKey("news")}</h2>
-          <div class="team-news-list">
-            ${news.map((item) => `
-              <div class="session-row">
-                <span>${escapeHtml(item.title)}</span>
-                <b>${escapeHtml(formatDateTime(item.createdAt))}</b>
-              </div>
-            `).join('') || '<div class="hint">' + tKey("no.news.yet") + '</div>'}
-          </div>
-        </section>
-
-        ${data.links ? `
-          <section class="profile-panel team-panel">
-            <h2>${tKey("links")}</h2>
-            <div class="team-page-links">${escapeHtml(data.links)}</div>
-          </section>
-        ` : ''}
-      </aside>
+    <div class="detail-tabs team-tabs" role="tablist">
+      <button class="detail-tab" type="button" role="tab" data-team-tab="news">${tKey("news")}</button>
+      <button class="detail-tab" type="button" role="tab" data-team-tab="modes">${tKey("modes")}</button>
+      <button class="detail-tab" type="button" role="tab" data-team-tab="team">${tKey("nav.team")}</button>
     </div>
-  `;
-}
 
-export async function showTeamJoinRequests(team) {
-  const box = $('team-page-requests');
-  if (!box || !team) return;
-  box.innerHTML = '<div class="hint">' + tKey("teams.loading.applications") + '</div>';
-  try {
-    const items = await api.teamJoinRequests(team.id);
-    const list = Array.isArray(items) ? items : [];
-    box.innerHTML = `
-      <h3 class="team-page-heading">${tKey("teams.join.requests")}</h3>
-      ${list.length ? list.map((item) => `
-        <div class="session-row">
-          <span>@${escapeHtml(item.username)} · ${escapeHtml(item.displayName || '')}</span>
-          <span>
-            <button class="btn btn-primary btn-small" type="button" data-team-request="accept" data-id="${escapeHtml(item.id)}">${tKey("accept")}</button>
-            <button class="btn btn-ghost btn-small" type="button" data-team-request="reject" data-id="${escapeHtml(item.id)}">${tKey("decline")}</button>
-          </span>
+    <section class="team-section" data-team-section="news">
+      <div class="profile-panel team-panel">
+        <div class="team-news-list">
+          ${news.map((item) => `
+            <div class="session-row">
+              <span>${escapeHtml(item.title)}</span>
+              <b>${escapeHtml(formatDateTime(item.createdAt))}</b>
+            </div>
+          `).join('') || '<div class="hint">' + tKey("no.news.yet") + '</div>'}
         </div>
-      `).join('') : '<div class="hint">' + tKey("no.applications") + '</div>'}
-    `;
-  } catch (err) {
-    box.innerHTML = `<div class="hint">${tKey("failed.to.load.applications")} ${escapeHtml(String(err))}</div>`;
-  }
+      </div>
+    </section>
+
+    <section class="team-section" data-team-section="modes">
+      <div class="profile-panel team-panel">
+        <div class="team-mode-list">
+          ${modes.map((mode) => `
+            <button class="profile-mode-row team-mode-row" type="button" data-team-mode="${escapeHtml(mode.slug)}">
+              <span>${escapeHtml(mode.title)}</span>
+              <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
+            </button>
+          `).join('') || '<div class="hint">' + tKey("no.published.modes.yet.2") + '</div>'}
+        </div>
+      </div>
+    </section>
+
+    <section class="team-section" data-team-section="team">
+      <div class="profile-panel team-panel">
+        <div class="team-members-list">
+          ${members.map((member) => `
+            <div class="team-member-row">
+              <div class="grow">
+                <div class="name">${escapeHtml(member.displayName || member.username)}</div>
+                <div class="sub">@${escapeHtml(member.username)}</div>
+              </div>
+              <span class="team-role-badge">${escapeHtml(teamRoleName(member.role))}</span>
+            </div>
+          `).join('') || '<div class="hint">' + tKey("teams.no.members") + '</div>'}
+        </div>
+      </div>
+      ${data.links ? `
+        <div class="profile-panel team-panel">
+          <h2>${tKey("links")}</h2>
+          <div class="team-page-links">${escapeHtml(data.links)}</div>
+        </div>
+      ` : ''}
+    </section>
+  `;
+  selectTeamTab(S.teamPageTab || 'news');
 }
 
-export async function resolveTeamJoinRequest(requestId, action) {
-  const team = S.teamPage;
-  if (!team) return;
-  try {
-    await api.teamResolveJoinRequest(team.id, requestId, action);
-    toast(action === 'accept' ? tKey("request.accepted") : tKey("request.declined"), 'ok');
-    await showTeamJoinRequests(team);
-    await openTeamPage(team);
-  } catch (err) {
-    toast(tKey("failed.to.resolve.application") + " " + err, 'error');
-  }
-}
-
-export function openTeamJoin(team) {
-  if (!team) return;
-  S.teamJoinTeam = team;
-  $('team-join-info').textContent = tKey("pattern.team.x", [team.title]);
-  $('team-join-message').value = '';
-  $('team-join-error').hidden = true;
-  teamActions.openModal('modal-team-join');
-  setTimeout(() => $('team-join-message').focus(), 50);
-}
-
-export async function submitTeamJoin() {
-  const team = S.teamJoinTeam;
-  if (!team) return;
-  const message = $('team-join-message').value.trim();
-  const error = $('team-join-error');
-  const button = $('team-join-submit');
-  button.disabled = true;
-  error.hidden = true;
-  try {
-    const result = await api.teamJoin(team.id, message);
-    $('modal-team-join').hidden = true;
-    toast(result && result.status === 'joined' ? tKey("you.joined.the.team") : tKey("request.sent"), 'ok');
-    S.teamsLoaded = false;
-    await loadTeams(true);
-  } catch (err) {
-    error.textContent = String(err || tKey("failed.to.submit.application"));
-    error.hidden = false;
-  } finally {
-    button.disabled = false;
-  }
+export function selectTeamTab(tab) {
+  const allowed = ['news', 'modes', 'team'];
+  S.teamPageTab = allowed.includes(tab) ? tab : 'news';
+  document.querySelectorAll('#team-page-content [data-team-tab]').forEach((button) => {
+    const active = button.dataset.teamTab === S.teamPageTab;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('#team-page-content [data-team-section]').forEach((section) => {
+    section.classList.toggle('tab-hidden', section.dataset.teamSection !== S.teamPageTab);
+  });
 }
 
 export function openTeamNews(team) {

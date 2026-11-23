@@ -316,7 +316,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
 }
 
 .team-page-links {
@@ -331,6 +330,83 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* ---- Вкладки и разделы страницы ---- */
+.team-tabs { margin: 0; }
+.team-section { min-width: 0; }
+.team-section.tab-hidden { display: none !important; }
+.team-section .profile-panel + .profile-panel { margin-top: 16px; }
+.team-section .session-row:first-child { padding-top: 0; }
+
+/* ---- Роли команды ---- */
+.team-roles-table {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.team-roles-head,
+.team-roles-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.5fr) repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: center;
+  padding: 9px 14px;
+}
+.team-roles-head {
+  background: var(--panel-2);
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+.team-roles-head span:not(:first-child) { text-align: center; }
+.team-roles-head span:first-child { justify-self: start; }
+.team-roles-row { border-top: 1px solid var(--border); }
+.team-roles-name {
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 500;
+}
+.team-roles-mark {
+  color: var(--muted-2);
+  font-size: var(--fs-base);
+  text-align: center;
+}
+.team-roles-mark.on { color: var(--ok); }
+
+/* ---- Настройки команды ---- */
+.team-settings { width: min(820px, calc(100vw - 48px)); }
+.team-settings .settings-body { padding: 16px 20px 20px; }
+.team-settings .settings-section-head { margin-bottom: 14px; }
+.team-settings .field { margin-bottom: 12px; }
+.team-settings .pub-grid { gap: 0 16px; }
+.settings-nav-item.danger { color: var(--danger); }
+
+.team-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.team-danger-row:first-of-type { border-top: 0; padding-top: 0; }
+.team-danger-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.team-danger-row b {
+  font-size: var(--fs-base);
+  font-weight: 500;
+}
+.team-danger-row span {
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+}
+.team-members-list .team-role-badge { flex-shrink: 0; }
+.team-member-row .select-shell { width: 160px; }
+.team-member-row .select-trigger { height: 32px; font-size: var(--fs-sm); }
 
 /* ---- Режимы команды ---- */
 .team-mode-list {

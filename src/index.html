@@ -905,106 +905,159 @@
     </div>
   </div>
 
-  <!-- Команда -->
+  <!-- Новая команда: только название, ID и аватар -->
   <div class="modal-overlay" id="modal-team" hidden role="dialog" aria-modal="true" aria-labelledby="team-modal-title">
-    <div class="modal">
+    <div class="modal modal-login">
       <div class="modal-head">
         <h2 id="team-modal-title">Новая команда</h2>
         <button class="modal-close" data-close="modal-team">✕</button>
       </div>
       <form id="team-form" autocomplete="off">
-        <div class="pub-grid">
-          <div class="field">
-            <label for="team-title" data-i18n="name">Название</label>
-            <input id="team-title" type="text" maxlength="100" placeholder="Например, Night Studio" data-i18n-placeholder="for.example.night.studio">
-          </div>
-          <div class="field">
-            <label for="team-slug" data-i18n="team.id">ID команды</label>
-            <input id="team-slug" type="text" maxlength="64" placeholder="tmteam">
-            <div class="hint" data-i18n="team.id.hint">Короткий ID для ссылки и поиска, например tmteam.</div>
-          </div>
+        <div class="field">
+          <label for="team-title" data-i18n="name">Название</label>
+          <input id="team-title" type="text" maxlength="100" placeholder="Например, Night Studio" data-i18n-placeholder="for.example.night.studio">
         </div>
         <div class="field">
-          <label for="team-description" data-i18n="description">Описание</label>
-          <textarea id="team-description" rows="4" maxlength="5000" placeholder="Чем занимается команда" data-i18n-placeholder="what.the.team.does"></textarea>
+          <label for="team-slug" data-i18n="team.id">ID команды</label>
+          <input id="team-slug" type="text" maxlength="64" placeholder="tmteam">
+          <div class="hint" data-i18n="team.id.hint">Короткий ID для ссылки и поиска, например tmteam.</div>
         </div>
         <div class="field">
-          <label for="team-links" data-i18n="links">Ссылки</label>
-          <input id="team-links" type="text" maxlength="1000" placeholder="Сайт, Discord, YouTube" data-i18n-placeholder="website.discord.youtube">
+          <label for="team-avatar" data-i18n="avatar.url">Аватар (URL)</label>
+          <input id="team-avatar" type="text" maxlength="500" placeholder="https://...">
         </div>
-        <div class="field">
-          <label for="team-join-mode" data-i18n="joining">Вступление</label>
-          <select id="team-join-mode">
-            <option value="invite" data-i18n="invite.only">Только по приглашению</option>
-            <option value="request" data-i18n="by.application">По заявке</option>
-            <option value="open" data-i18n="open.2">Свободное</option>
-          </select>
-        </div>
-        <div class="pub-grid">
-          <div class="field">
-            <label for="team-avatar" data-i18n="avatar.url">Аватар (URL)</label>
-            <input id="team-avatar" type="text" maxlength="500" placeholder="https://...">
-          </div>
-          <div class="field">
-            <label for="team-banner" data-i18n="banner.url">Баннер (URL)</label>
-            <input id="team-banner" type="text" maxlength="500" placeholder="https://...">
-          </div>
-        </div>
+        <div class="hint" data-i18n="team.create.hint">Описание, ссылки, баннер и роли настроишь после создания в настройках команды.</div>
         <div class="form-error" id="team-error" hidden></div>
         <button class="btn btn-primary btn-block" id="team-submit" type="submit">Создать команду</button>
       </form>
     </div>
   </div>
 
-  <!-- Участники команды -->
-  <div class="modal-overlay" id="modal-team-members" hidden role="dialog" aria-modal="true" aria-labelledby="team-members-title">
-    <div class="modal">
+  <!-- Настройки команды -->
+  <div class="modal-overlay" id="modal-team-settings" hidden role="dialog" aria-modal="true" aria-labelledby="team-settings-title">
+    <div class="modal modal-settings team-settings">
       <div class="modal-head">
-        <h2 id="team-members-title">Участники</h2>
-        <button class="modal-close" data-close="modal-team-members">✕</button>
+        <h2 id="team-settings-title" data-i18n="team.settings">Настройки команды</h2>
+        <button class="modal-close" data-close="modal-team-settings">✕</button>
       </div>
-      <div class="hint" id="team-members-hint"></div>
-      <div id="team-members-list" class="team-members-list"></div>
-      <form id="team-invite-form" autocomplete="off" hidden>
-        <div class="pub-grid">
-          <div class="field">
-            <label for="team-invite-username">Username</label>
-            <input id="team-invite-username" type="text" maxlength="20" placeholder="steve">
-          </div>
-          <div class="field">
-            <label for="team-invite-role" data-i18n="role">Роль</label>
-            <select id="team-invite-role">
-              <option value="publisher" data-i18n="publisher">Публикатор</option>
-              <option value="designer" data-i18n="designer">Дизайнер</option>
-              <option value="builder" data-i18n="team.role.builder">Билдер</option>
-              <option value="modeler" data-i18n="team.role.modeler">Моделлер</option>
-              <option value="member" selected data-i18n="member">Участник</option>
-              <option value="admin" data-i18n="administrator">Администратор</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-error" id="team-invite-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit" data-i18n="invite">Пригласить</button>
-      </form>
-    </div>
-  </div>
 
-  <!-- Заявка в команду -->
-  <div class="modal-overlay" id="modal-team-join" hidden role="dialog" aria-modal="true" aria-labelledby="team-join-title">
-    <div class="modal modal-login">
-      <div class="modal-head">
-        <h2 id="team-join-title" data-i18n="team.application">Заявка в команду</h2>
-        <button class="modal-close" data-close="modal-team-join">✕</button>
-      </div>
-      <div class="hint" id="team-join-info"></div>
-      <form id="team-join-form">
-        <div class="field">
-          <label for="team-join-message" data-i18n="messages.placeholder">Сообщение</label>
-          <textarea id="team-join-message" rows="4" maxlength="1000" placeholder="Расскажи, чем можешь помочь команде" data-i18n-placeholder="tell.us.how.you"></textarea>
+      <div class="settings-shell">
+        <nav class="settings-nav">
+          <button class="settings-nav-item active" type="button" data-team-settings-tab="overview" data-i18n="team.settings.overview">Обзор</button>
+          <button class="settings-nav-item" type="button" data-team-settings-tab="roles" data-i18n="team.settings.roles">Роли</button>
+          <button class="settings-nav-item" type="button" data-team-settings-tab="members" data-i18n="team.settings.members">Участники</button>
+          <div class="settings-nav-spacer"></div>
+          <button class="settings-nav-item danger" type="button" data-team-settings-tab="danger" data-i18n="team.settings.danger">Опасная зона</button>
+        </nav>
+
+        <div class="settings-body">
+          <section class="settings-section" data-team-settings-pane="overview">
+            <div class="settings-section-head">
+              <h3 data-i18n="team.settings.overview">Обзор</h3>
+              <p data-i18n="team.settings.overview.hint">Название, описание, ссылки и оформление команды.</p>
+            </div>
+            <div class="field">
+              <label for="team-settings-name" data-i18n="name">Название</label>
+              <input id="team-settings-name" type="text" maxlength="100">
+            </div>
+            <div class="field">
+              <label for="team-settings-slug" data-i18n="team.id">ID команды</label>
+              <input id="team-settings-slug" type="text" maxlength="64" spellcheck="false">
+            </div>
+            <div class="field">
+              <label for="team-settings-description" data-i18n="description">Описание</label>
+              <textarea id="team-settings-description" rows="3" maxlength="5000" placeholder="Чем занимается команда" data-i18n-placeholder="what.the.team.does"></textarea>
+            </div>
+            <div class="field">
+              <label for="team-settings-links" data-i18n="links">Ссылки</label>
+              <input id="team-settings-links" type="text" maxlength="1000" placeholder="Сайт, Discord, YouTube" data-i18n-placeholder="website.discord.youtube">
+            </div>
+            <div class="pub-grid">
+              <div class="field">
+                <label for="team-settings-avatar" data-i18n="avatar.url">Аватар (URL)</label>
+                <input id="team-settings-avatar" type="text" maxlength="500" placeholder="https://...">
+              </div>
+              <div class="field">
+                <label for="team-settings-banner" data-i18n="banner.url">Баннер (URL)</label>
+                <input id="team-settings-banner" type="text" maxlength="500" placeholder="https://...">
+              </div>
+            </div>
+            <div class="hint" data-i18n="team.invite.only">В команду можно вступить только по приглашению.</div>
+            <div class="form-error" id="team-settings-error" hidden></div>
+            <div class="settings-actions">
+              <button class="btn btn-primary" id="team-settings-save" type="button" data-i18n="save">Сохранить</button>
+            </div>
+          </section>
+
+          <section class="settings-section" data-team-settings-pane="roles" hidden>
+            <div class="settings-section-head">
+              <h3 data-i18n="team.settings.roles">Роли</h3>
+              <p data-i18n="team.roles.hint">Права по умолчанию для каждой роли. Отдельным участникам можно выдать исключения в разделе «Участники».</p>
+            </div>
+            <div class="team-roles-table" id="team-roles-table"></div>
+          </section>
+
+          <section class="settings-section" data-team-settings-pane="members" hidden>
+            <div class="settings-section-head">
+              <h3 data-i18n="team.settings.members">Участники</h3>
+              <p id="team-members-hint"></p>
+            </div>
+            <form id="team-invite-form" autocomplete="off" hidden>
+              <div class="pub-grid">
+                <div class="field">
+                  <label for="team-invite-username">Username</label>
+                  <input id="team-invite-username" type="text" maxlength="20" placeholder="steve">
+                </div>
+                <div class="field">
+                  <label for="team-invite-role" data-i18n="role">Роль</label>
+                  <select id="team-invite-role">
+                    <option value="publisher" data-i18n="publisher">Публикатор</option>
+                    <option value="designer" data-i18n="designer">Дизайнер</option>
+                    <option value="builder" data-i18n="team.role.builder">Билдер</option>
+                    <option value="modeler" data-i18n="team.role.modeler">Моделлер</option>
+                    <option value="member" selected data-i18n="member">Участник</option>
+                    <option value="admin" data-i18n="administrator">Администратор</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-error" id="team-invite-error" hidden></div>
+              <button class="btn btn-primary" id="team-invite-submit" type="submit" data-i18n="invite">Пригласить</button>
+            </form>
+            <div id="team-members-list" class="team-members-list"></div>
+          </section>
+
+          <section class="settings-section" data-team-settings-pane="danger" hidden>
+            <div class="settings-section-head">
+              <h3 data-i18n="team.settings.danger">Опасная зона</h3>
+              <p data-i18n="team.settings.danger.hint">Необратимые действия с командой.</p>
+            </div>
+
+            <div class="team-danger-row">
+              <div>
+                <b data-i18n="transfer.ownership">Передать владение</b>
+                <span data-i18n="the.new.owner.must">Новый владелец должен состоять в команде. Ты станешь администратором.</span>
+              </div>
+              <button class="btn btn-ghost" id="team-settings-transfer" type="button" data-i18n="transfer">Передать</button>
+            </div>
+
+            <div class="team-danger-row" id="team-settings-verify-row" hidden>
+              <div>
+                <b data-i18n="teams.remove.verified">Снять верификацию</b>
+                <span data-i18n="team.verify.hint">Отметка подтверждённой команды в каталоге и на странице режима.</span>
+              </div>
+              <button class="btn btn-ghost" id="team-settings-verify" type="button" data-i18n="teams.remove.verified">Снять верификацию</button>
+            </div>
+
+            <div class="team-danger-row">
+              <div>
+                <b data-i18n="teams.archive">Архивировать команду</b>
+                <span data-i18n="team.archive.hint">Команда скроется из каталога, участники потеряют доступ.</span>
+              </div>
+              <button class="btn btn-danger" id="team-settings-archive" type="button" data-i18n="teams.archive">Архивировать</button>
+            </div>
+          </section>
         </div>
-        <div class="form-error" id="team-join-error" hidden></div>
-        <button class="btn btn-primary btn-block" id="team-join-submit" type="submit" data-i18n="submit.application">Отправить заявку</button>
-      </form>
+      </div>
     </div>
   </div>
 

@@ -291,10 +291,9 @@ async function checkServerSearch(cdp) {
 async function runTeamFlows(cdp) {
   const cases = [
     ['team-new', `m.openTeamModal(null)`],
-    ['team-edit', `m.openTeamModal({ id: 't1', title: 'My Team', slug: 'my-team', description: 'Desc', links: '', joinMode: 'open' })`],
+    ['team-settings', `m.openTeamModal({ id: 't1', title: 'My Team', slug: 'my-team', description: 'Desc', links: '', joinMode: 'invite' })`],
     ['team-members', `m.openTeamMembers({ id: 't1', title: 'My Team', slug: 'my-team' })`],
     ['team-page', `m.openTeamPage({ id: 't1', title: 'My Team', slug: 'my-team' })`],
-    ['team-join', `m.openTeamJoin({ id: 't1', title: 'My Team', slug: 'my-team' })`],
     ['team-news', `m.openTeamNews({ id: 't1', title: 'My Team', slug: 'my-team' })`],
     ['team-transfer', `m.openTeamTransfer({ id: 't1', title: 'My Team', slug: 'my-team' })`]
   ];
