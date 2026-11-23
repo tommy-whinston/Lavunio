@@ -447,3 +447,57 @@ pub async fn team_verify(
     )
     .await
 }
+
+#[tauri::command]
+pub async fn team_roles(
+    state: State<'_, AppState>,
+    team_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/roles");
+    publisher_request(state.inner(), "GET", path, None).await
+}
+
+#[tauri::command]
+pub async fn team_role_create(
+    state: State<'_, AppState>,
+    team_id: String,
+    name: String,
+    permissions: Option<Value>,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/roles");
+    publisher_request(
+        state.inner(),
+        "POST",
+        path,
+        Some(json!({ "name": name, "permissions": permissions })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_role_update(
+    state: State<'_, AppState>,
+    team_id: String,
+    role_id: String,
+    name: String,
+    permissions: Option<Value>,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/roles/{role_id}");
+    publisher_request(
+        state.inner(),
+        "PUT",
+        path,
+        Some(json!({ "name": name, "permissions": permissions })),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn team_role_delete(
+    state: State<'_, AppState>,
+    team_id: String,
+    role_id: String,
+) -> Result<Value, String> {
+    let path = format!("/v1/teams/{team_id}/roles/{role_id}");
+    publisher_request(state.inner(), "DELETE", path, None).await
+}

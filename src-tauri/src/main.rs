@@ -37,7 +37,7 @@ fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
     let (show_label, quit_label) = if lang == "en" {
         ("Open Lavunio", "Quit")
     } else {
-        ("Открыть Lavunio", "Выход")
+        ("РћС‚РєСЂС‹С‚СЊ Lavunio", "Р’С‹С…РѕРґ")
     };
     let show_item = MenuItem::with_id(app, "show", show_label, true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
@@ -182,6 +182,10 @@ fn main() {
             commands::team_invitation_accept,
             commands::team_invitation_decline,
             commands::team_member_role,
+        commands::team_roles,
+        commands::team_role_create,
+        commands::team_role_update,
+        commands::team_role_delete,
             commands::team_member_remove,
             commands::team_join,
             commands::team_join_requests,

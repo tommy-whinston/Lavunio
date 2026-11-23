@@ -373,6 +373,66 @@
 }
 .team-roles-mark.on { color: var(--ok); }
 
+/* ---- Роли команды ---- */
+.team-roles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.team-role-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+.team-role-row-name {
+  min-width: 120px;
+  font-size: var(--fs-base);
+  font-weight: 500;
+}
+.team-role-row-perms {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.team-role-flag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-xs);
+  background: var(--panel-3);
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.team-role-flag.on {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.team-role-row-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+.team-role-form {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.team-role-perms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 10px 0 14px;
+}
+.team-settings .team-role-form .settings-actions { margin-top: 0; }
+
 /* ---- Настройки команды ---- */
 .team-settings { width: min(820px, calc(100vw - 48px)); }
 .team-settings .settings-body { padding: 16px 20px 20px; }

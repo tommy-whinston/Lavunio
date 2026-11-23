@@ -992,7 +992,25 @@
               <h3 data-i18n="team.settings.roles">Роли</h3>
               <p data-i18n="team.roles.hint">Права по умолчанию для каждой роли. Отдельным участникам можно выдать исключения в разделе «Участники».</p>
             </div>
-            <div class="team-roles-table" id="team-roles-table"></div>
+            <div class="team-roles-list" id="team-roles-list"></div>
+
+            <form class="team-role-form" id="team-role-form" autocomplete="off">
+              <div class="field">
+                <label for="team-role-name" data-i18n="team.role.new">Новая роль</label>
+                <input id="team-role-name" type="text" maxlength="32" placeholder="Например, модератор" data-i18n-placeholder="team.role.placeholder">
+              </div>
+              <div class="team-role-perms">
+                <label class="check"><input type="checkbox" data-role-perm="manage_team"> <span data-i18n="team.permission.manage_team">Управление</span></label>
+                <label class="check"><input type="checkbox" data-role-perm="manage_members"> <span data-i18n="team.permission.manage_members">Участники</span></label>
+                <label class="check"><input type="checkbox" data-role-perm="manage_modes"> <span data-i18n="team.permission.manage_modes">Режимы</span></label>
+                <label class="check"><input type="checkbox" data-role-perm="manage_news"> <span data-i18n="team.permission.manage_news">Новости</span></label>
+              </div>
+              <div class="form-error" id="team-role-error" hidden></div>
+              <div class="settings-actions">
+                <button class="btn btn-primary" id="team-role-submit" type="submit" data-i18n="team.role.create">Создать роль</button>
+                <button class="btn btn-ghost" id="team-role-cancel" type="button" data-i18n="cancel" hidden>Отмена</button>
+              </div>
+            </form>
           </section>
 
           <section class="settings-section" data-team-settings-pane="members" hidden>
