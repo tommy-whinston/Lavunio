@@ -1,7 +1,7 @@
 {
   "name": "lavunio",
   "productName": "Lavunio",
-  "version": "0.23.54",
+  "version": "0.23.55",
   "private": true,
   "description": "Lavunio - Minecraft mode store with Lavunio ID accounts (Tauri)",
   "scripts": {
