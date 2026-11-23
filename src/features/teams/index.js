@@ -163,23 +163,17 @@ export function bindTeams() {
   if (avatarUpload) avatarUpload.onclick = () => uploadTeamImage('avatar');
   const bannerUpload = $('team-banner-upload');
   if (bannerUpload) bannerUpload.onclick = () => uploadTeamImage('banner');
-  const roleForm = $('team-role-form');
-  if (roleForm) roleForm.onsubmit = (event) => {
-    event.preventDefault();
-    submitTeamRole();
-  };
-  const roleCancel = $('team-role-cancel');
-  if (roleCancel) roleCancel.onclick = () => fillRoleForm(null);
+  const roleNew = $('team-role-new');
+  if (roleNew) roleNew.onclick = () => startNewRole();
   const rolesList = $('team-roles-list');
   if (rolesList) rolesList.onclick = (event) => {
-    const edit = event.target.closest('[data-role-edit]');
-    if (edit) {
-      const role = (S.teamRoles || []).find((item) => item.id === edit.dataset.roleEdit);
-      if (role) fillRoleForm(role);
-      return;
-    }
-    const remove = event.target.closest('[data-role-delete]');
-    if (remove) deleteTeamRole(remove.dataset.roleDelete);
+    const item = event.target.closest('[data-role-select]');
+    if (item) selectTeamRole(item.dataset.roleSelect);
+  };
+  const roleEditor = $('team-role-editor');
+  if (roleEditor) roleEditor.onclick = (event) => {
+    if (event.target.closest('#team-role-save')) submitTeamRole();
+    else if (event.target.closest('#team-role-delete')) deleteTeamRole(roleEditingId);
   };
   const newsForm = $('team-news-form');
   if (newsForm) newsForm.onsubmit = (event) => { event.preventDefault(); submitTeamNews(); };
@@ -496,7 +490,7 @@ export function openTeamSettings(team, tab) {
   if (!team) return;
   S.teamSettingsTeam = team;
   fillTeamSettings(team);
-  fillRoleForm(null);
+  roleEditingId = null;
   updateTeamDanger(team);
   teamActions.openModal('modal-team-settings');
   setTeamSettingsTab(tab || 'overview');
@@ -707,48 +701,73 @@ function rolePermissions(role) {
   return role && role.permissions && typeof role.permissions === 'object' ? role.permissions : {};
 }
 
+const ROLE_PERMISSION_GROUPS = [
+  { labelKey: 'team.role.group.team', perms: [['manage_team', 'team.permission.manage_team']] },
+  { labelKey: 'team.role.group.members', perms: [['manage_members', 'team.permission.manage_members']] },
+  { labelKey: 'team.role.group.content', perms: [['manage_modes', 'team.permission.manage_modes'], ['manage_news', 'team.permission.manage_news']] }
+];
+
 function renderTeamRolesList() {
   const box = $('team-roles-list');
   if (!box) return;
   const roles = Array.isArray(S.teamRoles) ? S.teamRoles : [];
-  if (!roles.length) {
-    box.innerHTML = '<div class="hint">' + tKey("team.roles.empty") + '</div>';
-    return;
-  }
-  box.innerHTML = roles.map((role) => {
-    const perms = rolePermissions(role);
-    const locked = role.name === 'owner' || role.isDefault;
-    return `
-      <div class="team-role-row">
-        <span class="team-role-row-name">${escapeHtml(teamRoleName(role.name))}</span>
-        <span class="team-role-row-perms">
-          ${TEAM_PERMISSIONS.map(([key, label]) => `<span class="team-role-flag${perms[key] ? ' on' : ''}">${tKey(label)}</span>`).join('')}
-        </span>
-        ${locked ? '' : `
-          <span class="team-role-row-actions">
-            <button class="btn btn-ghost btn-small" type="button" data-role-edit="${escapeHtml(role.id)}">${tKey("edit")}</button>
-            <button class="btn btn-ghost btn-small" type="button" data-role-delete="${escapeHtml(role.id)}">${tKey("delete")}</button>
-          </span>
-        `}
-      </div>
-    `;
-  }).join('');
+  box.innerHTML = roles.map((role) => `
+    <button class="team-role-item${role.id === roleEditingId ? ' active' : ''}" type="button" data-role-select="${escapeHtml(role.id)}">
+      <span class="team-role-item-name">${escapeHtml(teamRoleName(role.name))}</span>
+      ${role.name === 'owner' ? `<span class="team-role-item-tag">${tKey("team.role.base")}</span>` : ''}
+    </button>
+  `).join('') || `<div class="team-role-item empty">${tKey("team.roles.empty")}</div>`;
 }
 
-function fillRoleForm(role) {
+function renderRoleEditor(role) {
+  const box = $('team-role-editor');
+  if (!box) return;
+  const isNew = !role;
+  const perms = isNew ? {} : rolePermissions(role);
+  const locked = !!role && (role.name === 'owner' || role.isDefault);
+  box.innerHTML = `
+    <div class="team-role-editor-head">
+      <h4>${isNew ? tKey("team.role.new") : escapeHtml(teamRoleName(role.name))}</h4>
+      ${locked ? `<span class="team-role-locked">${tKey("team.role.locked")}</span>` : ''}
+    </div>
+    <div class="field">
+      <label for="team-role-name">${tKey("team.role.name")}</label>
+      <input id="team-role-name" type="text" maxlength="32" value="${isNew ? '' : escapeHtml(role.name)}"${locked ? ' readonly' : ''}>
+    </div>
+    ${ROLE_PERMISSION_GROUPS.map((group) => `
+      <div class="team-perm-group">
+        <h5>${tKey(group.labelKey)}</h5>
+        ${group.perms.map(([key, label]) => `
+          <label class="team-perm-row">
+            <span>${tKey(label)}</span>
+            <span class="team-switch">
+              <input type="checkbox" data-role-perm="${key}"${perms[key] ? ' checked' : ''}${locked ? ' disabled' : ''}>
+              <i></i>
+            </span>
+          </label>
+        `).join('')}
+      </div>
+    `).join('')}
+    <div class="form-error" id="team-role-error" hidden></div>
+    <div class="team-role-editor-foot">
+      <button class="btn btn-primary" id="team-role-save" type="button"${locked ? ' disabled' : ''}>${isNew ? tKey("team.role.create") : tKey("save")}</button>
+      ${role && !locked ? `<button class="btn btn-danger" id="team-role-delete" type="button">${tKey("delete")}</button>` : ''}
+    </div>
+  `;
+}
+
+function selectTeamRole(roleId) {
+  const roles = Array.isArray(S.teamRoles) ? S.teamRoles : [];
+  const role = roles.find((item) => item.id === roleId) || null;
   roleEditingId = role ? role.id : null;
-  const name = $('team-role-name');
-  if (name) name.value = role ? role.name : '';
-  const perms = rolePermissions(role);
-  document.querySelectorAll('#team-role-form [data-role-perm]').forEach((input) => {
-    input.checked = !!perms[input.dataset.rolePerm];
-  });
-  const submit = $('team-role-submit');
-  if (submit) submit.textContent = role ? tKey("team.role.save") : tKey("team.role.create");
-  const cancel = $('team-role-cancel');
-  if (cancel) cancel.hidden = !role;
-  const error = $('team-role-error');
-  if (error) error.hidden = true;
+  renderTeamRolesList();
+  renderRoleEditor(role);
+}
+
+export function startNewRole() {
+  roleEditingId = null;
+  renderTeamRolesList();
+  renderRoleEditor(null);
 }
 
 async function refreshTeamRoles(team) {
@@ -758,7 +777,12 @@ async function refreshTeamRoles(team) {
   } catch (_) {
     S.teamRoles = S.teamRoles || [];
   }
+  const roles = S.teamRoles;
+  if (!roles.some((role) => role.id === roleEditingId)) {
+    roleEditingId = roles[0] ? roles[0].id : null;
+  }
   renderTeamRolesList();
+  renderRoleEditor(roles.find((role) => role.id === roleEditingId) || null);
   syncInviteRoles();
 }
 
@@ -777,7 +801,8 @@ export async function submitTeamRole() {
   const team = S.teamSettingsTeam;
   if (!team) return;
   const error = $('team-role-error');
-  const name = $('team-role-name').value.trim();
+  const input = $('team-role-name');
+  const name = input ? input.value.trim() : '';
   const showError = (text) => {
     if (!error) return;
     error.textContent = text;
@@ -788,23 +813,24 @@ export async function submitTeamRole() {
     return;
   }
   const permissions = {};
-  document.querySelectorAll('#team-role-form [data-role-perm]').forEach((input) => {
-    permissions[input.dataset.rolePerm] = input.checked;
+  document.querySelectorAll('#team-role-editor [data-role-perm]').forEach((el) => {
+    permissions[el.dataset.rolePerm] = el.checked;
   });
-  const submit = $('team-role-submit');
-  if (submit) submit.disabled = true;
+  const button = $('team-role-save');
+  if (button) button.disabled = true;
   if (error) error.hidden = true;
   try {
-    if (roleEditingId) await api.teamRoleUpdate(team.id, roleEditingId, name, permissions);
-    else await api.teamRoleCreate(team.id, name, permissions);
+    const saved = roleEditingId
+      ? await api.teamRoleUpdate(team.id, roleEditingId, name, permissions)
+      : await api.teamRoleCreate(team.id, name, permissions);
+    if (saved && saved.id) roleEditingId = saved.id;
     toast(tKey("team.role.saved"), 'ok');
-    fillRoleForm(null);
     await refreshTeamRoles(team);
     if (S.teamPage && S.teamPage.id === team.id) await openTeamPage(S.teamPage);
   } catch (err) {
     showError(String(err || tKey("team.role.failed")));
   } finally {
-    if (submit) submit.disabled = false;
+    if (button) button.disabled = false;
   }
 }
 
@@ -820,6 +846,7 @@ export async function deleteTeamRole(roleId) {
   try {
     await api.teamRoleDelete(team.id, roleId);
     toast(tKey("team.role.deleted"), 'ok');
+    roleEditingId = null;
     await refreshTeamRoles(team);
   } catch (err) {
     toast(tKey("team.role.failed") + ' ' + err, 'error');

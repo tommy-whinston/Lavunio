@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const fs = require('fs');
 const path = require('path');
@@ -48,6 +48,10 @@ function createMockScript(scenario) {
     stats: { downloads: 5, installs: 3, updates: 2, uniqueUsers: 4 }
   };
 
+  const teamRoles = [
+    { id: 'role-owner', name: 'owner', permissions: { manage_team: true, manage_members: true, manage_modes: true, manage_news: true }, position: 0, isDefault: true },
+    { id: 'role-mod', name: 'moderator', permissions: { manage_team: false, manage_members: true, manage_modes: false, manage_news: true }, position: 10, isDefault: false }
+  ];
   const team = { id: 't1', slug: 'my-team', title: 'My Team', role: 'owner', status: 'active', verified: true, description: 'Team description', links: 'https://example.com', joinMode: 'open', members: [], modes: [], news: [] };
   const friend = { id: 'f1', username: 'alex', displayName: 'Alex', online: true };
   const profile = {
@@ -87,6 +91,7 @@ function createMockScript(scenario) {
     offline,
     mode,
     team,
+    teamRoles,
     friend,
     profile,
     queue,
@@ -143,7 +148,7 @@ const base = {
   lavunioVerifyLogin: async () => ({ configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: true } }),
   lavunioRegister: async () => ({ requiresVerification: true, email: 'new@example.com' }),
   lavunioVerifyRegistration: async (email, code) => {
-    if (code !== '123456') throw new Error('Неверный код');
+    if (code !== '123456') throw new Error('РќРµРІРµСЂРЅС‹Р№ РєРѕРґ');
     return { configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: true } };
   },
   lavunioResendRegistration: async () => ({ requiresVerification: true, email: 'new@example.com' }),
@@ -172,8 +177,25 @@ const base = {
   }),
   teamsPending: async () => [],
   teamInvitations: async () => data.user ? [{ id: 'inv1', teamTitle: 'My Team', inviterName: 'Alex', role: 'member' }] : [],
+  teamRoles: async () => data.teamRoles,
+  teamRoleCreate: async (teamId, name, permissions) => {
+    const role = { id: 'role-' + Date.now(), name, permissions: permissions || {}, position: 99, isDefault: false };
+    data.teamRoles = [...data.teamRoles, role];
+    return role;
+  },
+  teamRoleUpdate: async (teamId, roleId, name, permissions) => {
+    data.teamRoles = data.teamRoles.map((role) => role.id === roleId ? { ...role, name, permissions: permissions || {} } : role);
+    return data.teamRoles.find((role) => role.id === roleId);
+  },
+  teamRoleDelete: async (teamId, roleId) => {
+    data.teamRoles = data.teamRoles.filter((role) => role.id !== roleId);
+    return { ok: true };
+  },
+  teamPickImage: async () => null,
+  teamUploadImage: async () => ({ url: 'https://example.com/team-image.png' }),
   teamProfile: async () => ({
     team: data.team,
+    roles: data.teamRoles,
     role: 'owner',
     following: false,
     permissions: { manage_team: true, manage_members: true, manage_modes: true, manage_news: true },
@@ -181,6 +203,7 @@ const base = {
   }),
   teamProfilePublic: async () => ({
     team: data.team,
+    roles: data.teamRoles,
     stats: { modes: 1, downloads: 5, installs: 3, uniqueUsers: 2, published: 1 },
     members: [{ userId: 'u1', username: 'alex', displayName: 'Alex', role: 'member', permissions: {} }],
     modes: [data.mode],

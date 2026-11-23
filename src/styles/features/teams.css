@@ -374,64 +374,158 @@
 .team-roles-mark.on { color: var(--ok); }
 
 /* ---- Роли команды ---- */
-.team-roles-list {
+.team-roles {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 430px;
+}
+.team-roles-nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-.team-role-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 8px 10px;
+  min-width: 0;
+  overflow: hidden;
   background: var(--panel-2);
   border: 1px solid var(--border);
 }
-.team-role-row-name {
-  min-width: 120px;
-  font-size: var(--fs-base);
-  font-weight: 500;
-}
-.team-role-row-perms {
-  flex: 1;
-  min-width: 0;
+.team-roles-nav-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.team-role-flag {
-  display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 7px;
-  border-radius: var(--radius-xs);
-  background: var(--panel-3);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--border);
   color: var(--muted-2);
   font-size: var(--fs-xs);
+  font-weight: 500;
+}
+.team-roles-nav-head .icon-btn { width: 24px; height: 24px; }
+.team-roles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  overflow-y: auto;
+  max-height: 470px;
+}
+.team-role-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: var(--fs-base);
+  text-align: left;
+  transition: background var(--dur), color var(--dur);
+}
+.team-role-item:hover { background: var(--panel-3); color: var(--text); }
+.team-role-item.active { background: var(--panel-3); color: var(--text); }
+.team-role-item.empty { color: var(--muted-2); cursor: default; }
+.team-role-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.team-role-flag.on {
-  background: var(--ok-soft);
-  color: var(--ok);
-}
-.team-role-row-actions {
-  display: flex;
+.team-role-item-tag {
   flex-shrink: 0;
-  gap: 6px;
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
 }
-.team-role-form {
+
+.team-role-editor {
+  min-width: 0;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.team-role-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.team-role-editor-head h4 {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.team-role-locked {
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+}
+.team-perm-group { margin-top: 14px; }
+.team-perm-group h5 {
+  margin-bottom: 4px;
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+.team-perm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+.team-perm-group h5 + .team-perm-row { border-top: 0; }
+.team-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 18px;
+}
+.team-switch input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.team-switch i {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--panel-3);
+  transition: background var(--dur);
+}
+.team-switch i::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform var(--dur), background var(--dur);
+}
+.team-switch input:checked + i { background: var(--accent); }
+.team-switch input:checked + i::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+.team-switch input:disabled + i { opacity: 0.45; }
+.team-switch input:focus-visible + i {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.team-role-editor-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
 }
-.team-role-perms {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin: 10px 0 14px;
-}
-.team-settings .team-role-form .settings-actions { margin-top: 0; }
 .team-image-hint { margin: 0; }
 
 /* ---- Настройки команды ---- */
