@@ -724,15 +724,15 @@ function renderRoleEditor(role) {
   if (!box) return;
   const isNew = !role;
   const perms = isNew ? {} : rolePermissions(role);
-  const locked = !!role && (role.name === 'owner' || role.isDefault);
+  const isBase = !!role && (role.name === 'owner' || role.isDefault);
   box.innerHTML = `
     <div class="team-role-editor-head">
       <h4>${isNew ? tKey("team.role.new") : escapeHtml(teamRoleName(role.name))}</h4>
-      ${locked ? `<span class="team-role-locked">${tKey("team.role.locked")}</span>` : ''}
+      ${isBase ? `<span class="team-role-locked">${tKey("team.role.locked")}</span>` : ''}
     </div>
     <div class="field">
       <label for="team-role-name">${tKey("team.role.name")}</label>
-      <input id="team-role-name" type="text" maxlength="32" value="${isNew ? '' : escapeHtml(role.name)}"${locked ? ' readonly' : ''}>
+      <input id="team-role-name" type="text" maxlength="32" value="${isNew ? '' : escapeHtml(role.name)}">
     </div>
     ${ROLE_PERMISSION_GROUPS.map((group) => `
       <div class="team-perm-group">
@@ -741,7 +741,7 @@ function renderRoleEditor(role) {
           <label class="team-perm-row">
             <span>${tKey(label)}</span>
             <span class="team-switch">
-              <input type="checkbox" data-role-perm="${key}"${perms[key] ? ' checked' : ''}${locked ? ' disabled' : ''}>
+              <input type="checkbox" data-role-perm="${key}"${perms[key] ? ' checked' : ''}${isBase ? ' disabled' : ''}>
               <i></i>
             </span>
           </label>
@@ -750,8 +750,8 @@ function renderRoleEditor(role) {
     `).join('')}
     <div class="form-error" id="team-role-error" hidden></div>
     <div class="team-role-editor-foot">
-      <button class="btn btn-primary" id="team-role-save" type="button"${locked ? ' disabled' : ''}>${isNew ? tKey("team.role.create") : tKey("save")}</button>
-      ${role && !locked ? `<button class="btn btn-danger" id="team-role-delete" type="button">${tKey("delete")}</button>` : ''}
+      <button class="btn btn-primary" id="team-role-save" type="button">${isNew ? tKey("team.role.create") : tKey("save")}</button>
+      ${role && !isBase ? `<button class="btn btn-danger" id="team-role-delete" type="button">${tKey("delete")}</button>` : ''}
     </div>
   `;
 }
