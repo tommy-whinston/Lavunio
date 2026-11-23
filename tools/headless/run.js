@@ -514,13 +514,23 @@ async function checkTeamsDirectory(cdp) {
   await cdp.evaluate(`document.querySelector('#team-list [data-team-action="page"]').click()`);
   await sleep(350);
   const profile = await cdp.evaluate(`({
-    visible: !document.getElementById('modal-team-page').hidden,
+    visible: !document.getElementById('team-page-content').hidden,
+    directoryHidden: !!document.querySelector('#team-view .team-directory').hidden,
     actions: document.querySelectorAll('#team-page-content [data-team-page-action]').length,
     modes: document.querySelectorAll('#team-page-content [data-team-mode]').length,
     settings: !!document.querySelector('#team-page-content [data-team-page-action="settings"]')
   })`);
-  if (!profile.visible || !profile.actions || !profile.modes) {
+  if (!profile.visible || !profile.directoryHidden || !profile.actions || !profile.modes) {
     throw new Error('team profile: ' + JSON.stringify(profile));
+  }
+  await cdp.evaluate(`document.querySelector('#team-page-content [data-team-page-back]').click()`);
+  await sleep(250);
+  const back = await cdp.evaluate(`({
+    pageHidden: document.getElementById('team-page-content').hidden,
+    directoryVisible: !document.querySelector('#team-view .team-directory').hidden
+  })`);
+  if (!back.pageHidden || !back.directoryVisible) {
+    throw new Error('team back button: ' + JSON.stringify(back));
   }
   await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.showSection('store')`);
 }

@@ -49,7 +49,7 @@ export function bindTeams() {
   };
   const list = $('team-list');
   if (list) list.onclick = (event) => {
-    const button = event.target.closest('button[data-team-action]');
+    const button = event.target.closest('[data-team-action]');
     if (!button) return;
     const team = [...(S.teamDirectory || []), ...(S.teams || [])].find((item) => item.id === button.dataset.id);
     if (!team) return;
@@ -99,10 +99,16 @@ export function bindTeams() {
   }
   const page = $('team-page-content');
   if (page) page.onclick = (event) => {
+    const backButton = event.target.closest('[data-team-page-back]');
+    if (backButton) {
+      closeTeamPage();
+      return;
+    }
     const modeButton = event.target.closest('[data-team-mode]');
     if (modeButton) {
-      $('modal-team-page').hidden = true;
       teamActions.openDetail(modeButton.dataset.teamMode);
+      S.detailFrom = 'team-page';
+      if (els.detailBackLabel) els.detailBackLabel.textContent = tKey("app.back.to.team");
       return;
     }
     const requestButton = event.target.closest('button[data-team-request]');
@@ -178,16 +184,14 @@ function teamCardHtml(team) {
     ? `<div class="team-card-banner" style="background-image:url('${escapeHtml(team.bannerUrl)}')"></div>`
     : '<div class="team-card-banner"></div>';
   const followed = !!team.following;
-  const actions = [
-    `<button class="btn btn-primary btn-small" type="button" data-team-action="page" data-id="${escapeHtml(team.id)}">${tKey("open")}</button>`
-  ];
+  const actions = [];
   if (team.role && canManageTeam(team)) {
     actions.push(`<button class="icon-btn" type="button" title="${tKey("settings")}" data-team-action="settings" data-id="${escapeHtml(team.id)}">⚙</button>`);
   } else if (teamActions.loggedIn()) {
     actions.push(`<button class="btn btn-ghost btn-small" type="button" data-team-action="${followed ? 'unfollow' : 'follow'}" data-id="${escapeHtml(team.id)}">${followed ? tKey("teams.unsubscribe") : tKey("follow")}</button>`);
   }
   return `
-    <article class="team-card">
+    <article class="team-card" data-team-action="page" data-id="${escapeHtml(team.id)}">
       ${banner}
       <div class="team-card-body">
         <div class="team-card-head">
@@ -569,9 +573,9 @@ export async function openTeamPage(team) {
   if (!team) return;
   S.teamPage = team;
   S.teamPageData = null;
-  $('team-page-title').textContent = team.title;
+  teamActions.showView('team');
+  showTeamPage();
   els.teamPageContent.innerHTML = '<div class="mod-empty">' + tKey("teams.loading.page") + '</div>';
-  teamActions.openModal('modal-team-page');
   try {
     const profile = api.teamProfilePublic
       ? await api.teamProfilePublic(team.slug)
@@ -589,6 +593,18 @@ export async function openTeamPage(team) {
   } catch (err) {
     els.teamPageContent.innerHTML = `<div class="mod-empty">${tKey("failed.to.load.team")} ${escapeHtml(String(err))}</div>`;
   }
+}
+
+export function showTeamPage() {
+  const directory = document.querySelector('#team-view .team-directory');
+  if (directory) directory.hidden = true;
+  if (els.teamPageContent) els.teamPageContent.hidden = false;
+}
+
+export function closeTeamPage() {
+  const directory = document.querySelector('#team-view .team-directory');
+  if (directory) directory.hidden = false;
+  if (els.teamPageContent) els.teamPageContent.hidden = true;
 }
 
 export function renderTeamPage(team, profile) {
@@ -633,56 +649,88 @@ export function renderTeamPage(team, profile) {
     ? `<span class="team-page-avatar image" style="background-image:url('${escapeHtml(data.avatarUrl)}')"></span>`
     : `<span class="team-page-avatar">${escapeHtml((data.title || '?').slice(0, 2).toUpperCase())}</span>`;
 
-  $('team-page-title').textContent = data.title || team.title || '';
   els.teamPageContent.innerHTML = `
-    ${banner}
-    <div class="team-page-hero">
-      ${avatar}
-      <div class="team-page-hero-copy">
-        <h3>${escapeHtml(data.title || team.title)}${data.verified ? ' <span class="team-verified">✓</span>' : ''}</h3>
-        <div class="team-card-slug">@${escapeHtml(data.slug || team.slug)}</div>
-        ${role ? `<span class="team-role-badge">${escapeHtml(teamRoleLabel(role))}</span>` : ''}
-        <p>${escapeHtml(data.description || tKey("no.description"))}</p>
+    <button class="back-btn" type="button" data-team-page-back>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5 L8 12 L15 19"/></svg>
+      <span>${tKey("app.back.to.team")}</span>
+    </button>
+
+    <div class="profile-hero team-hero">
+      ${banner}
+      <div class="profile-avatar-wrap team-avatar-wrap">
+        ${avatar}
+      </div>
+      <div class="profile-hero-main team-hero-main">
+        <h1>${escapeHtml(data.title || team.title)}${data.verified ? ' <span class="team-verified">✓</span>' : ''}</h1>
+        <div class="profile-handle">@${escapeHtml(data.slug || team.slug)}</div>
+        <div class="profile-badges team-badges">
+          ${role ? `<span class="profile-badge team-role-badge">${escapeHtml(teamRoleLabel(role))}</span>` : ''}
+          ${following ? `<span class="profile-badge team-badge">${tKey("teams.subscribed")}</span>` : ''}
+        </div>
+        <div class="profile-bio team-bio">${escapeHtml(data.description || tKey("no.description"))}</div>
+        <div class="team-actions">${actionHtml}</div>
       </div>
     </div>
-    ${data.links ? `<div class="team-page-links">${escapeHtml(data.links)}</div>` : ''}
-    <div class="dashboard-stats team-page-stats">
-      <div class="dash-stat"><span>${tKey("modes")}</span><b>${Number(stats.modes) || 0}</b></div>
-      <div class="dash-stat"><span>${tKey("published")}</span><b>${Number(stats.published) || 0}</b></div>
-      <div class="dash-stat"><span>${tKey("downloads.2")}</span><b>${Number(stats.downloads) || 0}</b></div>
-      <div class="dash-stat"><span>${tKey("installs")}</span><b>${Number(stats.installs) || 0}</b></div>
-      <div class="dash-stat"><span>${tKey("followers")}</span><b>${Number(profile && profile.followers) || 0}</b></div>
+
+    <div class="profile-stats team-stats">
+      <div class="profile-stat team-stat"><span>${tKey("modes")}</span><b>${Number(stats.modes) || 0}</b></div>
+      <div class="profile-stat team-stat"><span>${tKey("published")}</span><b>${Number(stats.published) || 0}</b></div>
+      <div class="profile-stat team-stat"><span>${tKey("downloads.2")}</span><b>${Number(stats.downloads) || 0}</b></div>
+      <div class="profile-stat team-stat"><span>${tKey("installs")}</span><b>${Number(stats.installs) || 0}</b></div>
+      <div class="profile-stat team-stat"><span>${tKey("followers")}</span><b>${Number(profile && profile.followers) || 0}</b></div>
     </div>
-    <div class="pub-release-actions team-page-actions">${actionHtml}</div>
-    <div id="team-page-requests"></div>
-    <h3 class="team-page-heading">${tKey("members")}</h3>
-    <div class="team-members-list">
-      ${members.map((member) => `
-        <div class="team-member-row">
-          <div class="grow">
-            <div class="name">${escapeHtml(member.displayName || member.username)}</div>
-            <div class="sub">@${escapeHtml(member.username)} · ${escapeHtml(teamRoleLabel(member.role))}</div>
+
+    <div class="profile-layout team-layout">
+      <div class="profile-main team-main">
+        <section class="profile-panel team-panel">
+          <h2>${tKey("modes")}</h2>
+          <div class="team-mode-list">
+            ${modes.map((mode) => `
+              <button class="profile-mode-row team-mode-row" type="button" data-team-mode="${escapeHtml(mode.slug)}">
+                <span>${escapeHtml(mode.title)}</span>
+                <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
+              </button>
+            `).join('') || '<div class="hint">' + tKey("no.published.modes.yet.2") + '</div>'}
           </div>
-        </div>
-      `).join('') || '<div class="hint">' + tKey("teams.no.members") + '</div>'}
-    </div>
-    <h3 class="team-page-heading">${tKey("modes")}</h3>
-    <div class="team-mode-list">
-      ${modes.map((mode) => `
-        <button class="team-mode-row" type="button" data-team-mode="${escapeHtml(mode.slug)}">
-          <span>${escapeHtml(mode.title)}</span>
-          <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
-        </button>
-      `).join('') || '<div class="hint">' + tKey("no.published.modes.yet.2") + '</div>'}
-    </div>
-    <h3 class="team-page-heading">${tKey("news")}</h3>
-    <div class="team-news-list">
-      ${news.map((item) => `
-        <div class="session-row">
-          <span>${escapeHtml(item.title)}</span>
-          <b>${escapeHtml(formatDateTime(item.createdAt))}</b>
-        </div>
-      `).join('') || '<div class="hint">' + tKey("no.news.yet") + '</div>'}
+        </section>
+
+        <section class="profile-panel team-panel">
+          <h2>${tKey("members")}</h2>
+          <div class="team-members-list">
+            ${members.map((member) => `
+              <div class="team-member-row">
+                <div class="grow">
+                  <div class="name">${escapeHtml(member.displayName || member.username)}</div>
+                  <div class="sub">@${escapeHtml(member.username)} · ${escapeHtml(teamRoleLabel(member.role))}</div>
+                </div>
+              </div>
+            `).join('') || '<div class="hint">' + tKey("teams.no.members") + '</div>'}
+          </div>
+        </section>
+
+        <div id="team-page-requests"></div>
+      </div>
+
+      <aside class="profile-side team-side">
+        <section class="profile-panel team-panel">
+          <h2>${tKey("news")}</h2>
+          <div class="team-news-list">
+            ${news.map((item) => `
+              <div class="session-row">
+                <span>${escapeHtml(item.title)}</span>
+                <b>${escapeHtml(formatDateTime(item.createdAt))}</b>
+              </div>
+            `).join('') || '<div class="hint">' + tKey("no.news.yet") + '</div>'}
+          </div>
+        </section>
+
+        ${data.links ? `
+          <section class="profile-panel team-panel">
+            <h2>${tKey("links")}</h2>
+            <div class="team-page-links">${escapeHtml(data.links)}</div>
+          </section>
+        ` : ''}
+      </aside>
     </div>
   `;
 }

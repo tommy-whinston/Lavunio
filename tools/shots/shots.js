@@ -134,6 +134,7 @@ const VIEWS = [
   { name: 'library', code: `window.LavunioDebug.showSection('library')` },
   { name: 'detail', code: `window.LavunioDebug.showSection('store'); window.LavunioDebug.openDetail('night-demon')` },
   { name: 'teams', code: `window.LavunioDebug.showSection('team')` },
+  { name: 'team-page', code: `window.LavunioDebug.showSection('team'); document.querySelector('#team-list [data-team-action="page"]').click()` },
   { name: 'publisher', code: `window.LavunioDebug.showSection('publisher')` },
   { name: 'moderation', code: `window.LavunioDebug.showSection('moderation')` },
   { name: 'messages', code: `window.LavunioDebug.showSection('messages')` },

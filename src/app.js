@@ -12,7 +12,7 @@ import { renderLibrary } from './features/library/view.js';
 import { renderProfile } from './features/profile/view.js';
 import { configureProfileActions, openProfile, bindProfileView, openSkinModal } from './features/profile/actions.js';
 import { configureSettings, bindSettings, fillSettingsForm, applyRamLimit } from './features/settings/view.js';
-import { configureTeams, bindTeams, renderTeams, loadTeams, loadTeamInvitations, openTeamPage } from './features/teams/index.js';
+import { configureTeams, bindTeams, renderTeams, loadTeams, loadTeamInvitations, openTeamPage, showTeamPage, closeTeamPage } from './features/teams/index.js';
 import { configurePublisher, bindPublisher, loadPublisher, renderPublisher } from './features/publisher/index.js';
 import { configureModeration, bindModeration, loadModeration, renderModeration } from './features/moderation/index.js';
 import { configureMessages, loadChatList, renderMessagesList, openChat, sendChatMessage } from './features/messages/view.js';
@@ -116,6 +116,7 @@ configureTeams({
   publisherAllowed,
   openModal,
   askConfirm,
+  showView,
   loggedIn: lavunioLoggedIn,
   openAccount: () => openModal('modal-account')
 });
@@ -465,6 +466,12 @@ function showSection(section) {
     openModal('modal-account');
     section = 'store';
   }
+  if (section === 'team-page') {
+    showView('team');
+    showTeamPage();
+    return;
+  }
+
   if (!PRIMARY_SECTIONS.has(section)) section = 'store';
 
   if (section === 'profile') {
@@ -483,6 +490,7 @@ function showSection(section) {
     renderPublisher();
     loadPublisher();
   } else if (section === 'team') {
+    closeTeamPage();
     renderTeams();
     loadTeams();
     loadTeamInvitations();

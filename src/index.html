@@ -359,6 +359,7 @@
     </section>
 
     <section id="team-view" hidden>
+      <div class="team-directory">
       <div class="library-head publisher-head team-directory-head">
         <div class="dashboard-copy">
           <div class="eyebrow">Lavunio</div>
@@ -405,6 +406,9 @@
         <p data-i18n="teams.directory.empty">Попробуй изменить запрос или создай свою команду.</p>
       </div>
       <button class="btn btn-ghost team-more" id="team-more" type="button" data-i18n="load.more" hidden>Показать ещё</button>
+      </div>
+
+      <div id="team-page-content" hidden></div>
     </section>
 
     <section id="publisher-view" hidden>
@@ -982,17 +986,6 @@
         <div class="form-error" id="team-invite-error" hidden></div>
         <button class="btn btn-primary btn-block" id="team-invite-submit" type="submit" data-i18n="invite">Пригласить</button>
       </form>
-    </div>
-  </div>
-
-  <!-- Публичная страница команды -->
-  <div class="modal-overlay" id="modal-team-page" hidden role="dialog" aria-modal="true" aria-labelledby="team-page-title">
-    <div class="modal">
-      <div class="modal-head">
-        <h2 id="team-page-title">Команда</h2>
-        <button class="modal-close" data-close="modal-team-page">✕</button>
-      </div>
-      <div id="team-page-content"></div>
     </div>
   </div>
 

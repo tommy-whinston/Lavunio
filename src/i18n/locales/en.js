@@ -916,6 +916,7 @@ export const EN = {
   "app.files.missing.corrupted": "Missing files: {0}, corrupted: {1}.",
   "app.repair.install": "{0} Repair the installation?",
   "app.back.to.profile": "Back to profile",
+  "app.back.to.team": "Back to teams",
   "app.team.with.verified": "Team: {0}{1}",
   "app.reviews.summary": "{0} ★ · {1} reviews",
   "app.first.review": "Be the first to leave a review.",

@@ -916,6 +916,7 @@ export const RU = {
   "app.files.missing.corrupted": "Отсутствует файлов: {0}, повреждено: {1}.",
   "app.repair.install": "{0} Исправить установку?",
   "app.back.to.profile": "Назад в профиль",
+  "app.back.to.team": "Назад к командам",
   "app.team.with.verified": "Команда: {0}{1}",
   "app.reviews.summary": "{0} ★ · {1} отзывов",
   "app.first.review": "Стань первым, кто оставит отзыв.",
