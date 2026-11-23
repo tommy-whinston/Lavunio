@@ -1,7 +1,7 @@
-'use strict';
+﻿'use strict';
 
-// Снимает скриншоты разделов интерфейса в headless-браузере на мок-данных.
-// Используется для визуальной проверки вёрстки после изменений стилей.
+// РЎРЅРёРјР°РµС‚ СЃРєСЂРёРЅС€РѕС‚С‹ СЂР°Р·РґРµР»РѕРІ РёРЅС‚РµСЂС„РµР№СЃР° РІ headless-Р±СЂР°СѓР·РµСЂРµ РЅР° РјРѕРє-РґР°РЅРЅС‹С….
+// РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ РІРёР·СѓР°Р»СЊРЅРѕР№ РїСЂРѕРІРµСЂРєРё РІС‘СЂСЃС‚РєРё РїРѕСЃР»Рµ РёР·РјРµРЅРµРЅРёР№ СЃС‚РёР»РµР№.
 //
 //   node tools/shots/shots.js [--width 1280] [--height 800] [--scenario admin]
 
@@ -40,7 +40,7 @@ function findBrowser() {
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
   }
-  throw new Error('Не найден Edge/Chrome. Укажи EDGE_PATH или CHROME_PATH.');
+  throw new Error('РќРµ РЅР°Р№РґРµРЅ Edge/Chrome. РЈРєР°Р¶Рё EDGE_PATH РёР»Рё CHROME_PATH.');
 }
 
 function contentType(file) {
@@ -85,7 +85,7 @@ async function getTarget(debugPort) {
     } catch (_) {}
     await sleep(200);
   }
-  throw new Error('Не удалось подключиться к headless-браузеру');
+  throw new Error('РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ Рє headless-Р±СЂР°СѓР·РµСЂСѓ');
 }
 
 function connect(wsUrl) {
@@ -133,6 +133,7 @@ const VIEWS = [
   { name: 'store', code: `window.LavunioDebug.showSection('store')` },
   { name: 'library', code: `window.LavunioDebug.showSection('library')` },
   { name: 'detail', code: `window.LavunioDebug.showSection('store'); window.LavunioDebug.openDetail('night-demon')` },
+  { name: 'detail-author', code: `(async () => { window.LavunioDebug.showSection('store'); window.LavunioDebug.openDetail('night-demon'); await new Promise((r) => setTimeout(r, 700)); const s = document.getElementById('detail-author-section'); if (s) s.scrollIntoView({ block: 'center' }); })()` },
   { name: 'teams', code: `window.LavunioDebug.showSection('team')` },
   { name: 'team-page', code: `window.LavunioDebug.showSection('team'); document.querySelector('#team-list [data-team-action="page"]').click()` },
   { name: 'team-page-team', code: `(async () => { window.LavunioDebug.showSection('team'); document.querySelector('#team-list [data-team-action="page"]').click(); await new Promise((r) => setTimeout(r, 600)); document.querySelector('#team-page-content [data-team-tab="team"]').click(); })()` },
@@ -202,7 +203,7 @@ const VIEWS = [
       }
     }
 
-    // Сплэш живёт меньше секунды, поэтому его снимаем сразу после перезагрузки.
+    // РЎРїР»СЌС€ Р¶РёРІС‘С‚ РјРµРЅСЊС€Рµ СЃРµРєСѓРЅРґС‹, РїРѕСЌС‚РѕРјСѓ РµРіРѕ СЃРЅРёРјР°РµРј СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РїРµСЂРµР·Р°РіСЂСѓР·РєРё.
     try {
       await cdp.send('Page.navigate', { url: `http://127.0.0.1:${port}/__headless.html?scenario=${SCENARIO}` });
       await sleep(350);

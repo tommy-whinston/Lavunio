@@ -717,3 +717,17 @@
   #team-invite-form .pub-grid { grid-template-columns: minmax(0, 1fr); }
   #team-refresh { margin-left: 0; }
 }
+
+/* Ссылка на команду в блоке автора режима */
+.team-ref {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0;
+  color: var(--accent-2);
+  font-size: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.team-ref:hover { text-decoration: underline; }
+.team-ref .team-verified { font-size: var(--fs-xs); }

@@ -88,10 +88,12 @@ export function bindDetail() {
     const mode = modeById(S.selectedId);
     if (mode && mode.author) openProfile(mode.author.username);
   };
-  if (els.detailTeam) els.detailTeam.onclick = () => {
+  if (els.detailAuthorSection) els.detailAuthorSection.addEventListener('click', (event) => {
+    const ref = event.target.closest('[data-detail-team-ref]');
+    if (!ref) return;
     const mode = modeById(S.selectedId);
-    if (mode && mode.team) openTeamPage(mode.team);
-  };
+    if (mode && mode.team) openTeamPage({ ...mode.team, slug: ref.dataset.detailTeamRef });
+  });
   els.detailReport.onclick = () => openReportModal(modeById(S.selectedId));
   els.reportForm.onsubmit = (event) => {
     event.preventDefault();
@@ -408,10 +410,14 @@ export function renderDetail() {
   const apiReady = !!(S.lavunio && S.lavunio.configured);
   const author = mode.author || (Array.isArray(mode.authors) ? mode.authors[0] : null);
   const authorName = (author && (author.name || author.displayName)) || modeAuthors(mode)[0] || '';
+  const team = mode.team;
   els.detailAuthorSection.hidden = !authorName;
   if (authorName) {
     els.detailAuthorName.textContent = authorName;
-    els.detailAuthorSub.textContent = author && author.verified ? tKey("verified.author") : tKey("mode.author");
+    const authorSub = author && author.verified ? tKey("verified.author") : tKey("mode.author");
+    els.detailAuthorSub.innerHTML = team && team.slug
+      ? `<span>${escapeHtml(authorSub)}</span> · <button class="team-ref" type="button" data-detail-team-ref="${escapeHtml(team.slug)}">${escapeHtml(team.title)}${team.verified ? ' <span class="team-verified">✓</span>' : ''}</button>`
+      : escapeHtml(authorSub);
     const avatar = els.detailAuthorAvatar;
     avatar.textContent = authorName[0].toUpperCase();
     avatar.style.backgroundImage = author && author.avatar ? `url("${author.avatar}")` : '';
@@ -423,11 +429,6 @@ export function renderDetail() {
     const following = S.follows.includes(author.id);
     els.detailAuthorFollow.textContent = following ? tKey("following.2") : tKey("follow");
     els.detailAuthorFollow.classList.toggle('active', following);
-  }
-  if (els.detailTeam) {
-    const team = mode.team;
-    els.detailTeam.hidden = !team;
-    if (team) els.detailTeam.textContent = tKey("app.team.with.verified", [team.title, team.verified ? ' ✓' : '']);
   }
 
   els.detailReviewsSection.hidden = !apiReady;

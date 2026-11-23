@@ -37,7 +37,7 @@ function createMockScript(scenario) {
     history: [{ version: '1.0.0', title: 'Initial release', tags: ['release'], date: '2026-11-01', changes: ['Added stuff'] }],
     authors: [{ id: 'steve', username: 'steve', displayName: 'Steve', name: 'Steve', verified: true }],
     author: { id: 'steve', username: 'steve', displayName: 'Steve', name: 'Steve', verified: true },
-    team: { title: 'My Team', verified: true },
+    team: { id: 't1', slug: 'my-team', title: 'My Team', verified: true },
     releases: [
       { id: 'r1', version: '1.2.0', status: 'draft', channel: 'stable', changelog: 'Changes', assets: [{ kind: 'archive', url: 'https://example.com/build.zip', size: 2048, fileName: 'build.zip' }] },
       { id: 'r2', version: '1.1.0', status: 'pending', channel: 'stable', changelog: 'Changes', assets: [] },
