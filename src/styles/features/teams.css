@@ -432,6 +432,7 @@
   margin: 10px 0 14px;
 }
 .team-settings .team-role-form .settings-actions { margin-top: 0; }
+.team-image-hint { margin: 0; }
 
 /* ---- Настройки команды ---- */
 .team-settings { width: min(820px, calc(100vw - 48px)); }

@@ -972,12 +972,18 @@
             </div>
             <div class="pub-grid">
               <div class="field">
-                <label for="team-settings-avatar" data-i18n="avatar.url">Аватар (URL)</label>
-                <input id="team-settings-avatar" type="text" maxlength="500" placeholder="https://...">
+                <label data-i18n="avatar">Аватар</label>
+                <div class="row">
+                  <button class="btn btn-ghost" id="team-avatar-upload" type="button" data-i18n="upload">Загрузить</button>
+                  <span class="hint team-image-hint" id="team-avatar-hint"></span>
+                </div>
               </div>
               <div class="field">
-                <label for="team-settings-banner" data-i18n="banner.url">Баннер (URL)</label>
-                <input id="team-settings-banner" type="text" maxlength="500" placeholder="https://...">
+                <label data-i18n="banner">Баннер</label>
+                <div class="row">
+                  <button class="btn btn-ghost" id="team-banner-upload" type="button" data-i18n="upload">Загрузить</button>
+                  <span class="hint team-image-hint" id="team-banner-hint"></span>
+                </div>
               </div>
             </div>
             <div class="hint" data-i18n="team.invite.only">В команду можно вступить только по приглашению.</div>

@@ -159,6 +159,10 @@ export function bindTeams() {
   if (settingsArchive) settingsArchive.onclick = () => archiveTeam(S.teamSettingsTeam || S.teamPage);
   const settingsVerify = $('team-settings-verify');
   if (settingsVerify) settingsVerify.onclick = () => toggleTeamVerified(S.teamSettingsTeam || S.teamPage);
+  const avatarUpload = $('team-avatar-upload');
+  if (avatarUpload) avatarUpload.onclick = () => uploadTeamImage('avatar');
+  const bannerUpload = $('team-banner-upload');
+  if (bannerUpload) bannerUpload.onclick = () => uploadTeamImage('banner');
   const roleForm = $('team-role-form');
   if (roleForm) roleForm.onsubmit = (event) => {
     event.preventDefault();
@@ -411,10 +415,51 @@ function fillTeamSettings(team) {
   set('team-settings-slug', team.slug);
   set('team-settings-description', team.description);
   set('team-settings-links', team.links);
-  set('team-settings-avatar', team.avatarUrl);
-  set('team-settings-banner', team.bannerUrl);
+  updateTeamImageHints();
   const error = $('team-settings-error');
   if (error) error.hidden = true;
+}
+
+function updateTeamImageHints() {
+  const team = S.teamSettingsTeam || {};
+  const avatarHint = $('team-avatar-hint');
+  if (avatarHint) avatarHint.textContent = team.avatarUrl ? tKey("team.image.uploaded") : tKey("team.image.none");
+  const bannerHint = $('team-banner-hint');
+  if (bannerHint) bannerHint.textContent = team.bannerUrl ? tKey("team.image.uploaded") : tKey("team.image.none");
+}
+
+export async function uploadTeamImage(kind) {
+  const team = S.teamSettingsTeam;
+  if (!team) return;
+  let path;
+  try {
+    path = await api.teamPickImage();
+  } catch (err) {
+    toast(String(err), 'error');
+    return;
+  }
+  if (!path) return;
+  const button = $(kind === 'avatar' ? 'team-avatar-upload' : 'team-banner-upload');
+  if (button) button.disabled = true;
+  try {
+    const result = await api.teamUploadImage(team.id, kind, path);
+    const url = result && result.url;
+    if (url) {
+      S.teamSettingsTeam = {
+        ...team,
+        [kind === 'avatar' ? 'avatarUrl' : 'bannerUrl']: url
+      };
+      if (S.teamPage && S.teamPage.id === team.id) {
+        await openTeamPage(S.teamPage);
+      }
+    }
+    updateTeamImageHints();
+    toast(tKey("team.image.saved"), 'ok');
+  } catch (err) {
+    toast(tKey("failed.to.upload") + ' ' + err, 'error');
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 function renderTeamRoles() {
@@ -473,8 +518,8 @@ export async function saveTeamSettings() {
     slug: $('team-settings-slug').value.trim(),
     description: $('team-settings-description').value.trim(),
     links: $('team-settings-links').value.trim(),
-    avatarUrl: $('team-settings-avatar').value.trim() || null,
-    bannerUrl: $('team-settings-banner').value.trim() || null,
+    avatarUrl: (S.teamSettingsTeam && S.teamSettingsTeam.avatarUrl) || null,
+    bannerUrl: (S.teamSettingsTeam && S.teamSettingsTeam.bannerUrl) || null,
     joinMode: 'invite'
   };
   if (!payload.title) {

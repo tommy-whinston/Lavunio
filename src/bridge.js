@@ -116,6 +116,8 @@
     teamRoleCreate: (teamId, name, permissions) => invoke("team_role_create", { teamId, name, permissions: permissions ?? null }),
     teamRoleUpdate: (teamId, roleId, name, permissions) => invoke("team_role_update", { teamId, roleId, name, permissions: permissions ?? null }),
     teamRoleDelete: (teamId, roleId) => invoke("team_role_delete", { teamId, roleId }),
+    teamPickImage: () => invoke("team_pick_image"),
+    teamUploadImage: (teamId, kind, path) => invoke("team_upload_image", { teamId, kind, path }),
     teamMemberRemove: (teamId, userId) => invoke("team_member_remove", { teamId, userId }),
     teamJoin: (teamId, message) => invoke("team_join", { teamId, message }),
     teamJoinRequests: (teamId) => invoke("team_join_requests", { teamId }),

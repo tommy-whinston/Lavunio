@@ -386,3 +386,42 @@ pub async fn publisher_upload_build(
     busy.store(false, Ordering::SeqCst);
     result
 }
+
+#[tauri::command]
+pub async fn team_pick_image() -> Result<Option<String>, String> {
+    let picked = blocking(|| {
+        rfd::FileDialog::new()
+            .add_filter("Изображения", &["png", "jpg", "jpeg", "webp"])
+            .pick_file()
+    })
+    .await?;
+    Ok(picked.map(|path| path_string(&path)))
+}
+
+#[tauri::command]
+pub async fn team_upload_image(
+    state: State<'_, AppState>,
+    team_id: String,
+    kind: String,
+    path: String,
+) -> Result<Value, String> {
+    let bytes = std::fs::read(&path)
+        .map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err("Файл больше 2 МБ".to_string());
+    }
+    let api = lavunio_api()?;
+    let token = lavunio_access_token(state.inner()).await?;
+    let endpoint = format!("/v1/teams/{team_id}/image?kind={kind}");
+    blocking(move || {
+        net::api_request_bytes(
+            &api,
+            "PUT",
+            &endpoint,
+            Some(&token),
+            bytes,
+            "application/octet-stream",
+        )
+    })
+    .await?
+}
