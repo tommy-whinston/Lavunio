@@ -10,6 +10,7 @@
     "build": "tauri build",
     "smoke": "node tools/smoke/smoke.js",
     "shots": "node tools/shots/shots.js",
+    "preview": "node tools/preview/preview.js",
     "test:headless": "node tools/headless/run.js",
     "release": "node tools/release/release.js"
   },
