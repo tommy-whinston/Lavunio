@@ -7,6 +7,7 @@ export const EN = {
   "nav.management": "Management",
   "nav.publishing": "Publishing",
   "nav.team": "Team",
+  "nav.teams": "Teams",
   "nav.moderation": "Moderation",
   "sidebar.inLibrary": "In library",
   "sidebar.installed": "Installed",

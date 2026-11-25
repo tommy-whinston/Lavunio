@@ -7,6 +7,7 @@ export const RU = {
   "nav.management": "Управление",
   "nav.publishing": "Публикация",
   "nav.team": "Команда",
+  "nav.teams": "Команды",
   "nav.moderation": "Модерация",
   "sidebar.inLibrary": "В библиотеке",
   "sidebar.installed": "Установлено",
