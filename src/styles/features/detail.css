@@ -23,40 +23,41 @@
 /* --- Баннер режима --- */
 .detail-hero {
   position: relative;
-  height: 260px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--panel);
 }
 .detail-hero > img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  display: block;
+  width: calc(100% - 32px);
+  height: auto;
+  aspect-ratio: 16 / 9;
+  align-self: center;
+  justify-self: center;
   object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
-.detail-hero-shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--bg) 94%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 74%, transparent) 38%,
-    color-mix(in srgb, var(--bg) 24%, transparent) 74%,
-    transparent 100%
-  );
-}
+.detail-hero-shade { display: none; }
 .detail-hero-content {
   position: relative;
   z-index: 1;
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-end;
-  gap: 16px;
-  height: 100%;
-  padding: 24px;
+  justify-content: center;
+  gap: 15px;
+  height: auto;
+  padding: 28px 30px;
 }
 .detail-hero-text {
   min-width: 0;
@@ -64,10 +65,10 @@
 }
 #detail-tags { margin: 0 0 10px; }
 #detail-title {
-  font-size: 30px;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  font-size: 38px;
+  font-weight: 620;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   overflow-wrap: anywhere;
 }
 #detail-sub {
@@ -75,8 +76,8 @@
   overflow: hidden;
   color: var(--muted);
   font-size: var(--fs-base);
+  line-height: 1.6;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* --- Действия --- */
@@ -652,7 +653,21 @@
 
 /* --- Адаптив --- */
 @media (max-width: 900px) {
-  #detail-title { font-size: 26px; }
+  .detail-hero { grid-template-columns: 1fr; }
+  .detail-hero > img {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .detail-hero-content {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 22px;
+  }
+  #detail-title { font-size: 30px; }
   .detail-meta { flex-basis: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .meta-item:nth-child(4n) { border-right: 1px solid var(--border); }
   .meta-item:nth-child(2n) { border-right: 0; }
@@ -668,9 +683,8 @@
 }
 
 @media (max-width: 640px) {
-  .detail-hero { height: auto; min-height: 220px; }
   .detail-hero-content { padding: 16px; }
-  #detail-title { font-size: 22px; }
+  #detail-title { font-size: 25px; }
   .meta-item { padding: 10px 12px; }
   .detail-gallery { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .review-head { flex-wrap: wrap; }

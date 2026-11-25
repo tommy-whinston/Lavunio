@@ -136,9 +136,6 @@ export function renderProfile(profile) {
   if (!profile || !els.profileContent) return;
   const own = isOwnUsername(profile.username);
   const friend = friendByUsername(profile.username);
-  const outgoing = ((S.friendRequests && S.friendRequests.outgoing) || []).some(
-    (item) => String(item.username || '').toLowerCase() === String(profile.username).toLowerCase()
-  );
   const display = profile.displayName || profile.username;
   const nameClass = String(display).length > 13 ? 'profile-name-xlong'
     : String(display).length > 10 ? 'profile-name-long' : '';
@@ -154,9 +151,7 @@ export function renderProfile(profile) {
       ${friend
         ? `<button class="btn btn-primary" type="button" data-profile-action="chat" data-username="${escapeHtml(profile.username)}" data-name="${escapeHtml(display)}">${tKey("message")}</button>
            <button class="btn btn-ghost" type="button" data-profile-action="remove-friend" data-username="${escapeHtml(profile.username)}">${tKey("remove.friend.2")}</button>`
-        : outgoing
-          ? '<button class="btn btn-ghost" type="button" disabled>' + tKey("request.sent") + '</button>'
-          : `<button class="btn btn-primary" type="button" data-profile-action="add-friend" data-username="${escapeHtml(profile.username)}">${tKey("add.friend")}</button>`}
+        : ''}
       <button class="btn btn-ghost" type="button" data-profile-action="messages">${tKey("messages.title")}</button>
     `;
 
@@ -213,13 +208,8 @@ export function renderProfile(profile) {
           ${profileTeamsHtml(profile)}
         </section>
         ${own ? `
-          ${profileRequestsHtml()}
           <section class="profile-panel">
             <h2>${tKey("friends")}</h2>
-            <form class="profile-add-friend" data-profile-form="friend" autocomplete="off">
-              <input id="profile-friend-name" type="text" maxlength="20" placeholder="username">
-              <button class="btn btn-ghost" type="submit">${tKey("add")}</button>
-            </form>
             ${profileFriendsHtml()}
           </section>
         ` : `

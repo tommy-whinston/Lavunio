@@ -3,8 +3,10 @@
 /* ---- Блок «Рекомендуем» ---- */
 .featured {
   position: relative;
-  display: block;
-  min-height: 320px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 600px);
+  align-items: stretch;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -12,39 +14,41 @@
 }
 
 #featured-img {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: calc(100% - 32px);
+  height: auto;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  align-self: center;
+  justify-self: center;
   object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   transition: transform var(--dur) var(--ease);
 }
 .featured:hover #featured-img {
-  transform: scale(1.02);
+  transform: none;
 }
 
-/* Единственный допустимый градиент — скрим поверх обложки */
-.featured-shade {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    to right,
-    var(--scrim) 0%,
-    color-mix(in srgb, var(--scrim) 62%, transparent) 40%,
-    transparent 78%
-  );
-}
+.featured-shade { display: none; }
 
 .featured-content {
-  position: absolute;
+  position: relative;
   z-index: 2;
-  left: 32px;
-  right: 32px;
-  bottom: 28px;
-  max-width: 620px;
+  grid-column: 1;
+  grid-row: 1;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  max-width: none;
+  padding: 28px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .featured .eyebrow {
@@ -55,19 +59,19 @@
 }
 
 #featured-title {
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-size: 34px;
+  font-weight: 620;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
   color: var(--text);
 }
 
 #featured-desc {
   margin-top: 8px;
-  max-width: 520px;
+  max-width: 500px;
   color: var(--muted);
   font-size: var(--fs-base);
-  line-height: 1.5;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -296,21 +300,33 @@
 
 @media (max-width: 900px) {
   .featured {
-    min-height: 280px;
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  #featured-img {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
   .featured-content {
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
+    grid-column: 1;
+    grid-row: 2;
+    padding: 22px;
   }
   #featured-title {
-    font-size: 20px;
+    font-size: 28px;
   }
 }
 
 @media (max-width: 640px) {
-  .featured {
-    min-height: 240px;
+  #featured-title {
+    font-size: 25px;
   }
   .news-head {
     flex-wrap: wrap;

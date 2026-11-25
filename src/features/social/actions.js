@@ -8,6 +8,7 @@ import { toast } from '../../ui/toast.js';
 import { loadNotifications } from '../notifications/index.js';
 import { renderProfile } from '../profile/view.js';
 import { renderMessagesList } from '../messages/view.js';
+import { renderFriends } from '../friends/view.js';
 
 let socialActions = {
   askConfirm: async () => false
@@ -39,6 +40,7 @@ export async function loadFriends(force = false) {
 export function refreshFriendSurfaces() {
   if (S.section === 'profile' && S.playerProfile) renderProfile(S.playerProfile);
   if (S.section === 'messages') renderMessagesList();
+  if (S.section === 'friends') renderFriends();
 }
 
 export async function respondFriendRequest(id, action) {

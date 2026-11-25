@@ -12,3 +12,8 @@ export function moderatorAllowed() {
   return !!(S.lavunio && S.lavunio.configured && user && (user.role === 'moderator' || user.role === 'admin'));
 }
 
+export function adminAllowed() {
+  const user = S.lavunio && S.lavunio.user;
+  return !!(S.lavunio && S.lavunio.configured && user && user.role === 'admin');
+}
+

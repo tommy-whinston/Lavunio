@@ -48,6 +48,8 @@ export function setSettingsTab(tab) {
   if (save) save.hidden = settingsTab === 'profile';
   const hint = $('settings-foot-hint');
   if (hint) hint.hidden = settingsTab === 'profile';
+  const shell = document.querySelector('.settings-shell');
+  if (shell) shell.scrollTop = 0;
 }
 
 export function renderSettingsProfile() {

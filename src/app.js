@@ -4,7 +4,7 @@ import { tKey } from './i18n/index.js';
 
 import { api } from './api/client.js';
 import { S } from './core/state.js';
-import { publisherAllowed, moderatorAllowed } from './core/permissions.js';
+import { publisherAllowed, moderatorAllowed, adminAllowed } from './core/permissions.js';
 import { lavunioLoggedIn } from './core/lavunio.js';
 import { els } from './core/elements.js';
 import { configureCatalogGrid } from './features/catalog/grid.js';
@@ -20,6 +20,8 @@ import { configureUpdates, bindUpdateModal, checkLauncherUpdate, checkUpdateInBa
 import { configureNotifications, bindNotifications, loadNotifications, renderNotifications } from './features/notifications/index.js';
 import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderLavunioPane, logoutLavunio } from './features/account/index.js';
 import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
+import { configureFriends, bindFriends, renderFriends } from './features/friends/view.js';
+import { initTheme } from './core/theme.js';
 import { configureStore, renderStore, updateAllModes, notifyModeUpdates, loadFollows, loadStoreNews, updateCardProgress, refreshStore, loadStorePage } from './features/store/view.js';
 import { configureDetailActions, bindDetail, openDetail, showStore, startMode, openCardContext, closeCardContext, renderDetail, updateDetailAction } from './features/detail/actions.js';
 import { onGameEvent } from './features/game/events.js';
@@ -62,6 +64,13 @@ configureMessages({
   showView,
   loadFriends,
   loadTeams
+});
+
+configureFriends({
+  openChat,
+  openProfile,
+  loadFriends,
+  respondFriendRequest
 });
 
 configureProfileActions({
@@ -137,6 +146,7 @@ configureModeration({
 init();
 
 async function init() {
+  initTheme();
   if (api && api.windowSplash) api.windowSplash().catch(() => {});
   bindWindowButtons();
   bindModals();
@@ -149,6 +159,7 @@ async function init() {
   bindPublisher();
   bindTeams();
   bindSocial();
+  bindFriends();
   bindModeration();
   bindUpdateModal();
   initCustomSelects();
@@ -226,7 +237,6 @@ async function init() {
     renderAccountChip();
     updatePublisherNav();
     loadFollows();
-    loadStoreNews();
     renderStore();
     renderLibrary();
     updateSidebar();
@@ -350,7 +360,8 @@ function bindStore() {
     } else if (S.section === 'store') {
       refreshStore({ reset: true, debounce: 250 });
     } else {
-      renderCurrentSection();
+      showSection('store');
+      refreshStore({ reset: true, debounce: 250 });
     }
   });
   if (els.librarySearch) els.librarySearch.addEventListener('input', () => {
@@ -435,6 +446,13 @@ function bindSidebar() {
       showSection('messages');
     };
   }
+  if (els.sideFriends) {
+    els.sideFriends.onclick = (event) => {
+      event.stopPropagation();
+      S.detailFrom = null;
+      showSection('friends');
+    };
+  }
   if (els.sidebarSettings) {
     els.sidebarSettings.onclick = (event) => {
       event.stopPropagation();
@@ -444,7 +462,7 @@ function bindSidebar() {
   bindProfileView();
 }
 
-const PRIMARY_SECTIONS = new Set(['store', 'library', 'publisher', 'team', 'moderation', 'profile', 'messages']);
+const PRIMARY_SECTIONS = new Set(['store', 'library', 'publisher', 'team', 'friends', 'moderation', 'admin', 'profile', 'messages']);
 
 function showView(section) {
   S.section = section;
@@ -453,7 +471,9 @@ function showView(section) {
   els.libraryView.hidden = section !== 'library';
   if (els.publisherView) els.publisherView.hidden = section !== 'publisher';
   if (els.teamView) els.teamView.hidden = section !== 'team';
+  if (els.friendsView) els.friendsView.hidden = section !== 'friends';
   if (els.moderationView) els.moderationView.hidden = section !== 'moderation';
+  if (els.adminView) els.adminView.hidden = section !== 'admin';
   if (els.profileView) els.profileView.hidden = section !== 'profile';
   if (els.messagesView) els.messagesView.hidden = section !== 'messages';
   els.detailView.hidden = true;
@@ -469,7 +489,8 @@ function showView(section) {
 function showSection(section) {
   if (section === 'publisher' && !publisherAllowed()) section = 'store';
   if (section === 'moderation' && !moderatorAllowed()) section = 'store';
-  if ((section === 'profile' || section === 'messages') && !lavunioLoggedIn()) {
+  if (section === 'admin' && !adminAllowed()) section = 'store';
+  if ((section === 'profile' || section === 'messages' || section === 'friends') && !lavunioLoggedIn()) {
     S.profileAfterLogin = section === 'profile';
     openModal('modal-account');
     section = 'store';
@@ -507,7 +528,10 @@ function showSection(section) {
     loadModeration();
   } else if (section === 'messages') {
     loadChatList();
-  } else renderStore();
+  } else if (section === 'friends') {
+    renderFriends();
+    loadFriends(true);
+  } else if (section !== 'admin') renderStore();
   const app = $('app');
   if (app) app.scrollTop = 0;
 }
@@ -522,8 +546,10 @@ function updateSidebar() {
   const profileCard = $('sidebar-profile-card');
   if (profileCard) profileCard.classList.toggle('active', S.section === 'profile');
   if (els.sidebarMessages) els.sidebarMessages.classList.toggle('active', S.section === 'messages');
+  if (els.sideFriends) els.sideFriends.classList.toggle('active', S.section === 'friends');
   updatePublisherNav();
   updateModerationNav();
+  updateAdminNav();
   updateSocialNav();
   updateSideGroups();
 }
@@ -537,6 +563,7 @@ function updateSideGroups() {
 }
 
 function renderCurrentSection() {
+  if (S.section === 'admin') return;
   if (S.section === 'library') renderLibrary();
   else if (S.section === 'publisher') renderPublisher();
   else if (S.section === 'team') renderTeams();
@@ -545,6 +572,7 @@ function renderCurrentSection() {
     if (S.playerProfile) renderProfile(S.playerProfile);
     else if (S.profileUsername) openProfile(S.profileUsername);
   } else if (S.section === 'messages') renderMessagesList();
+  else if (S.section === 'friends') renderFriends();
   else renderStore();
 }
 
@@ -663,7 +691,30 @@ async function handleCardAction(modeId, action, autoPlay = false) {
 function updateSocialNav() {
   const logged = lavunioLoggedIn();
   if (els.sidebarMessages) els.sidebarMessages.hidden = !logged;
+  if (els.sideFriends) els.sideFriends.hidden = !logged;
+  updateAdminNav();
   updateSideGroups();
+}
+
+function updateAdminNav() {
+  const allowed = adminAllowed();
+  const button = $('side-admin');
+  if (button) button.hidden = !allowed;
+  updateSideGroups();
+  if (!allowed && S.section === 'admin') {
+    S.section = 'store';
+    S.view = 'store';
+    if (els.storeView) els.storeView.hidden = false;
+    if (els.adminView) els.adminView.hidden = true;
+    if (els.libraryView) els.libraryView.hidden = true;
+    if (els.teamView) els.teamView.hidden = true;
+    if (els.friendsView) els.friendsView.hidden = true;
+    if (els.detailView) els.detailView.hidden = true;
+    document.querySelectorAll('.side-link').forEach((link) => {
+      link.classList.toggle('active', link.dataset.section === 'store');
+    });
+    renderStore();
+  }
 }
 
 function updatePublisherNav() {
