@@ -32,6 +32,26 @@ where
         .map_err(|e| format!("Ошибка выполнения: {e}"))
 }
 
+pub(crate) fn read_limited(path: &str, limit: u64, label: &str) -> Result<Vec<u8>, String> {
+    let meta = std::fs::metadata(path)
+        .map_err(|error| format!("Не удалось прочитать {label}: {error}"))?;
+    if meta.len() > limit {
+        return Err(format!(
+            "{label} больше {} МБ",
+            limit / (1024 * 1024)
+        ));
+    }
+    let bytes =
+        std::fs::read(path).map_err(|error| format!("Не удалось прочитать {label}: {error}"))?;
+    if bytes.len() as u64 > limit {
+        return Err(format!(
+            "{label} больше {} МБ",
+            limit / (1024 * 1024)
+        ));
+    }
+    Ok(bytes)
+}
+
 pub(crate) async fn load_modes(state: &AppState) -> Vec<Mode> {
     let (repo, token, cached) = {
         let store = state.store.lock().unwrap();

@@ -1,4 +1,4 @@
-use super::{blocking, lavunio_access_token, lavunio_api, publisher_request};
+use super::{blocking, lavunio_access_token, lavunio_api, publisher_request, read_limited};
 use crate::net;
 use crate::publisher as build_publisher;
 use crate::state::AppState;
@@ -114,11 +114,7 @@ pub async fn publisher_upload_cover(
     mode_id: String,
     path: String,
 ) -> Result<Value, String> {
-    let bytes =
-        std::fs::read(&path).map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
-    if bytes.len() > 8 * 1024 * 1024 {
-        return Err("Обложка больше 8 МБ".to_string());
-    }
+    let bytes = read_limited(&path, 2 * 1024 * 1024, "Обложка")?;
     let api = lavunio_api()?;
     let token = lavunio_access_token(state.inner()).await?;
     let endpoint = format!("/v1/publisher/modes/{mode_id}/cover");
@@ -141,11 +137,7 @@ pub async fn publisher_upload_screenshot(
     release_id: String,
     path: String,
 ) -> Result<Value, String> {
-    let bytes =
-        std::fs::read(&path).map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
-    if bytes.len() > 20 * 1024 * 1024 {
-        return Err("Скриншот больше 20 МБ".to_string());
-    }
+    let bytes = read_limited(&path, 2 * 1024 * 1024, "Скриншот")?;
     let file_name = Path::new(&path)
         .file_name()
         .and_then(|name| name.to_str())
@@ -405,11 +397,7 @@ pub async fn team_upload_image(
     kind: String,
     path: String,
 ) -> Result<Value, String> {
-    let bytes = std::fs::read(&path)
-        .map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
-    if bytes.len() > 2 * 1024 * 1024 {
-        return Err("Файл больше 2 МБ".to_string());
-    }
+    let bytes = read_limited(&path, 2 * 1024 * 1024, "Изображение")?;
     let api = lavunio_api()?;
     let token = lavunio_access_token(state.inner()).await?;
     let endpoint = format!("/v1/teams/{team_id}/image?kind={kind}");

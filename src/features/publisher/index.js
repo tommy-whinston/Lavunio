@@ -256,6 +256,14 @@ export function renderPublisher() {
   list.innerHTML = modes.map((mode) => publisherModeCard(mode)).join('');
 }
 
+export function publisherScreenshotCount(mode) {
+  return (mode && Array.isArray(mode.releases) ? mode.releases : []).reduce(
+    (total, release) => total + (Array.isArray(release.assets) ? release.assets : [])
+      .filter((asset) => asset.kind === 'screenshot' && asset.url).length,
+    0
+  );
+}
+
 export function publisherModeCard(mode) {
   const releases = mode.releases || [];
   const status = publisherStatusLabel(mode.status);
@@ -320,8 +328,10 @@ export function publisherReleaseCard(mode, release) {
   const rejectionHtml = release.rejectionNote
     ? `<div class="mod-reject-note">${tKey("rejection.reason")} ${escapeHtml(release.rejectionNote)}</div>`
     : '';
-  const screenshots = (release.assets || []).filter((asset) => asset.kind === 'screenshot' && asset.url).length;
-  const screenshotHtml = screenshots ? `${tKey("screenshots.2")} ${screenshots}` : '';
+  const screenshots = publisherScreenshotCount(mode);
+  const screenshotHtml = screenshots
+    ? tKey("publisher.screenshots.count", [screenshots])
+    : '';
 
   let actions = '';
   if (release.status === 'draft') {
@@ -509,6 +519,10 @@ export async function deletePublisherCover(mode) {
 
 export async function uploadPublisherScreenshot(mode, release) {
   if (!mode || !release) return;
+  if (publisherScreenshotCount(mode) >= 10) {
+    toast(tKey("publisher.screenshots.limit"), 'warn');
+    return;
+  }
   let path;
   try {
     path = await api.publisherPickScreenshot();

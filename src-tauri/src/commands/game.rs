@@ -2,7 +2,7 @@ use base64::Engine;
 
 use super::{
     blocking, lavunio_access_token, lavunio_api, lavunio_status_value, load_modes,
-    publisher_request, save_lavunio_session,
+    publisher_request, read_limited, save_lavunio_session,
 };
 use crate::game;
 use crate::models::{GameAccount, LavunioUser};
@@ -134,11 +134,7 @@ async fn lavunio_upload_image(
     path: String,
     endpoint: String,
 ) -> Result<Value, String> {
-    let bytes =
-        std::fs::read(&path).map_err(|error| format!("Не удалось прочитать файл: {error}"))?;
-    if bytes.len() > 2 * 1024 * 1024 {
-        return Err("Файл больше 2 МБ".to_string());
-    }
+    let bytes = read_limited(&path, 2 * 1024 * 1024, "Изображение")?;
     let api = lavunio_api()?;
     let token = lavunio_access_token(state).await?;
     let data = blocking(move || {
