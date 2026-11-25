@@ -2344,7 +2344,7 @@ dependencies = [
 
 [[package]]
 name = "lavunio"
-version = "0.23.59"
+version = "0.23.60"
 dependencies = [
  "base64 0.22.1",
  "chrono",
