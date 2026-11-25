@@ -106,11 +106,11 @@ pub async fn lavunio_register(
 #[tauri::command]
 pub async fn lavunio_login(
     state: State<'_, AppState>,
-    email: String,
+    login: String,
     password: String,
 ) -> Result<Value, String> {
     let api = lavunio_api()?;
-    let payload = json!({ "email": email, "password": password });
+    let payload = json!({ "identifier": login, "email": login, "password": password });
     let data = blocking(move || {
         net::api_request_json(&api, "POST", "/v1/auth/login", None, Some(payload))
     })
@@ -250,6 +250,22 @@ pub async fn lavunio_logout(state: State<'_, AppState>) -> Result<Value, String>
     save_lavunio_session(state.inner(), LavunioSession::default())?;
     crate::logging::log("lavunio: logged out");
     Ok(json!({ "ok": true }))
+}
+
+#[tauri::command]
+pub async fn lavunio_forgot_password(login: String) -> Result<Value, String> {
+    let api = lavunio_api()?;
+    let payload = json!({ "identifier": login, "email": login });
+    blocking(move || {
+        net::api_request_json(
+            &api,
+            "POST",
+            "/v1/auth/password/forgot",
+            None,
+            Some(payload),
+        )
+    })
+    .await?
 }
 
 #[tauri::command]

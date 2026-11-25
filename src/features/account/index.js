@@ -48,9 +48,23 @@ export function bindAccountModal() {
   };
   $('lavunio-switch').onclick = () => {
     S.lavunioRegisterMode = !S.lavunioRegisterMode;
+    S.lavunioForgotMode = null;
     renderLavunioPane();
     $('lavunio-email').focus();
   };
+  $('lavunio-forgot').onclick = () => {
+    S.lavunioForgotMode = 'form';
+    $('lavunio-forgot-login').value = $('lavunio-email').value.trim();
+    $('lavunio-forgot-error').hidden = true;
+    renderLavunioPane();
+    $('lavunio-forgot-login').focus();
+  };
+  $('lavunio-forgot-form').onsubmit = (event) => {
+    event.preventDefault();
+    submitLavunioForgot();
+  };
+  $('lavunio-forgot-back').onclick = () => backToLavunioLogin();
+  $('lavunio-forgot-sent-back').onclick = () => backToLavunioLogin();
   const usernameInput = $('lavunio-username');
   if (usernameInput) usernameInput.addEventListener('input', () => normalizeIdInput(usernameInput));
   $('lavunio-logout').onclick = () => logoutLavunio();
@@ -117,19 +131,24 @@ export function renderLavunioPane() {
   const user = S.lavunio && S.lavunio.user;
   const challenge = S.loginChallenge;
   const pending = S.lavunioPending;
+  const forgot = S.lavunioForgotMode;
   const form = $('lavunio-form');
   const signed = $('lavunio-signed');
   const current = $('lavunio-current');
   const hint = $('lavunio-api-hint');
   const error = $('lavunio-error');
   const challengeBox = $('lavunio-login-challenge');
+  const forgotForm = $('lavunio-forgot-form');
+  const forgotSent = $('lavunio-forgot-sent');
 
   if (!form) return;
   if (hint) hint.hidden = available;
   if (current) current.hidden = !user;
   if (challengeBox) challengeBox.hidden = !challenge || !!user;
-  if (form) form.hidden = !!user || !!challenge || !!pending;
+  if (form) form.hidden = !!user || !!challenge || !!pending || !!forgot;
   if (signed) signed.hidden = !user;
+  if (forgotForm) forgotForm.hidden = forgot !== 'form' || !!user;
+  if (forgotSent) forgotSent.hidden = forgot !== 'sent' || !!user;
   if (challenge) {
     const text = $('lavunio-login-challenge-text');
     if (text) text.textContent = tKey("login.code.sent.to", [challenge.email || '']);
@@ -183,9 +202,17 @@ export function renderLavunioPane() {
     $('lavunio-skin-delete').hidden = !user.skinUrl;
   } else {
     const register = !!S.lavunioRegisterMode;
+    const emailInput = $('lavunio-email');
+    const emailLabel = $('lavunio-email-label');
     $('lavunio-username-field').hidden = !register;
     $('lavunio-display-name-field').hidden = !register;
     if (els.consentRow) els.consentRow.hidden = !register;
+    emailLabel.textContent = register ? tKey("email") : tKey("email.or.account.id");
+    emailInput.type = register ? 'email' : 'text';
+    emailInput.autocomplete = register ? 'email' : 'username';
+    emailInput.setAttribute('inputmode', register ? 'email' : 'text');
+    emailInput.placeholder = register ? tKey("email.placeholder") : tKey("email.or.id.placeholder");
+    $('lavunio-forgot-row').hidden = register;
     $('lavunio-password').autocomplete = register ? 'new-password' : 'current-password';
     $('lavunio-submit').textContent = register ? tKey("create.account") : tKey("sign.in");
     $('lavunio-switch-text').textContent = register ? tKey("already.have.an.account") : tKey("no.account");
@@ -198,15 +225,15 @@ export function renderLavunioPane() {
 
 async function submitLavunioForm() {
   const error = $('lavunio-error');
-  const email = $('lavunio-email').value.trim();
+  const login = $('lavunio-email').value.trim();
   const password = $('lavunio-password').value;
   const username = $('lavunio-username').value.trim().toLowerCase();
   const displayName = $('lavunio-display-name').value.trim();
   const register = !!S.lavunioRegisterMode;
 
   error.hidden = true;
-  if (!email || !password) {
-    error.textContent = tKey("fill.in.email.and");
+  if (!login || !password) {
+    error.textContent = register ? tKey("fill.in.email.and") : tKey("fill.in.login.and");
     error.hidden = false;
     return;
   }
@@ -237,10 +264,10 @@ async function submitLavunioForm() {
   button.textContent = register ? tKey("creating") : tKey("signing.in");
   try {
     const status = register
-      ? await api.lavunioRegister(email, password, username || null, displayName || null, !!(els.consent && els.consent.checked))
-      : await api.lavunioLogin(email, password);
+      ? await api.lavunioRegister(login, password, username || null, displayName || null, !!(els.consent && els.consent.checked))
+      : await api.lavunioLogin(login, password);
     if (status && status.requiresVerification) {
-      S.lavunioPending = { email: status.email || email, register };
+      S.lavunioPending = { email: status.email || login, register };
       S.loginChallenge = null;
       $('lavunio-password').value = '';
       renderLavunioPane();
@@ -251,7 +278,7 @@ async function submitLavunioForm() {
       return;
     }
     if (!register && status && status.requiresCode) {
-      S.loginChallenge = { id: status.challengeId, email: status.email || email };
+      S.loginChallenge = { id: status.challengeId, email: status.email || login };
       $('lavunio-password').value = '';
       renderLavunioPane();
       toast(tKey("login.code.sent"), 'warn');
@@ -272,9 +299,49 @@ async function submitLavunioForm() {
   }
 }
 
+async function submitLavunioForgot() {
+  const error = $('lavunio-forgot-error');
+  const input = $('lavunio-forgot-login');
+  const login = input.value.trim();
+  error.hidden = true;
+  if (!login) {
+    error.textContent = tKey("enter.email.or.id");
+    error.hidden = false;
+    input.focus();
+    return;
+  }
+  if (!S.lavunio || !S.lavunio.configured) {
+    error.textContent = tKey("lavunio.api.is.not.2");
+    error.hidden = false;
+    return;
+  }
+  const button = $('lavunio-forgot-submit');
+  button.disabled = true;
+  button.textContent = tKey("sending");
+  try {
+    await api.lavunioForgotPassword(login);
+    S.lavunioForgotMode = 'sent';
+    renderLavunioPane();
+    toast(tKey("password.reset.email.sent"), 'ok');
+  } catch (err) {
+    error.textContent = String(err || tKey("failed.to.send.reset.email"));
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = tKey("send.reset.link");
+  }
+}
+
+function backToLavunioLogin() {
+  S.lavunioForgotMode = null;
+  renderLavunioPane();
+  $('lavunio-email').focus();
+}
+
 function applyLavunioSession(status, register) {
   S.loginChallenge = null;
   S.lavunioPending = null;
+  S.lavunioForgotMode = null;
   S.lavunio = status;
   $('lavunio-password').value = '';
   renderLavunioPane();
@@ -322,6 +389,7 @@ export async function logoutLavunio() {
   S.loginChallenge = null;
   S.lavunioPending = null;
   S.lavunioRegisterMode = false;
+  S.lavunioForgotMode = null;
   S.reviews = {};
   S.follows = [];
   S.feed = [];

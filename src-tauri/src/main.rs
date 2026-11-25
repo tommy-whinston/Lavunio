@@ -123,6 +123,7 @@ fn main() {
             commands::lavunio_login,
             commands::lavunio_verify_login,
             commands::lavunio_logout,
+            commands::lavunio_forgot_password,
             commands::lavunio_resend_verification,
             commands::lavunio_verify_email,
             commands::lavunio_game_session,

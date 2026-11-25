@@ -154,6 +154,7 @@ const base = {
   lavunioResendRegistration: async () => ({ requiresVerification: true, email: 'new@example.com' }),
   lavunioVerifyEmail: async (code) => ({ configured: true, hasSession: true, user: { ...(data.user || data.profile), emailVerified: code === '123456' } }),
   lavunioLogout: async () => ({ configured: true, hasSession: false, user: null }),
+  lavunioForgotPassword: async () => ({ ok: true }),
   onGameEvent: async () => {}, presenceHeartbeat: async () => {},
   notificationsList: async () => ({ items: data.user ? [{ id: 'n1', kind: 'mode', title: 'Night Demon updated', body: 'Version 1.0.0', createdAt: now, readAt: null, linkType: 'mode', linkId: 'night-demon' }] : [], unread: data.user ? 1 : 0 }),
   notificationsRead: async () => ({ items: [], unread: 0 }),

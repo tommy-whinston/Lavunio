@@ -494,7 +494,39 @@ async function checkAuthCodes(cdp) {
   await sleep(300);
   const loginVerified = await cdp.evaluate(`!!(window.LavunioDebug.S.lavunio && window.LavunioDebug.S.lavunio.user && window.LavunioDebug.S.lavunio.user.emailVerified)`);
   if (!loginVerified) throw new Error('unverified login did not complete after code');
-  await cdp.evaluate(`window.__loginUnverified = false; window.LavunioDebug.closeModals()`);
+  await cdp.evaluate(`(() => {
+    window.__loginUnverified = false;
+    const S = window.LavunioDebug.S;
+    S.lavunio = { configured: true, hasSession: false, user: null };
+    S.lavunioRegisterMode = false;
+    return import('/features/account/index.js').then((m) => m.renderLavunioPane());
+  })()`);
+  await sleep(150);
+  await cdp.evaluate(`document.getElementById('lavunio-forgot').click()`);
+  await sleep(150);
+  const forgot = await cdp.evaluate(`({
+    loginVisible: !document.getElementById('lavunio-form').hidden,
+    forgotVisible: !document.getElementById('lavunio-forgot-form').hidden,
+    sentVisible: !document.getElementById('lavunio-forgot-sent').hidden
+  })`);
+  if (forgot.loginVisible || !forgot.forgotVisible || forgot.sentVisible) {
+    throw new Error('forgot password form not shown: ' + JSON.stringify(forgot));
+  }
+  await cdp.evaluate(`(() => {
+    document.getElementById('lavunio-forgot-login').value = 'steve';
+    document.getElementById('lavunio-forgot-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  })()`);
+  await sleep(250);
+  const forgotSent = await cdp.evaluate(`({
+    visible: !document.getElementById('lavunio-forgot-sent').hidden,
+    formHidden: document.getElementById('lavunio-forgot-form').hidden
+  })`);
+  if (!forgotSent.visible || !forgotSent.formHidden) {
+    throw new Error('forgot password confirmation not shown: ' + JSON.stringify(forgotSent));
+  }
+  await cdp.evaluate(`document.getElementById('lavunio-forgot-sent-back').click()`);
+  await sleep(120);
+  await cdp.evaluate(`window.LavunioDebug.closeModals()`);
 }
 
 async function checkTeamsDirectory(cdp) {

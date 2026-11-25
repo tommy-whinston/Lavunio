@@ -92,6 +92,27 @@
 }
 .acc-form .field { margin-bottom: 0; }
 
+.acc-forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+.acc-forgot-row .link-btn {
+  font-size: var(--fs-sm);
+}
+
+#lavunio-forgot-sent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+#lavunio-forgot-sent span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
 .consent-row {
   display: flex;
   align-items: flex-start;
