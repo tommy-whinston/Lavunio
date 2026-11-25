@@ -245,3 +245,36 @@ impl Store {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migrates_plaintext_session_to_encrypted_file() {
+        let dir = std::env::temp_dir().join(format!(
+            "lavunio-session-test-{}-{}",
+            std::process::id(),
+            now_ms()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let mut session = LavunioSession::default();
+        session.access_token = "access-token".to_string();
+        session.refresh_token = "refresh-token".to_string();
+        write_json(&dir.join(LEGACY_SESSION_FILE), &session).unwrap();
+
+        let loaded = load_lavunio_session(&dir);
+        assert_eq!(loaded.access_token, "access-token");
+        assert_eq!(loaded.refresh_token, "refresh-token");
+        assert!(dir.join(SESSION_FILE).exists());
+        assert!(!dir.join(LEGACY_SESSION_FILE).exists());
+        let encrypted = fs::read(dir.join(SESSION_FILE)).unwrap();
+        assert_ne!(encrypted.first(), Some(&b'{'));
+
+        let loaded_again = load_lavunio_session(&dir);
+        assert_eq!(loaded_again.access_token, "access-token");
+        let _ = fs::remove_dir_all(&dir);
+    }
+}
