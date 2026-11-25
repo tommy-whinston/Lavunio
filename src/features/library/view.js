@@ -42,7 +42,7 @@ export function renderLibrary() {
       })
     : S.modes.filter((mode) => isVisibleInLibrary(mode));
   const list = sortCatalog(
-    source.filter((mode) => matchesSearch(mode) && modePassesFilter(mode, S.libraryFilter)),
+    source.filter((mode) => matchesSearch(mode, S.librarySearch) && modePassesFilter(mode, S.libraryFilter)),
     S.librarySort
   );
   els.libraryCount.textContent = String(list.length);
@@ -50,7 +50,7 @@ export function renderLibrary() {
   const showEmpty = list.length === 0;
   els.libraryEmpty.hidden = !showEmpty;
   if (showEmpty) {
-    if (S.search) {
+    if (S.librarySearch) {
       els.libraryEmptyTitle.textContent = tKey("nothing.found");
       els.libraryEmptySub.textContent = tKey("try.changing.the.query");
     } else if (S.libraryFilter === 'hidden') {

@@ -37,6 +37,7 @@ export const RU = {
   "banner.url": "Баннер (URL)",
   "no.team": "Без команды",
   "library.is.empty": "Библиотека пуста",
+  "library.search": "Поиск в библиотеке",
   "queued": "В очереди",
   "in.development": "В разработке",
   "add.to.wishlist": "В список желаемого",

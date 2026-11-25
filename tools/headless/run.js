@@ -199,7 +199,7 @@ async function checkLanguage(cdp) {
   const en = await cdp.evaluate(`({
     catalog: document.querySelector('[data-section="store"] span')?.textContent,
     library: document.querySelector('[data-section="library"] span')?.textContent,
-    search: document.getElementById('search-input')?.placeholder
+    search: document.getElementById('store-search')?.placeholder
   })`);
   if (en.catalog !== 'Catalog' || en.library !== 'Library' || en.search !== 'Search modes') {
     throw new Error('EN labels не совпали: ' + JSON.stringify(en));
@@ -208,7 +208,7 @@ async function checkLanguage(cdp) {
   const ru = await cdp.evaluate(`({
     catalog: document.querySelector('[data-section="store"] span')?.textContent,
     library: document.querySelector('[data-section="library"] span')?.textContent,
-    search: document.getElementById('search-input')?.placeholder
+    search: document.getElementById('store-search')?.placeholder
   })`);
   if (ru.catalog !== 'Каталог' || ru.library !== 'Библиотека' || ru.search !== 'Поиск режимов') {
     throw new Error('RU labels не совпали: ' + JSON.stringify(ru));
@@ -241,7 +241,7 @@ async function checkStaticPanels(cdp) {
 async function checkServerSearch(cdp) {
   await cdp.evaluate(`window.LavunioDebug.showSection('store')`);
   await cdp.evaluate(`(() => {
-    const input = document.getElementById('search-input');
+    const input = document.getElementById('store-search');
     input.value = 'Night';
     input.dispatchEvent(new Event('input', { bubbles: true }));
   })()`);
@@ -263,7 +263,7 @@ async function checkServerSearch(cdp) {
   const title = await cdp.evaluate(`document.getElementById('detail-title').textContent`);
   if (!title.includes('Night Mode 30')) throw new Error('detail из второй страницы не открылся: ' + title);
   await cdp.evaluate(`(() => {
-    const input = document.getElementById('search-input');
+    const input = document.getElementById('store-search');
     input.value = '';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     window.LavunioDebug.showSection('store');

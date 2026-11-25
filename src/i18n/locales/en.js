@@ -37,6 +37,7 @@ export const EN = {
   "banner.url": "Banner (URL)",
   "no.team": "No team",
   "library.is.empty": "Library is empty",
+  "library.search": "Search library",
   "queued": "Queued",
   "in.development": "In development",
   "add.to.wishlist": "Add to wishlist",

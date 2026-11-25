@@ -51,8 +51,8 @@ export function sortCatalog(list, sort) {
   return sortModes(list);
 }
 
-export function matchesSearch(mode) {
-  if (!S.search) return true;
+export function matchesSearch(mode, query = S.search) {
+  if (!query) return true;
   const haystack = [
     mode.title,
     mode.description,
@@ -62,7 +62,7 @@ export function matchesSearch(mode) {
     ...modeAuthors(mode),
     ...(Array.isArray(mode.tags) ? mode.tags : [])
   ].join(' ').toLowerCase();
-  return haystack.includes(S.search);
+  return haystack.includes(query);
 }
 
 export function filterModes() {

@@ -68,13 +68,6 @@
       </span>
       <span class="brand-name">Lavunio</span>
     </div>
-    <label class="search-box">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <circle cx="11" cy="11" r="6.5"/><path d="M16 16 L21 21"/>
-      </svg>
-      <input id="search-input" type="text" placeholder="Поиск режимов" aria-label="Поиск режимов" data-i18n-placeholder="topbar.search" autocomplete="off" spellcheck="false" data-i18n-aria="topbar.search">
-    </label>
-
     <div class="nav-drag" data-tauri-drag-region></div>
 
     <button class="update-chip" id="update-chip" hidden type="button">
@@ -196,6 +189,15 @@
         <p data-i18n="pick.modes.install.with">Выбирай режимы, ставь одной кнопкой и следи за обновлениями.</p>
       </div>
 
+      <div class="catalog-toolbar">
+        <label class="search-box section-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="6.5"/><path d="M16 16 L21 21"/>
+          </svg>
+          <input id="store-search" type="text" placeholder="Поиск режимов" aria-label="Поиск режимов" data-i18n-placeholder="topbar.search" autocomplete="off" spellcheck="false" data-i18n-aria="topbar.search">
+        </label>
+      </div>
+
       <section id="featured" class="featured">
         <img id="featured-img" alt="">
         <div class="featured-shade"></div>
@@ -278,6 +280,15 @@
           <div class="dash-stat"><span data-i18n="updates">Обновлений</span><b id="library-stat-updates">0</b></div>
           <div class="dash-stat"><span data-i18n="playtime">Наиграно</span><b id="library-stat-playtime">—</b></div>
         </div>
+      </div>
+
+      <div class="catalog-toolbar">
+        <label class="search-box section-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="6.5"/><path d="M16 16 L21 21"/>
+          </svg>
+          <input id="library-search" type="text" placeholder="Поиск в библиотеке" aria-label="Поиск в библиотеке" data-i18n-placeholder="library.search" autocomplete="off" spellcheck="false" data-i18n-aria="library.search">
+        </label>
       </div>
 
       <div class="update-banner" id="library-update-banner" hidden>

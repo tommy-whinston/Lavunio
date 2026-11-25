@@ -72,7 +72,7 @@ export function bindDetail() {
     if (!name) return;
     S.selectedId = null;
     S.detailFrom = null;
-    els.search.value = name;
+    if (els.storeSearch) els.storeSearch.value = name;
     S.search = name.toLowerCase();
     detailActions.showSection('store');
   };

@@ -142,6 +142,17 @@
   min-width: 0;
 }
 
+.catalog-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.section-search {
+  width: min(100%, 320px);
+  flex: 0 1 320px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));

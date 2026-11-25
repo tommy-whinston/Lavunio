@@ -25,6 +25,7 @@ export const S = {
   updatesSnoozed: false,
   storeFilter: 'all',
   storeSort: 'date',
+  librarySearch: '',
   storeRemote: false,
   storeItems: [],
   storeTotal: 0,

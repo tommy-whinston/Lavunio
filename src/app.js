@@ -342,8 +342,8 @@ function bindStore() {
     if (S.featuredId) openDetail(S.featuredId);
   };
 
-  els.search.addEventListener('input', () => {
-    S.search = els.search.value.trim().toLowerCase();
+  if (els.storeSearch) els.storeSearch.addEventListener('input', () => {
+    S.search = els.storeSearch.value.trim().toLowerCase();
     if (S.view === 'detail') {
       S.detailFrom = null;
       showSection(S.section);
@@ -352,6 +352,10 @@ function bindStore() {
     } else {
       renderCurrentSection();
     }
+  });
+  if (els.librarySearch) els.librarySearch.addEventListener('input', () => {
+    S.librarySearch = els.librarySearch.value.trim().toLowerCase();
+    renderLibrary();
   });
 
   els.refresh.onclick = async () => {
@@ -394,8 +398,12 @@ function bindStore() {
       if (!document.querySelector('.modal-overlay:not([hidden])')) {
         if (S.view === 'detail') {
           showStore();
+        } else if (S.section === 'library' && S.librarySearch) {
+          if (els.librarySearch) els.librarySearch.value = '';
+          S.librarySearch = '';
+          renderLibrary();
         } else if (S.search) {
-          els.search.value = '';
+          if (els.storeSearch) els.storeSearch.value = '';
           S.search = '';
           renderCurrentSection();
         }
