@@ -39,7 +39,7 @@
     getLogsPath: () => invoke("app_logs_path"),
     openLogs: () => invoke("app_open_logs"),
     checkUpdate: () => invoke("check_update"),
-    installUpdate: (url) => invoke("install_update", { url }),
+    installUpdate: (url, sha256) => invoke("install_update", { url, sha256 }),
     onUpdateProgress: (cb) => listen("update:progress", (e) => cb(e.payload)),
 
     // Lavunio ID

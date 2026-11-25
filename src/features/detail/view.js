@@ -2,14 +2,12 @@
 
 import { tKey } from '../../i18n/index.js';
 
-import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { $, escapeHtml } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { formatDateTime, formatDuration, formatHistoryStamp } from '../../core/format.js';
 import { changelogModel } from '../../core/changelog.js';
 import { latestUpdateEntry } from '../../core/modes.js';
-import { toast } from '../../ui/toast.js';
 import { growAllTextareas } from '../../ui/textarea.js';
 
 export const UPDATE_TAGS = {
@@ -86,37 +84,6 @@ export function updateChangelogToggle() {
   const allOpen = items.every((item) => item.open);
   els.changelogToggle.textContent = allOpen ? tKey("collapse.all") : tKey("expand.all");
   els.changelogToggle.setAttribute('aria-expanded', allOpen ? 'true' : 'false');
-}
-
-export function trailerEmbed(url) {
-  const youtube = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i);
-  if (youtube) {
-    return { kind: 'iframe', src: `https://www.youtube.com/embed/${youtube[1]}?rel=0` };
-  }
-  const rutube = url.match(/rutube\.ru\/video\/([a-f0-9]{32})/i);
-  if (rutube) {
-    return { kind: 'iframe', src: `https://rutube.ru/play/embed/${rutube[1]}` };
-  }
-  if (/\.(mp4|webm|ogg)(\?|#|$)/i.test(url)) {
-    return { kind: 'video', src: url };
-  }
-  return { kind: 'iframe', src: url };
-}
-
-export function renderTrailer(mode) {
-  const raw = String((mode && mode.trailerUrl) || '').trim();
-  els.detailTrailerSection.hidden = !raw;
-  if (!raw) {
-    els.detailTrailer.innerHTML = '';
-    return;
-  }
-  const embed = trailerEmbed(raw);
-  els.detailTrailer.innerHTML = embed.kind === 'video'
-    ? `<video src="${escapeHtml(embed.src)}" controls preload="metadata"></video>`
-    : `<iframe src="${escapeHtml(embed.src)}" title="${tKey("trailer")}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-  els.detailTrailerOpen.onclick = () => {
-    api.openUrl(raw).catch((err) => toast(String(err), 'error'));
-  };
 }
 
 export function selectDetailTab(tab) {

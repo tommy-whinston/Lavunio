@@ -549,12 +549,6 @@
           <div id="detail-gallery" class="detail-gallery"></div>
         </section>
 
-        <section class="detail-section" id="detail-trailer-section" data-detail-tab="about" hidden>
-          <h2 data-i18n="trailer">Трейлер</h2>
-          <div id="detail-trailer" class="trailer-frame"></div>
-          <button class="btn btn-ghost trailer-open" id="detail-trailer-open" type="button" data-i18n="open.in.browser">Открыть в браузере</button>
-        </section>
-
         <section class="detail-section" id="detail-news-section" data-detail-tab="about" hidden>
           <h2 data-i18n="mode.news">Новости режима</h2>
           <div id="detail-news-list" class="news-list"></div>
@@ -945,10 +939,6 @@
           <input id="team-slug" type="text" maxlength="64" placeholder="tmteam">
           <div class="hint" data-i18n="team.id.hint">Короткий ID для ссылки и поиска, например tmteam.</div>
         </div>
-        <div class="field">
-          <label for="team-avatar" data-i18n="avatar.url">Аватар (URL)</label>
-          <input id="team-avatar" type="text" maxlength="500" placeholder="https://...">
-        </div>
         <div class="hint" data-i18n="team.create.hint">Описание, ссылки, баннер и роли настроишь после создания в настройках команды.</div>
         <div class="form-error" id="team-error" hidden></div>
         <button class="btn btn-primary btn-block" id="team-submit" type="submit">Создать команду</button>
@@ -1205,14 +1195,6 @@
         <div class="field">
           <label for="pub-mode-tags" data-i18n="tags">Теги</label>
           <input id="pub-mode-tags" type="text" placeholder="pvp, хоррор, ролевой" data-i18n-placeholder="pvp.horror.roleplay">
-        </div>
-        <div class="field">
-          <label for="pub-mode-cover" data-i18n="cover.url">Обложка (URL)</label>
-          <input id="pub-mode-cover" type="text" placeholder="https://...">
-        </div>
-        <div class="field">
-          <label for="pub-mode-trailer" data-i18n="trailer.url">Трейлер (URL)</label>
-          <input id="pub-mode-trailer" type="text" placeholder="https://www.youtube.com/watch?v=...">
         </div>
         <div class="form-error" id="pub-mode-error" hidden></div>
         <button class="btn btn-primary btn-block" id="pub-mode-submit" type="submit" data-i18n="create.draft">Создать черновик</button>

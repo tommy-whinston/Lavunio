@@ -352,7 +352,20 @@ fn parse_modes(data: Value) -> Result<Vec<Mode>, String> {
     let mut modes = Vec::new();
     for item in items {
         match serde_json::from_value::<Mode>(item.clone()) {
-            Ok(mode) if !mode.id.trim().is_empty() => modes.push(mode),
+            Ok(mut mode) if !mode.id.trim().is_empty() => {
+                // GitHub-каталог не должен подсовывать внешние картинки:
+                // в офлайн-режиме используем только локальную заглушку.
+                mode.image_url = None;
+                mode.image = None;
+                mode.screenshots.clear();
+                if let Some(author) = mode.author.as_mut() {
+                    author.avatar = None;
+                }
+                for author in mode.authors.iter_mut() {
+                    author.avatar = None;
+                }
+                modes.push(mode);
+            }
             _ => {}
         }
     }
@@ -548,10 +561,6 @@ fn api_mode(item: &Value) -> Option<Mode> {
             .and_then(Value::as_str)
             .map(str::to_string),
         image: None,
-        trailer_url: item
-            .get("trailerUrl")
-            .and_then(Value::as_str)
-            .map(str::to_string),
         screenshots: item
             .get("screenshots")
             .and_then(Value::as_array)

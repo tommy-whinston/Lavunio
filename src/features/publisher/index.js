@@ -382,8 +382,6 @@ export async function submitPublisherMode() {
     loader: $('pub-mode-loader').value,
     loaderVersion: $('pub-mode-loader-version').value.trim() || null,
     size: $('pub-mode-size').value.trim() || null,
-    coverUrl: $('pub-mode-cover').value.trim() || null,
-    trailerUrl: $('pub-mode-trailer').value.trim() || null,
     tags: $('pub-mode-tags').value.split(',').map((tag) => tag.trim()).filter(Boolean),
     teamId: $('pub-mode-team').value || null,
     coAuthors: $('pub-mode-coauthors').value.split(',').map((name) => name.trim()).filter(Boolean)

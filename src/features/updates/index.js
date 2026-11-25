@@ -212,7 +212,7 @@ async function startAutoUpdate(info, options = {}) {
       });
     }
 
-    await api.installUpdate(info.installerUrl);
+    await api.installUpdate(info.installerUrl, info.installerSha256);
     if (manual) {
       if (button) button.textContent = tKey("installing.the.update.the");
       if (els.updateNotes) {

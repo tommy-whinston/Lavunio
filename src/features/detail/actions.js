@@ -9,7 +9,7 @@ import { lavunioLoggedIn } from '../../core/lavunio.js';
 import { computeAction, inLibrary, isHiddenMode, isInstalled, isUpdate, latestUpdateEntry, loaderLabel, modeAuthors, modeById, modeFullDescription, modeReleaseDate, modeStatusMeta, modeSub, sortByTitle } from '../../core/modes.js';
 import { tKey } from '../../i18n/index.js';
 import { toast } from '../../ui/toast.js';
-import { renderChangelog, renderSessions, renderSpotlight, renderTrailer, selectDetailTab, updateChangelogToggle } from './view.js';
+import { renderChangelog, renderSessions, renderSpotlight, selectDetailTab, updateChangelogToggle } from './view.js';
 import { loadModeNews, renderModeNews } from '../news/index.js';
 import { renderModeGrid } from '../catalog/grid.js';
 import { imageSrc, wireImage } from '../catalog/cards.js';
@@ -403,7 +403,6 @@ export function renderDetail() {
 
   renderSessions(mode);
 
-  renderTrailer(mode);
   renderModeNews(mode);
   loadModeNews(mode);
 

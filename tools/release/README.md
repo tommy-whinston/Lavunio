@@ -20,6 +20,24 @@ npm run release -- --version 0.23.35
 --dry-run             показать план без изменений и сборки
 ```
 
+## Подпись релизов
+
+Обновления проверяются по Ed25519-подписи. Приватный ключ **не хранится в репозитории**:
+
+```text
+%USERPROFILE%\.lavunio\release-signing-key.pem
+```
+
+Публичный ключ уже встроен в `src-tauri/src/update.rs`:
+
+```text
+n-1tsam-66L5uv5jBQoRapBQA6XIEBjSroOSbWwdALQ
+```
+
+Если потерять приватный ключ, новые обновления перестанут проверяться — сделай резервную копию в надёжном месте и не выкладывай её в интернет.
+
+Скрипт релиза сам создаёт `lavunio-update.json`, подписывает его и прикладывает `lavunio-update.json.sig` к GitHub-релизу. Лаунчер принимает обновление только при валидной подписи и совпадении SHA-256 скачанного файла.
+
 ## Что делает
 
 1. Проверяет, что git чистый и лаунчер закрыт.
@@ -27,9 +45,9 @@ npm run release -- --version 0.23.35
 3. Поднимает версию в `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `tauri.conf.json`.
 4. Запускает `build-installer.bat --no-pause`.
 5. Копирует `Lavunio Setup.exe` в `Lavunio.Setup.exe` и `Lavunio.Setup.<version>.exe`.
-6. Делает commit `Release <version>`, тег `v<version>`, push в `main`.
-7. Создаёт GitHub release с `Lavunio.exe` и обоими installer-файлами.
-8. По умолчанию релиз обычный, не pre-release.
+6. Подписывает манифест обновления.
+7. Делает commit `Release <version>`, тег `v<version>`, push в `main`.
+8. Создаёт GitHub release с `Lavunio.exe`, installer-файлами, `lavunio-update.json` и подписью.
 
 ## Требования
 

@@ -8,6 +8,7 @@ pub struct AppState {
     pub modes: Mutex<Vec<Mode>>,
     pub active_game: Arc<Mutex<Option<Arc<AtomicBool>>>>,
     pub publisher_busy: Arc<AtomicBool>,
+    pub refresh_lock: tokio::sync::Mutex<()>,
 }
 
 impl AppState {
@@ -17,6 +18,7 @@ impl AppState {
             modes: Mutex::new(Vec::new()),
             active_game: Arc::new(Mutex::new(None)),
             publisher_busy: Arc::new(AtomicBool::new(false)),
+            refresh_lock: tokio::sync::Mutex::new(()),
         }
     }
 }

@@ -336,7 +336,6 @@ export function openTeamModal(team) {
   $('team-title').value = '';
   $('team-slug').value = '';
   $('team-slug').dataset.touched = '';
-  $('team-avatar').value = '';
   $('team-error').hidden = true;
   teamActions.openModal('modal-team');
   setTimeout(() => $('team-title').focus(), 50);
@@ -348,8 +347,6 @@ export async function submitTeam() {
     title: $('team-title').value.trim(),
     description: '',
     links: '',
-    avatarUrl: $('team-avatar').value.trim() || null,
-    bannerUrl: null,
     joinMode: 'invite'
   };
   const error = $('team-error');
@@ -512,8 +509,6 @@ export async function saveTeamSettings() {
     slug: $('team-settings-slug').value.trim(),
     description: $('team-settings-description').value.trim(),
     links: $('team-settings-links').value.trim(),
-    avatarUrl: (S.teamSettingsTeam && S.teamSettingsTeam.avatarUrl) || null,
-    bannerUrl: (S.teamSettingsTeam && S.teamSettingsTeam.bannerUrl) || null,
     joinMode: 'invite'
   };
   if (!payload.title) {

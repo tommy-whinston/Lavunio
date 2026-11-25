@@ -143,6 +143,7 @@ fn save_lavunio_session(state: &AppState, session: LavunioSession) -> Result<(),
 }
 
 async fn lavunio_access_token(state: &AppState) -> Result<String, String> {
+    let _guard = state.refresh_lock.lock().await;
     let session = state.store.lock().unwrap().lavunio.clone();
     if session.access_token.is_empty() {
         return Err("Сначала войдите в аккаунт Lavunio".to_string());

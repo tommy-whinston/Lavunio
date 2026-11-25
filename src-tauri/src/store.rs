@@ -1,7 +1,11 @@
 use crate::models::{LavunioSession, Mode, ModeState, ModeStates, RemoteCache, Settings};
-use crate::util::{now_ms, read_json, write_json};
+use crate::secrets;
+use crate::util::{now_ms, read_json, write_bytes, write_json};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+const SESSION_FILE: &str = "lavunio-session.dat";
+const LEGACY_SESSION_FILE: &str = "lavunio-session.json";
 
 pub fn app_data_dir() -> PathBuf {
     dirs::data_dir()
@@ -44,6 +48,35 @@ fn migrate_legacy_data(new_dir: &Path) {
 
 pub fn default_game_dir() -> PathBuf {
     app_data_dir().join("games")
+}
+
+fn load_lavunio_session(dir: &Path) -> LavunioSession {
+    let encrypted_path = dir.join(SESSION_FILE);
+    if let Ok(bytes) = fs::read(&encrypted_path) {
+        if let Ok(plain) = secrets::unprotect(&bytes) {
+            if let Ok(session) = serde_json::from_slice::<LavunioSession>(&plain) {
+                return session;
+            }
+        }
+    }
+
+    let legacy_path = dir.join(LEGACY_SESSION_FILE);
+    if let Some(session) = read_json::<LavunioSession>(&legacy_path) {
+        if save_lavunio_session(dir, &session).is_ok() {
+            let _ = fs::remove_file(&legacy_path);
+        }
+        return session;
+    }
+
+    LavunioSession::default()
+}
+
+fn save_lavunio_session(dir: &Path, session: &LavunioSession) -> Result<(), String> {
+    let plain = serde_json::to_vec(session).map_err(|error| error.to_string())?;
+    let encrypted = secrets::protect(&plain)?;
+    write_bytes(&dir.join(SESSION_FILE), &encrypted)?;
+    let _ = fs::remove_file(dir.join(LEGACY_SESSION_FILE));
+    Ok(())
 }
 
 pub struct Store {
@@ -106,8 +139,7 @@ impl Store {
         if migrated {
             let _ = write_json(&dir.join("mode-state.json"), &state);
         }
-        let lavunio: LavunioSession =
-            read_json(&dir.join("lavunio-session.json")).unwrap_or_default();
+        let lavunio = load_lavunio_session(&dir);
         Self {
             dir,
             settings,
@@ -125,7 +157,7 @@ impl Store {
     }
 
     pub fn save_lavunio(&self) -> Result<(), String> {
-        write_json(&self.path("lavunio-session.json"), &self.lavunio)
+        save_lavunio_session(&self.dir, &self.lavunio)
     }
 
     pub fn save_state(&self) -> Result<(), String> {

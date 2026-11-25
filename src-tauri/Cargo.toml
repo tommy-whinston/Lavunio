@@ -12,12 +12,14 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2"
+tokio = { version = "1", features = ["sync"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 zip = "2"
 base64 = "0.22"
 reqwest = { version = "0.13", features = ["blocking", "form", "json", "rustls"] }
 sha2 = "0.11"
+ed25519-dalek = "2"
 uuid = { version = "1", features = ["v4"] }
 rfd = "0.17"
 open = "5"
@@ -26,6 +28,9 @@ sysinfo = "0.39"
 url = "2"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 mc-launcher-core = "0.1.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
 
 [profile.release]
 opt-level = 2

@@ -27,10 +27,17 @@ pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("Не удалось создать папку: {e}"))?;
     }
     let text = serde_json::to_string_pretty(value).map_err(|e| e.to_string())?;
+    write_bytes(path, text.as_bytes())
+}
+
+pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Не удалось создать папку: {e}"))?;
+    }
     let tmp = path.with_extension("tmp");
     {
         let mut f = File::create(&tmp).map_err(|e| format!("Не удалось записать файл: {e}"))?;
-        f.write_all(text.as_bytes())
+        f.write_all(bytes)
             .map_err(|e| format!("Не удалось записать файл: {e}"))?;
     }
     fs::rename(&tmp, path).map_err(|e| format!("Не удалось сохранить файл: {e}"))?;

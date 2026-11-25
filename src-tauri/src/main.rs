@@ -7,6 +7,7 @@ mod logging;
 mod models;
 mod net;
 mod publisher;
+mod secrets;
 mod state;
 mod store;
 mod update;
