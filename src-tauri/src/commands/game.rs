@@ -57,6 +57,25 @@ async fn refresh_game_token(state: &AppState) -> Result<(String, String, u64), S
 }
 
 async fn ensure_game_account(state: &AppState) -> Result<GameAccount, String> {
+    // Перед запуском подтягиваем актуальный профиль: UUID, скин и модель могли
+    // измениться на сервере. Если сети нет — используем сохранённую сессию.
+    if let Ok(data) = publisher_request(state, "GET", "/v1/me".to_string(), None).await {
+        if let Ok(user) = serde_json::from_value::<LavunioUser>(data) {
+            let mut session = state.store.lock().unwrap().lavunio.clone();
+            let uuid_changed = session
+                .user
+                .as_ref()
+                .and_then(|current| current.minecraft_uuid.as_deref())
+                != user.minecraft_uuid.as_deref();
+            session.user = Some(user);
+            if uuid_changed {
+                session.game_access_token.clear();
+                session.game_expires_at = 0;
+            }
+            let _ = save_lavunio_session(state, session);
+        }
+    }
+
     let mut session = state.store.lock().unwrap().lavunio.clone();
     let Some(user) = session.user.clone() else {
         return Err("Сначала войдите в Lavunio ID".to_string());
@@ -92,6 +111,7 @@ async fn ensure_game_account(state: &AppState) -> Result<GameAccount, String> {
     Ok(GameAccount {
         name: user.username,
         uuid,
+        skin_url: user.skin_url,
         access_token: session.game_access_token,
     })
 }

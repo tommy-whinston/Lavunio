@@ -231,6 +231,7 @@ impl Settings {
 pub struct GameAccount {
     pub name: String,
     pub uuid: String,
+    pub skin_url: Option<String>,
     pub access_token: String,
 }
 

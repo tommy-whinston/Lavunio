@@ -848,6 +848,35 @@ fn ensure_authlib_injector(
     Ok(path)
 }
 
+fn add_skin_domain(metadata: &mut Value, host: &str) {
+    let host = host.trim();
+    if host.is_empty() {
+        return;
+    }
+    let Some(object) = metadata.as_object_mut() else {
+        return;
+    };
+    let domains = object
+        .entry("skinDomains")
+        .or_insert_with(|| Value::Array(Vec::new()));
+    if !domains.is_array() {
+        *domains = Value::Array(Vec::new());
+    }
+    if let Some(list) = domains.as_array_mut() {
+        if !list.iter().any(|item| item.as_str() == Some(host)) {
+            list.push(Value::String(host.to_string()));
+        }
+    }
+}
+
+fn url_host(url: &str) -> Option<&str> {
+    url.split("://")
+        .nth(1)
+        .and_then(|rest| rest.split('/').next())
+        .and_then(|host| host.split(':').next())
+        .filter(|host| !host.is_empty())
+}
+
 fn launch(
     account: &GameAccount,
     settings: &Settings,
@@ -912,9 +941,15 @@ fn launch(
                 launch
                     .args
                     .insert(0, "-Dauthlibinjector.side=client".to_string());
-                if let Ok(metadata) =
+                if let Ok(mut metadata) =
                     crate::net::api_request_json(&api_base, "GET", "/", None, None)
                 {
+                    // Некоторые сборки API не перечисляют S3-домен в skinDomains.
+                    // Добавляем его на клиенте, иначе Minecraft не применяет скин.
+                    add_skin_domain(&mut metadata, "s3.twcstorage.ru");
+                    if let Some(host) = account.skin_url.as_deref().and_then(url_host) {
+                        add_skin_domain(&mut metadata, host);
+                    }
                     if let Ok(bytes) = serde_json::to_vec(&metadata) {
                         use base64::Engine as _;
                         let prefetched = base64::engine::general_purpose::STANDARD.encode(bytes);
@@ -1079,5 +1114,20 @@ mod tests {
         );
         assert_eq!(parse_java_major("java version \"11.0.22\""), Some(11));
         assert_eq!(parse_java_major("not a java version"), None);
+    }
+
+    #[test]
+    fn skin_domains_include_storage_host_once() {
+        let mut metadata = json!({ "skinDomains": ["api.lavunio.pro"] });
+        add_skin_domain(&mut metadata, "s3.twcstorage.ru");
+        add_skin_domain(&mut metadata, "s3.twcstorage.ru");
+        assert_eq!(
+            metadata["skinDomains"],
+            json!(["api.lavunio.pro", "s3.twcstorage.ru"])
+        );
+        assert_eq!(
+            url_host("https://s3.twcstorage.ru/lavunio-files/skins/a.png"),
+            Some("s3.twcstorage.ru")
+        );
     }
 }
