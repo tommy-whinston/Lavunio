@@ -15,7 +15,7 @@ let updateActions = {
 
 let lastUpdateCheckAt = 0;
 let startupFinalized = false;
-const STARTUP_UPDATE_TIMEOUT_MS = 5000;
+const STARTUP_UPDATE_TIMEOUT_MS = 10000;
 
 export function configureUpdates(actions) {
   updateActions = { ...updateActions, ...actions };
@@ -102,7 +102,7 @@ export async function finishStartup() {
 
 export async function handleStartupUpdate(pending) {
   // Проверка идёт параллельно загрузке, но GitHub отвечает не мгновенно.
-  // Ждём до 5 секунд, чтобы автообновление успело начаться прямо со сплэша.
+  // Ждём до 10 секунд, чтобы автообновление успело начаться прямо со сплэша.
   const info = await withTimeout(pending, STARTUP_UPDATE_TIMEOUT_MS);
   lastUpdateCheckAt = Date.now();
   if (info && info.installerUrl) {
