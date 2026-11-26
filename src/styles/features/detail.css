@@ -651,6 +651,43 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
+/* --- Большой экран: контент + правая колонка --- */
+@media (min-width: 1200px) {
+  .detail-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    column-gap: 28px;
+    max-width: none;
+    align-items: start;
+  }
+  .about-section,
+  #detail-gallery-section,
+  #detail-news-section { grid-column: 1; }
+  .detail-side {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+  .release-spotlight,
+  .reviews-section,
+  #detail-requirements-section,
+  .changelog-section,
+  #more-section { grid-column: 1 / -1; }
+  .about-section .detail-desc { max-width: 1000px; }
+  .detail-side .author-card {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 10px 12px;
+    align-items: center;
+  }
+  .detail-side .author-info { grid-column: 2; }
+  .detail-side .author-card .btn {
+    grid-column: 1 / -1;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
 /* --- Адаптив --- */
 @media (max-width: 900px) {
   .detail-hero { grid-template-columns: 1fr; }

@@ -181,7 +181,7 @@ export function renderProfile(profile) {
   els.profileContent.innerHTML = `
     <div class="profile-social-page">
       <section class="profile-social-header profile-hero">
-        <div class="profile-social-cover">
+        <div class="profile-social-cover${bannerUrl ? ' has-banner' : ''}">
           ${bannerUrl ? `<img class="profile-social-banner" src="${escapeHtml(bannerUrl)}" alt="">` : ''}
           <span class="profile-social-cover-mark">@${escapeHtml(profile.username)}</span>
         </div>

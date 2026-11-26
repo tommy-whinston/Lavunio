@@ -1,8 +1,8 @@
 'use strict';
 
 const KEY_PREFIX = 'lavunio.profile.banner.';
-const BANNER_WIDTH = 1280;
-const BANNER_HEIGHT = 720;
+const BANNER_WIDTH = 1920;
+const BANNER_HEIGHT = 384;
 
 function storageKey(username) {
   return KEY_PREFIX + String(username || '').trim().toLowerCase();
@@ -47,11 +47,9 @@ export function cropImageToBanner(file) {
         canvas.height = BANNER_HEIGHT;
         const context = canvas.getContext('2d');
         if (!context) throw new Error('canvas unavailable');
-        const scale = Math.max(BANNER_WIDTH / image.naturalWidth, BANNER_HEIGHT / image.naturalHeight);
-        const width = image.naturalWidth * scale;
-        const height = image.naturalHeight * scale;
-        context.drawImage(image, (BANNER_WIDTH - width) / 2, (BANNER_HEIGHT - height) / 2, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.86));
+        const height = Math.round(BANNER_WIDTH / (image.naturalWidth / image.naturalHeight));
+        context.drawImage(image, 0, Math.round((BANNER_HEIGHT - height) / 2), BANNER_WIDTH, height);
+        resolve(canvas.toDataURL('image/webp', 0.9));
       } catch (err) {
         reject(err);
       } finally {
@@ -69,6 +67,7 @@ export function cropImageToBanner(file) {
 export function updateProfileBannerElement(url) {
   const cover = document.querySelector('.profile-social-cover');
   if (!cover) return;
+  cover.classList.toggle('has-banner', !!url);
   let image = cover.querySelector('.profile-social-banner');
   if (!url) {
     if (image) image.remove();

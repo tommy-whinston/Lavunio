@@ -584,6 +584,7 @@
           <div id="detail-news-list" class="news-list"></div>
         </section>
 
+        <div class="detail-side" data-detail-tab="about">
         <section class="detail-section" id="detail-author-section" data-detail-tab="about" hidden>
           <h2 data-i18n="author">Автор</h2>
           <div class="author-card">
@@ -608,6 +609,7 @@
           <div id="detail-sessions" class="session-list"></div>
           <button class="btn btn-ghost btn-small" id="detail-sessions-more" type="button" hidden>Показать все</button>
         </section>
+        </div>
 
         <section class="detail-section reviews-section" id="detail-reviews-section" data-detail-tab="reviews" hidden>
           <div class="reviews-head">
@@ -727,7 +729,7 @@
                   <button class="btn btn-ghost" id="settings-banner-remove" type="button" data-i18n="delete">Удалить</button>
                   <input id="settings-banner-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
                 </div>
-                <div class="hint" data-i18n="profile.banner.hint">PNG, JPEG или WebP. Автоматически обрезается до 16:9 (1280×720).</div>
+                <div class="hint" data-i18n="profile.banner.hint">PNG, JPEG или WebP. Широкий баннер 5:1 (1920×384).</div>
               </div>
               <div class="form-error" id="settings-profile-error" hidden></div>
               <div class="settings-actions">

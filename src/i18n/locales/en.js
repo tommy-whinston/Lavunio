@@ -1117,7 +1117,7 @@ export const EN = {
   "profile.bio.hint": "Up to 300 characters and 5 lines.",
   "profile.banner": "Profile banner",
   "profile.banner.empty": "No banner uploaded",
-  "profile.banner.hint": "PNG, JPEG or WebP. Automatically cropped to 16:9 (1280×720).",
+  "profile.banner.hint": "PNG, JPEG or WebP. Wide 5:1 banner (1920×384).",
   "profile.banner.updated": "Banner updated",
   "profile.banner.removed": "Banner removed",
   "profile.banner.failed": "Failed to upload banner:",

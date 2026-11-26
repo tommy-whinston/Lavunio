@@ -1117,7 +1117,7 @@ export const RU = {
   "profile.bio.hint": "До 300 символов и 5 строк.",
   "profile.banner": "Баннер профиля",
   "profile.banner.empty": "Баннер не загружен",
-  "profile.banner.hint": "PNG, JPEG или WebP. Автоматически обрезается до 16:9 (1280×720).",
+  "profile.banner.hint": "PNG, JPEG или WebP. Широкий баннер 5:1 (1920×384).",
   "profile.banner.updated": "Баннер обновлён",
   "profile.banner.removed": "Баннер удалён",
   "profile.banner.failed": "Не удалось загрузить баннер:",
