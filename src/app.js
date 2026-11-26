@@ -269,11 +269,12 @@ async function init() {
 }
 
 let splashFinished = false;
+const SPLASH_MIN_MS = 1000;
 function finishSplash() {
   if (splashFinished || S.autoUpdating) return;
   splashFinished = true;
   const elapsed = performance.now() - SPLASH_START;
-  const wait = Math.max(0, 680 - elapsed);
+  const wait = Math.max(0, SPLASH_MIN_MS - elapsed);
   setTimeout(() => {
     if (!els.splash) return;
     if (els.splashBar) {
