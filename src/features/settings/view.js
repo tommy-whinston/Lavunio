@@ -52,6 +52,14 @@ export function setSettingsTab(tab) {
   if (shell) shell.scrollTop = 0;
 }
 
+function limitBioValue(value) {
+  return String(value || '')
+    .split('\n')
+    .slice(0, 5)
+    .join('\n')
+    .slice(0, 300);
+}
+
 export function renderSettingsProfile() {
   const user = S.lavunio && S.lavunio.user;
   const guest = $('settings-profile-guest');
@@ -69,7 +77,7 @@ export function renderSettingsProfile() {
   const bio = $('settings-profile-bio');
   if (username) username.value = user.username || '';
   if (display) display.value = user.displayName || user.username || '';
-  if (bio) bio.value = (S.playerProfile && S.playerProfile.bio) || '';
+  if (bio) bio.value = limitBioValue((S.playerProfile && S.playerProfile.bio) || '');
   const error = $('settings-profile-error');
   if (error) error.hidden = true;
 }
@@ -140,6 +148,14 @@ export function bindSettings() {
   });
   const username = $('settings-profile-username');
   if (username) username.addEventListener('input', () => normalizeIdInput(username));
+  const bio = $('settings-profile-bio');
+  if (bio) {
+    bio.maxLength = 300;
+    bio.addEventListener('input', () => {
+      const limited = limitBioValue(bio.value);
+      if (limited !== bio.value) bio.value = limited;
+    });
+  }
   const profileSave = $('settings-profile-save');
   if (profileSave) profileSave.onclick = () => saveSettingsProfile();
   const profileSkin = $('settings-profile-skin');

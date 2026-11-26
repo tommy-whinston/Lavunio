@@ -11,6 +11,9 @@ import { teamRoleLabel } from '../../core/labels.js';
 import { isOwnUsername, friendByUsername } from '../../core/social.js';
 import { applyLavunioAvatar } from '../../core/lavunio.js';
 
+let profileTab = 'posts';
+let profileTabUser = '';
+
 export function profileRoleLabel(role) {
   return role === 'admin' ? tKey("administrator")
     : role === 'author' ? tKey("author")
@@ -110,11 +113,7 @@ export function profileFeedHtml(profile) {
   const own = isOwnUsername(profile.username);
   const posts = S.profilePosts || [];
   return `
-    <section class="profile-panel profile-feed">
-      <div class="profile-feed-head">
-        <h2>${tKey("posts")}</h2>
-        <span class="profile-feed-count" id="profile-posts-count">${Number(S.profilePostsTotal) || 0}</span>
-      </div>
+    <section class="profile-social-card profile-feed-card">
       ${own ? `
         <form class="profile-post-form" data-profile-form="post">
           <textarea id="profile-post-body" maxlength="1000" rows="3" placeholder="${tKey("share.something")}"></textarea>
@@ -140,6 +139,25 @@ export function renderProfile(profile) {
   const nameClass = String(display).length > 13 ? 'profile-name-xlong'
     : String(display).length > 10 ? 'profile-name-long' : '';
   const stats = profile.stats || {};
+  const libraryModes = own ? (S.modes || []).filter((mode) => isVisibleInLibrary(mode)) : [];
+  const friends = own ? (S.friends || []) : [];
+  const teams = profile.teams || [];
+
+  if (profileTabUser !== profile.username) {
+    profileTabUser = profile.username;
+    profileTab = 'posts';
+  }
+
+  const tabs = [
+    { id: 'posts', label: tKey('posts'), count: Number(S.profilePostsTotal) || 0, countId: 'profile-posts-count' },
+    { id: 'modes', label: tKey('modes'), count: (profile.modes || []).length },
+    ...(own ? [
+      { id: 'library', label: tKey('nav.library'), count: libraryModes.length },
+      { id: 'friends', label: tKey('friends'), count: friends.length }
+    ] : []),
+    { id: 'teams', label: tKey('teams.2'), count: teams.length }
+  ];
+  if (!tabs.some((tab) => tab.id === profileTab)) profileTab = 'posts';
 
   const actions = own
     ? `
@@ -155,72 +173,136 @@ export function renderProfile(profile) {
       <button class="btn btn-ghost" type="button" data-profile-action="messages">${tKey("messages.title")}</button>
     `;
 
+  const friendPreview = friends.slice(0, 4).map((item) => `
+    <button class="profile-social-preview" type="button" data-profile-action="friend-profile" data-username="${escapeHtml(item.username)}">
+      <span class="avatar" data-avatar-friend="${escapeHtml(item.username)}"></span>
+      <span class="profile-social-preview-copy">
+        <b>${escapeHtml(item.displayName || item.username)}</b>
+        <span>@${escapeHtml(item.username)}</span>
+      </span>
+      <span class="profile-social-presence ${item.online ? 'online' : ''}"><i></i></span>
+    </button>
+  `).join('');
+
+  const teamPreview = teams.slice(0, 3).map((team) => `
+    <button class="profile-social-preview" type="button" data-profile-team="${escapeHtml(team.slug)}" data-profile-team-title="${escapeHtml(team.title)}">
+      <span class="profile-social-team-mark">${escapeHtml(String(team.title || '?').slice(0, 2).toUpperCase())}</span>
+      <span class="profile-social-preview-copy">
+        <b>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</b>
+        <span>${escapeHtml(teamRoleLabel(team.role))}</span>
+      </span>
+    </button>
+  `).join('');
+
+  const libraryRows = libraryModes.slice(0, 40).map((mode) => `
+    <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
+      <span>${escapeHtml(mode.title)}</span>
+      <b>${isInstalled(mode) ? tKey('sidebar.installed') : tKey('sidebar.inLibrary')}</b>
+    </button>
+  `).join('');
+
   els.profileContent.innerHTML = `
-    <div class="profile-hero">
-      <div class="profile-avatar-wrap${own ? ' profile-avatar-editable' : ''}">
-        <span class="avatar" id="profile-avatar"${own ? ` role="button" tabindex="0" title="${escapeHtml(tKey("profile.avatar.hint"))}"` : ''}></span>
-        ${own ? `<div class="profile-avatar-hint">${tKey("profile.avatar.hint")}</div>` : ''}
-      </div>
-      <div class="profile-hero-main">
-        <h1${nameClass ? ` class="${nameClass}"` : ''}>${escapeHtml(display)}</h1>
-        <div class="profile-handle">@${escapeHtml(profile.username)}</div>
-        <div class="profile-badges">
-          <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>
-          <span class="profile-badge ${profile.online ? 'online' : ''}">${escapeHtml(profileOnlineLabel(profile))}</span>
-          ${friend ? '<span class="profile-badge">' + tKey("friend") + '</span>' : ''}
-          ${own ? '<span class="profile-badge">' + tKey("you") + '</span>' : ''}
+    <div class="profile-social-page">
+      <section class="profile-social-header profile-hero">
+        <div class="profile-social-cover">
+          <span class="profile-social-cover-mark">@${escapeHtml(profile.username)}</span>
         </div>
-        <div class="profile-bio">${escapeHtml(profile.bio || tKey("no.description"))}</div>
-      </div>
-      <div class="profile-actions">${actions}</div>
-    </div>
+        <div class="profile-social-head">
+          <div class="profile-social-avatar${own ? ' profile-avatar-editable' : ''}">
+            <span class="avatar" id="profile-avatar"${own ? ` role="button" tabindex="0" title="${escapeHtml(tKey("profile.avatar.hint"))}"` : ''}></span>
+          </div>
+          ${own ? `<span class="profile-avatar-hint" hidden>${tKey("profile.avatar.hint")}</span>` : ''}
+          <div class="profile-social-identity profile-hero-main">
+            <h1${nameClass ? ` class="${nameClass}"` : ''}>${escapeHtml(display)}</h1>
+            <div class="profile-handle">@${escapeHtml(profile.username)}</div>
+            <div class="profile-badges">
+              <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>
+              <span class="profile-badge ${profile.online ? 'online' : ''}">${escapeHtml(profileOnlineLabel(profile))}</span>
+              ${friend ? '<span class="profile-badge">' + tKey("friend") + '</span>' : ''}
+              ${own ? '<span class="profile-badge">' + tKey("you") + '</span>' : ''}
+            </div>
+          </div>
+          <div class="profile-social-actions">${actions}</div>
+        </div>
+        <div class="profile-social-bio profile-bio">${escapeHtml(profile.bio || tKey("no.description"))}</div>
+        <div class="profile-social-stats">
+          <div><span>${tKey("modes")}</span><b>${Number(stats.modes) || 0}</b></div>
+          <div><span>${tKey("downloads.2")}</span><b>${Number(stats.downloads) || 0}</b></div>
+          <div><span>${tKey("installs")}</span><b>${Number(stats.installs) || 0}</b></div>
+          <div><span>${tKey("teams.2")}</span><b>${teams.length}</b></div>
+        </div>
+      </section>
 
-    <div class="profile-stats">
-      <div class="profile-stat"><span>${tKey("modes")}</span><b>${Number(stats.modes) || 0}</b></div>
-      <div class="profile-stat"><span>${tKey("downloads.2")}</span><b>${Number(stats.downloads) || 0}</b></div>
-      <div class="profile-stat"><span>${tKey("installs")}</span><b>${Number(stats.installs) || 0}</b></div>
-      <div class="profile-stat"><span>${tKey("teams.2")}</span><b>${(profile.teams || []).length}</b></div>
-    </div>
+      <nav class="profile-social-tabs" role="tablist">
+        ${tabs.map((tab) => `
+          <button class="profile-social-tab ${tab.id === profileTab ? 'active' : ''}" type="button" role="tab" aria-selected="${tab.id === profileTab}" data-profile-tab="${tab.id}">
+            ${escapeHtml(tab.label)}
+            <span${tab.countId ? ` id="${tab.countId}"` : ''}>${Number(tab.count) || 0}</span>
+          </button>
+        `).join('')}
+      </nav>
 
-    ${profileFeedHtml(profile)}
-
-    <div class="profile-layout">
-      <div class="profile-main">
-        <section class="profile-panel">
-          <h2>${tKey("modes")}</h2>
-          ${profileModesHtml(profile)}
-        </section>
-        ${own ? `
-          <section class="profile-panel">
-            <h2>${tKey("nav.library")}</h2>
-            ${S.modes.filter((mode) => isVisibleInLibrary(mode)).slice(0, 20).map((mode) => `
-              <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
-                <span>${escapeHtml(mode.title)}</span>
-                <b>${isInstalled(mode) ? tKey("sidebar.installed") : tKey("sidebar.inLibrary")}</b>
-              </button>
-            `).join('') || '<div class="profile-empty">' + tKey("library.is.empty") + '</div>'}
+      <div class="profile-social-body">
+        <div class="profile-social-main">
+          <section class="profile-social-pane" data-profile-pane="posts" ${profileTab !== 'posts' ? 'hidden' : ''}>
+            ${profileFeedHtml(profile)}
           </section>
-        ` : ''}
-      </div>
-      <aside class="profile-side">
-        <section class="profile-panel">
-          <h2>${tKey("teams.2")}</h2>
-          ${profileTeamsHtml(profile)}
-        </section>
-        ${own ? `
-          <section class="profile-panel">
-            <h2>${tKey("friends")}</h2>
-            ${profileFriendsHtml()}
+          <section class="profile-social-pane" data-profile-pane="modes" ${profileTab !== 'modes' ? 'hidden' : ''}>
+            <section class="profile-social-card">
+              <div class="profile-social-card-head"><h3>${tKey("modes")}</h3><span>${(profile.modes || []).length}</span></div>
+              ${profileModesHtml(profile)}
+            </section>
           </section>
-        ` : `
-          <section class="profile-panel">
-            <h2>${tKey("information")}</h2>
+          ${own ? `
+            <section class="profile-social-pane" data-profile-pane="library" ${profileTab !== 'library' ? 'hidden' : ''}>
+              <section class="profile-social-card">
+                <div class="profile-social-card-head"><h3>${tKey("nav.library")}</h3><span>${libraryModes.length}</span></div>
+                ${libraryRows || '<div class="profile-empty">' + tKey("library.is.empty") + '</div>'}
+              </section>
+            </section>
+            <section class="profile-social-pane" data-profile-pane="friends" ${profileTab !== 'friends' ? 'hidden' : ''}>
+              <section class="profile-social-card">
+                <div class="profile-social-card-head"><h3>${tKey("friends")}</h3><span>${friends.length}</span></div>
+                ${profileFriendsHtml()}
+              </section>
+            </section>
+          ` : ''}
+          <section class="profile-social-pane" data-profile-pane="teams" ${profileTab !== 'teams' ? 'hidden' : ''}>
+            <section class="profile-social-card">
+              <div class="profile-social-card-head"><h3>${tKey("teams.2")}</h3><span>${teams.length}</span></div>
+              ${profileTeamsHtml(profile)}
+            </section>
+          </section>
+        </div>
+
+        <aside class="profile-social-side">
+          <section class="profile-social-card">
+            <div class="profile-social-card-head"><h3>${tKey("information")}</h3></div>
             <div class="profile-info-row"><span>${tKey("role")}</span><b>${escapeHtml(profileRoleLabel(profile.role))}</b></div>
             <div class="profile-info-row"><span>${tKey("status")}</span><b>${profile.online ? tKey("online.2") : tKey("offline.2")}</b></div>
             <div class="profile-info-row"><span>${tKey("on.lavunio.since")}</span><b>${escapeHtml(formatDateTime(profile.createdAt))}</b></div>
+            <div class="profile-info-row"><span>${tKey("profile.id")}</span><b>@${escapeHtml(profile.username)}</b></div>
           </section>
-        `}
-      </aside>
+
+          ${own ? `
+            <section class="profile-social-card">
+              <div class="profile-social-card-head">
+                <h3>${tKey("friends")} <span>${friends.length}</span></h3>
+                ${friends.length ? `<button class="profile-social-link" type="button" data-profile-tab-link="friends">${tKey("all")}</button>` : ''}
+              </div>
+              ${friendPreview || '<div class="profile-empty">' + tKey("no.friends.yet") + '</div>'}
+            </section>
+          ` : ''}
+
+          <section class="profile-social-card">
+            <div class="profile-social-card-head">
+              <h3>${tKey("teams.2")} <span>${teams.length}</span></h3>
+              ${teams.length ? `<button class="profile-social-link" type="button" data-profile-tab-link="teams">${tKey("all")}</button>` : ''}
+            </div>
+            ${teamPreview || '<div class="profile-empty">' + tKey("not.a.member.of") + '</div>'}
+          </section>
+        </aside>
+      </div>
     </div>
   `;
 
@@ -236,6 +318,26 @@ export function renderProfile(profile) {
   });
   els.profileContent.querySelectorAll('[data-post-avatar]').forEach((el) => {
     applyLavunioAvatar(el, profile);
+  });
+
+  const tabButtons = [...els.profileContent.querySelectorAll('[data-profile-tab]')];
+  const tabLinks = [...els.profileContent.querySelectorAll('[data-profile-tab-link]')];
+  const panes = [...els.profileContent.querySelectorAll('[data-profile-pane]')];
+  const activateTab = (tab) => {
+    if (!tabs.some((item) => item.id === tab)) tab = 'posts';
+    profileTab = tab;
+    tabButtons.forEach((button) => {
+      const active = button.dataset.profileTab === tab;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+    panes.forEach((pane) => { pane.hidden = pane.dataset.profilePane !== tab; });
+  };
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => activateTab(button.dataset.profileTab));
+  });
+  tabLinks.forEach((button) => {
+    button.addEventListener('click', () => activateTab(button.dataset.profileTabLink));
   });
 }
 

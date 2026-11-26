@@ -1114,6 +1114,7 @@ export const EN = {
   "profile.id.hint": "3–20 characters: Latin letters and digits. Others can find you by it.",
   "profile.id.invalid": "ID: 3–20 characters, Latin letters and digits only",
   "display.name.hint": "Up to 16 characters.",
+  "profile.bio.hint": "Up to 300 characters and 5 lines.",
   "email.code.hint": "Enter the 6-digit code from the email",
   "resend.code": "Send the code again",
   "email.code.sent": "Verification code sent to your email",

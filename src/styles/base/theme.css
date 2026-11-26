@@ -309,6 +309,26 @@
 }
 .theme-hint { margin-top: 10px; }
 
+/* --- Поля настроек: аккуратный фокус и bio в 5 строк --- */
+#settings-profile-bio {
+  height: 112px;
+  min-height: 112px;
+  max-height: 112px;
+  resize: none;
+  line-height: 1.5;
+}
+#modal-settings .field input:focus-visible,
+#modal-settings .field textarea:focus-visible,
+#modal-settings .field select:focus-visible {
+  outline: none;
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+#modal-settings .settings-nav-item:focus-visible {
+  outline: none;
+  box-shadow: inset 2px 0 0 var(--accent-line);
+}
+
 /* --- Команды: компактные карточки без пустых баннеров --- */
 .team-card-banner { display: none; }
 .team-card-body { padding: 16px; }
