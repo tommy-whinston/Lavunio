@@ -8,6 +8,7 @@ import { $, normalizeIdInput } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { formatBytes } from '../../core/format.js';
 import { applyLavunioAvatar } from '../../core/lavunio.js';
+import { getLocalProfileBanner, setLocalProfileBanner, clearLocalProfileBanner, cropImageToBanner, updateProfileBannerElement } from '../../core/profile-banner.js';
 import { toast } from '../../ui/toast.js';
 
 let settingsActions = {
@@ -60,12 +61,32 @@ function limitBioValue(value) {
     .slice(0, 300);
 }
 
+function renderSettingsBanner(user) {
+  const preview = $('settings-banner-preview');
+  const remove = $('settings-banner-remove');
+  if (!preview) return;
+  const url = user ? (getLocalProfileBanner(user.username) || (S.playerProfile && S.playerProfile.bannerUrl) || '') : '';
+  preview.innerHTML = '';
+  if (url) {
+    const image = document.createElement('img');
+    image.src = url;
+    image.alt = '';
+    preview.appendChild(image);
+  } else {
+    const empty = document.createElement('span');
+    empty.textContent = tKey('profile.banner.empty');
+    preview.appendChild(empty);
+  }
+  if (remove) remove.hidden = !url;
+}
+
 export function renderSettingsProfile() {
   const user = S.lavunio && S.lavunio.user;
   const guest = $('settings-profile-guest');
   const signed = $('settings-profile-signed');
   if (guest) guest.hidden = !!user;
   if (signed) signed.hidden = !user;
+  renderSettingsBanner(user);
   if (!user) return;
   const name = $('settings-profile-name');
   const handle = $('settings-profile-handle');
@@ -155,6 +176,43 @@ export function bindSettings() {
       const limited = limitBioValue(bio.value);
       if (limited !== bio.value) bio.value = limited;
     });
+  }
+  const bannerInput = $('settings-banner-input');
+  const bannerUpload = $('settings-banner-upload');
+  const bannerRemove = $('settings-banner-remove');
+  if (bannerUpload && bannerInput) {
+    bannerUpload.onclick = () => bannerInput.click();
+    bannerInput.onchange = async () => {
+      const file = bannerInput.files && bannerInput.files[0];
+      bannerInput.value = '';
+      if (!file) return;
+      const user = S.lavunio && S.lavunio.user;
+      if (!user) return;
+      bannerUpload.disabled = true;
+      try {
+        const data = await cropImageToBanner(file);
+        setLocalProfileBanner(user.username, data);
+        if (S.playerProfile) S.playerProfile = { ...S.playerProfile, bannerUrl: data };
+        updateProfileBannerElement(data);
+        renderSettingsBanner(user);
+        toast(tKey('profile.banner.updated'), 'ok');
+      } catch (err) {
+        toast(tKey('profile.banner.failed') + ' ' + err, 'error');
+      } finally {
+        bannerUpload.disabled = false;
+      }
+    };
+  }
+  if (bannerRemove) {
+    bannerRemove.onclick = () => {
+      const user = S.lavunio && S.lavunio.user;
+      if (!user) return;
+      clearLocalProfileBanner(user.username);
+      if (S.playerProfile) S.playerProfile = { ...S.playerProfile, bannerUrl: '' };
+      updateProfileBannerElement('');
+      renderSettingsBanner(user);
+      toast(tKey('profile.banner.removed'), 'ok');
+    };
   }
   const profileSave = $('settings-profile-save');
   if (profileSave) profileSave.onclick = () => saveSettingsProfile();

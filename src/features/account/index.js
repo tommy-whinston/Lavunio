@@ -37,7 +37,6 @@ export function renderAccountChip() {
       : tKey("sign.in.to.lavunio.3");
   }
   applyLavunioAvatar(els.sidebarAvatar, user);
-  if (els.sidebarMessages) els.sidebarMessages.hidden = !user;
   accountActions.updateSocialNav();
 }
 

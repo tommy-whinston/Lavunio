@@ -600,22 +600,14 @@ async function checkProfileEditor(cdp) {
   }
   await cdp.evaluate(`window.LavunioDebug.closeModals()`);
 
-  const feed = await cdp.evaluate(`({
-    composer: !!document.getElementById('profile-post-body'),
-    list: !!document.getElementById('profile-posts'),
-    count: !!document.getElementById('profile-posts-count')
+  const profileTabs = await cdp.evaluate(`({
+    tabs: Array.from(document.querySelectorAll('[data-profile-tab]')).map((button) => button.dataset.profileTab),
+    library: !!document.querySelector('[data-profile-pane="library"]'),
+    friends: !!document.querySelector('[data-profile-pane="friends"]')
   })`);
-  if (!feed.composer || !feed.list || !feed.count) {
-    throw new Error('profile feed missing: ' + JSON.stringify(feed));
+  if (!profileTabs.tabs.includes('library') || !profileTabs.tabs.includes('friends') || !profileTabs.library || !profileTabs.friends) {
+    throw new Error('profile sections missing: ' + JSON.stringify(profileTabs));
   }
-  await cdp.evaluate(`(() => {
-    const input = document.getElementById('profile-post-body');
-    input.value = 'Hello from the profile feed';
-    input.closest('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  })()`);
-  await sleep(350);
-  const postCount = await cdp.evaluate(`document.querySelectorAll('#profile-posts .profile-post').length`);
-  if (!postCount) throw new Error('profile post was not created');
 
   let longName = null;
   for (const width of [1280, 860]) {

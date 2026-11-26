@@ -57,6 +57,14 @@
   text-overflow: ellipsis;
   pointer-events: none;
 }
+.profile-social-banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
 
 .profile-social-head {
   position: relative;
@@ -211,6 +219,25 @@
   top: 56px;
 }
 
+.profile-banner-preview {
+  position: relative;
+  width: min(100%, 380px);
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+}
+.profile-banner-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .profile-social-card {
   min-width: 0;
   padding: 16px;
@@ -297,7 +324,212 @@
 .profile-post-delete:hover { color: var(--danger); background: var(--danger-soft); }
 .profile-posts-more { margin-top: 12px; width: 100%; }
 
-/* ---- Списки ---- */
+/* ---- Библиотека ---- */
+.profile-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+.profile-library-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  transition: border-color var(--dur), box-shadow var(--dur), transform var(--dur);
+}
+.profile-library-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.profile-library-cover {
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+.profile-library-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-library-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px 10px;
+}
+.profile-library-copy b {
+  overflow: hidden;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-library-copy > span {
+  overflow: hidden;
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-library-state {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.profile-library-state.installed { color: var(--ok); }
+
+/* ---- Команды ---- */
+.profile-team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px;
+}
+.profile-team-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 10px 12px 10px 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  transition: border-color var(--dur), box-shadow var(--dur), transform var(--dur);
+}
+.profile-team-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.profile-team-card-glow {
+  position: absolute;
+  top: -40px;
+  right: -30px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  opacity: 0.2;
+  filter: blur(22px);
+  pointer-events: none;
+}
+.profile-team-card.tone-0 .profile-team-card-glow { background: #7e4b70; }
+.profile-team-card.tone-1 .profile-team-card-glow { background: #4b6f91; }
+.profile-team-card.tone-2 .profile-team-card-glow { background: #47755e; }
+.profile-team-card-thumb {
+  position: relative;
+  z-index: 1;
+  width: 122px;
+  flex: 0 0 122px;
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  background-color: var(--panel-2);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+.profile-team-card-mark {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.profile-team-card.tone-0 .profile-team-card-mark { background: linear-gradient(135deg, #3e2438, #171016); }
+.profile-team-card.tone-1 .profile-team-card-mark { background: linear-gradient(135deg, #1f3446, #0d151c); }
+.profile-team-card.tone-2 .profile-team-card-mark { background: linear-gradient(135deg, #1d3a2e, #0c1712); }
+.profile-team-card-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+}
+.profile-team-card-copy b {
+  display: block;
+  overflow: hidden;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-team-verified {
+  color: var(--blue);
+  font-weight: 700;
+}
+.profile-team-card-copy span {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-team-card-role {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+.profile-team-card-arrow {
+  position: relative;
+  z-index: 1;
+  color: var(--muted-2);
+  font-size: 13px;
+}
+.profile-team-card:hover .profile-team-card-arrow { color: var(--text); }
+
+/* ---- Друзья в профиле ---- */
+.profile-social-card .profile-add-friend {
+  margin-bottom: 12px;
+}
+.profile-social-card .profile-add-friend input {
+  min-height: 34px;
+  font-size: var(--fs-base);
+}
+.profile-social-card .profile-panel {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.profile-social-card .profile-panel h2 {
+  margin: 0 0 6px;
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .profile-mode-row {
   width: 100%;
   display: flex;
@@ -439,4 +671,9 @@
   .profile-social-stats > div:nth-child(-n + 2) { border-bottom: 1px solid var(--border); }
   .profile-social-side { grid-template-columns: 1fr; }
   .profile-social-card { padding: 14px; }
+}
+@media (max-width: 560px) {
+  .profile-team-card { gap: 9px; }
+  .profile-team-card-thumb { width: 94px; flex-basis: 94px; }
+  .profile-team-card-arrow { display: none; }
 }

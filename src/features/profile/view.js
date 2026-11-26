@@ -6,12 +6,14 @@ import { S } from '../../core/state.js';
 import { els } from '../../core/elements.js';
 import { $, escapeHtml } from '../../core/dom.js';
 import { formatDateTime } from '../../core/format.js';
-import { isInstalled, isVisibleInLibrary } from '../../core/modes.js';
+import { isInstalled, isVisibleInLibrary, modeSub } from '../../core/modes.js';
+import { imageSrc, wireImage } from '../catalog/cards.js';
 import { teamRoleLabel } from '../../core/labels.js';
 import { isOwnUsername, friendByUsername } from '../../core/social.js';
 import { applyLavunioAvatar } from '../../core/lavunio.js';
+import { getLocalProfileBanner } from '../../core/profile-banner.js';
 
-let profileTab = 'posts';
+let profileTab = 'library';
 let profileTabUser = '';
 
 export function profileRoleLabel(role) {
@@ -26,26 +28,37 @@ export function profileOnlineLabel(profile) {
   return seen === '—' ? tKey("offline.2") : `${tKey("last.seen")} ${seen}`;
 }
 
-export function profileModesHtml(profile) {
-  const modes = profile.modes || [];
-  if (!modes.length) return '<div class="profile-empty">' + tKey("no.published.modes.yet") + '</div>';
-  return modes.map((mode) => `
-    <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.slug)}">
-      <span>${escapeHtml(mode.title)}</span>
-      <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
-    </button>
-  `).join('');
-}
-
-export function profileTeamsHtml(profile) {
+export function profileTeamCardsHtml(profile) {
   const teams = profile.teams || [];
   if (!teams.length) return '<div class="profile-empty">' + tKey("not.a.member.of") + '</div>';
-  return teams.map((team) => `
-    <button class="profile-mode-row" type="button" data-profile-team="${escapeHtml(team.slug)}" data-profile-team-title="${escapeHtml(team.title)}">
-      <span>${escapeHtml(team.title)}${team.verified ? ' ✓' : ''}</span>
-      <b>${escapeHtml(teamRoleLabel(team.role))}</b>
+  return `<div class="profile-team-grid">${teams.map((team, index) => `
+    <button class="profile-team-card tone-${index % 3}" type="button" data-profile-team="${escapeHtml(team.slug)}" data-profile-team-title="${escapeHtml(team.title)}">
+      <span class="profile-team-card-glow"></span>
+      <span class="profile-team-card-thumb${team.bannerUrl ? ' has-image' : ''}"${team.bannerUrl ? ` style="background-image:url('${escapeHtml(team.bannerUrl)}')"` : ''}>
+        ${team.bannerUrl ? '' : `<span class="profile-team-card-mark">${escapeHtml(String(team.title || '?').slice(0, 2).toUpperCase())}</span>`}
+      </span>
+      <span class="profile-team-card-copy">
+        <b>${escapeHtml(team.title)}${team.verified ? ' <span class="profile-team-verified">✓</span>' : ''}</b>
+        <span>@${escapeHtml(team.slug)}</span>
+      </span>
+      <span class="profile-team-card-role">${escapeHtml(teamRoleLabel(team.role))}</span>
+      <span class="profile-team-card-arrow">→</span>
     </button>
-  `).join('');
+  `).join('')}</div>`;
+}
+
+export function profileLibraryCardsHtml(modes) {
+  if (!modes.length) return '<div class="profile-empty">' + tKey("library.is.empty") + '</div>';
+  return `<div class="profile-library-grid">${modes.map((mode) => `
+    <button class="profile-library-card" type="button" data-profile-mode="${escapeHtml(mode.id)}">
+      <span class="profile-library-cover"><img src="${escapeHtml(imageSrc(mode))}" alt="" loading="lazy" data-profile-library-image data-mode-id="${escapeHtml(mode.id)}"></span>
+      <span class="profile-library-copy">
+        <b>${escapeHtml(mode.title)}</b>
+        <span>${escapeHtml(modeSub(mode))}</span>
+        <span class="profile-library-state ${isInstalled(mode) ? 'installed' : ''}">${isInstalled(mode) ? tKey('sidebar.installed') : tKey('sidebar.inLibrary')}</span>
+      </span>
+    </button>
+  `).join('')}</div>`;
 }
 
 export function profileFriendsHtml() {
@@ -92,45 +105,6 @@ export function profileRequestsHtml() {
   `;
 }
 
-export function profilePostHtml(post) {
-  const own = isOwnUsername(post.username);
-  return `
-    <article class="profile-post">
-      <div class="profile-post-head">
-        <span class="avatar" data-post-avatar="${escapeHtml(post.username)}"></span>
-        <div class="profile-post-copy">
-          <b>${escapeHtml(post.displayName || post.username)}</b>
-          <span>@${escapeHtml(post.username)} · ${escapeHtml(formatDateTime(post.createdAt))}</span>
-        </div>
-        ${own ? `<button class="icon-btn profile-post-delete" type="button" title="${tKey("delete")}" data-profile-action="delete-post" data-post-id="${escapeHtml(post.id)}">✕</button>` : ''}
-      </div>
-      <div class="profile-post-body">${escapeHtml(post.body).replace(/\n/g, '<br>')}</div>
-    </article>
-  `;
-}
-
-export function profileFeedHtml(profile) {
-  const own = isOwnUsername(profile.username);
-  const posts = S.profilePosts || [];
-  return `
-    <section class="profile-social-card profile-feed-card">
-      ${own ? `
-        <form class="profile-post-form" data-profile-form="post">
-          <textarea id="profile-post-body" maxlength="1000" rows="3" placeholder="${tKey("share.something")}"></textarea>
-          <div class="profile-post-form-foot">
-            <span class="hint" id="profile-post-length">0/1000</span>
-            <button class="btn btn-primary" id="profile-post-submit" type="submit">${tKey("publish")}</button>
-          </div>
-        </form>
-      ` : ''}
-      <div class="profile-posts" id="profile-posts">
-        ${posts.length ? posts.map(profilePostHtml).join('') : `<div class="profile-empty">${tKey("no.posts.yet")}</div>`}
-      </div>
-      <button class="btn btn-ghost profile-posts-more" id="profile-posts-more" type="button" data-profile-action="posts-more" ${S.profilePostsHasMore ? '' : 'hidden'}>${tKey("load.more")}</button>
-    </section>
-  `;
-}
-
 export function renderProfile(profile) {
   if (!profile || !els.profileContent) return;
   const own = isOwnUsername(profile.username);
@@ -142,22 +116,23 @@ export function renderProfile(profile) {
   const libraryModes = own ? (S.modes || []).filter((mode) => isVisibleInLibrary(mode)) : [];
   const friends = own ? (S.friends || []) : [];
   const teams = profile.teams || [];
+  const bannerUrl = getLocalProfileBanner(profile.username) || profile.bannerUrl || '';
 
   if (profileTabUser !== profile.username) {
     profileTabUser = profile.username;
-    profileTab = 'posts';
+    profileTab = own ? 'library' : 'teams';
   }
 
-  const tabs = [
-    { id: 'posts', label: tKey('posts'), count: Number(S.profilePostsTotal) || 0, countId: 'profile-posts-count' },
-    { id: 'modes', label: tKey('modes'), count: (profile.modes || []).length },
-    ...(own ? [
+  const tabs = own
+    ? [
       { id: 'library', label: tKey('nav.library'), count: libraryModes.length },
-      { id: 'friends', label: tKey('friends'), count: friends.length }
-    ] : []),
-    { id: 'teams', label: tKey('teams.2'), count: teams.length }
-  ];
-  if (!tabs.some((tab) => tab.id === profileTab)) profileTab = 'posts';
+      { id: 'friends', label: tKey('friends'), count: friends.length },
+      { id: 'teams', label: tKey('teams.2'), count: teams.length }
+    ]
+    : [
+      { id: 'teams', label: tKey('teams.2'), count: teams.length }
+    ];
+  if (!tabs.some((tab) => tab.id === profileTab)) profileTab = tabs[0].id;
 
   const actions = own
     ? `
@@ -194,17 +169,20 @@ export function renderProfile(profile) {
     </button>
   `).join('');
 
-  const libraryRows = libraryModes.slice(0, 40).map((mode) => `
-    <button class="profile-mode-row" type="button" data-profile-mode="${escapeHtml(mode.id)}">
-      <span>${escapeHtml(mode.title)}</span>
-      <b>${isInstalled(mode) ? tKey('sidebar.installed') : tKey('sidebar.inLibrary')}</b>
-    </button>
-  `).join('');
+  const libraryCards = profileLibraryCardsHtml(libraryModes.slice(0, 40));
+  const teamCards = profileTeamCardsHtml(profile);
+  const friendAddForm = `
+    <form class="profile-add-friend" data-profile-form="friend" autocomplete="off">
+      <input id="profile-friend-name" type="text" maxlength="20" placeholder="username" spellcheck="false" autocapitalize="none">
+      <button class="btn btn-primary" type="submit">${tKey("add")}</button>
+    </form>
+  `;
 
   els.profileContent.innerHTML = `
     <div class="profile-social-page">
       <section class="profile-social-header profile-hero">
         <div class="profile-social-cover">
+          ${bannerUrl ? `<img class="profile-social-banner" src="${escapeHtml(bannerUrl)}" alt="">` : ''}
           <span class="profile-social-cover-mark">@${escapeHtml(profile.username)}</span>
         </div>
         <div class="profile-social-head">
@@ -233,36 +211,31 @@ export function renderProfile(profile) {
         </div>
       </section>
 
-      <nav class="profile-social-tabs" role="tablist">
-        ${tabs.map((tab) => `
-          <button class="profile-social-tab ${tab.id === profileTab ? 'active' : ''}" type="button" role="tab" aria-selected="${tab.id === profileTab}" data-profile-tab="${tab.id}">
-            ${escapeHtml(tab.label)}
-            <span${tab.countId ? ` id="${tab.countId}"` : ''}>${Number(tab.count) || 0}</span>
-          </button>
-        `).join('')}
-      </nav>
+      ${tabs.length > 1 ? `
+        <nav class="profile-social-tabs" role="tablist">
+          ${tabs.map((tab) => `
+            <button class="profile-social-tab ${tab.id === profileTab ? 'active' : ''}" type="button" role="tab" aria-selected="${tab.id === profileTab}" data-profile-tab="${tab.id}">
+              ${escapeHtml(tab.label)}
+              <span>${Number(tab.count) || 0}</span>
+            </button>
+          `).join('')}
+        </nav>
+      ` : ''}
 
       <div class="profile-social-body">
         <div class="profile-social-main">
-          <section class="profile-social-pane" data-profile-pane="posts" ${profileTab !== 'posts' ? 'hidden' : ''}>
-            ${profileFeedHtml(profile)}
-          </section>
-          <section class="profile-social-pane" data-profile-pane="modes" ${profileTab !== 'modes' ? 'hidden' : ''}>
-            <section class="profile-social-card">
-              <div class="profile-social-card-head"><h3>${tKey("modes")}</h3><span>${(profile.modes || []).length}</span></div>
-              ${profileModesHtml(profile)}
-            </section>
-          </section>
           ${own ? `
             <section class="profile-social-pane" data-profile-pane="library" ${profileTab !== 'library' ? 'hidden' : ''}>
               <section class="profile-social-card">
                 <div class="profile-social-card-head"><h3>${tKey("nav.library")}</h3><span>${libraryModes.length}</span></div>
-                ${libraryRows || '<div class="profile-empty">' + tKey("library.is.empty") + '</div>'}
+                ${libraryCards}
               </section>
             </section>
             <section class="profile-social-pane" data-profile-pane="friends" ${profileTab !== 'friends' ? 'hidden' : ''}>
               <section class="profile-social-card">
                 <div class="profile-social-card-head"><h3>${tKey("friends")}</h3><span>${friends.length}</span></div>
+                ${friendAddForm}
+                ${profileRequestsHtml()}
                 ${profileFriendsHtml()}
               </section>
             </section>
@@ -270,7 +243,7 @@ export function renderProfile(profile) {
           <section class="profile-social-pane" data-profile-pane="teams" ${profileTab !== 'teams' ? 'hidden' : ''}>
             <section class="profile-social-card">
               <div class="profile-social-card-head"><h3>${tKey("teams.2")}</h3><span>${teams.length}</span></div>
-              ${profileTeamsHtml(profile)}
+              ${teamCards}
             </section>
           </section>
         </div>
@@ -316,15 +289,16 @@ export function renderProfile(profile) {
     const friendItem = friendByUsername(el.dataset.avatarFriend);
     if (friendItem) applyLavunioAvatar(el, friendItem);
   });
-  els.profileContent.querySelectorAll('[data-post-avatar]').forEach((el) => {
-    applyLavunioAvatar(el, profile);
+  els.profileContent.querySelectorAll('[data-profile-library-image]').forEach((el) => {
+    const mode = (S.modes || []).find((item) => String(item.id) === el.dataset.modeId);
+    if (mode) wireImage(el, mode);
   });
 
   const tabButtons = [...els.profileContent.querySelectorAll('[data-profile-tab]')];
   const tabLinks = [...els.profileContent.querySelectorAll('[data-profile-tab-link]')];
   const panes = [...els.profileContent.querySelectorAll('[data-profile-pane]')];
   const activateTab = (tab) => {
-    if (!tabs.some((item) => item.id === tab)) tab = 'posts';
+    if (!tabs.some((item) => item.id === tab)) tab = tabs[0].id;
     profileTab = tab;
     tabButtons.forEach((button) => {
       const active = button.dataset.profileTab === tab;

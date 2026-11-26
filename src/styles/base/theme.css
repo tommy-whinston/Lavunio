@@ -379,8 +379,6 @@
   #topbar .nav-drag { order: 2; flex: 1; height: 34px; min-width: 8px; align-self: center; }
   .top-search { order: 3; width: 190px; flex: 0 1 190px; }
   .update-chip,
-  #btn-refresh,
-  #sidebar-messages,
   #sidebar-settings,
   .notif-wrap,
   .top-profile { order: 3; }

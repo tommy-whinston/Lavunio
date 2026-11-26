@@ -94,31 +94,6 @@
       <span id="update-chip-text">Обновление</span>
     </button>
 
-    <button class="icon-btn" id="btn-refresh" title="Обновить список режимов" aria-label="Обновить список режимов" data-i18n-title="topbar.refresh">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
-      </svg>
-    </button>
-
-    <button class="icon-btn" id="side-friends" title="Друзья" aria-label="Друзья" data-i18n-title="nav.friends" data-i18n-aria="nav.friends" type="button" hidden>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-        <circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5c2.6.3 4.5 2.4 4.5 5.5"/>
-      </svg>
-    </button>
-
-    <button class="icon-btn" id="sidebar-messages" title="Сообщения" aria-label="Сообщения" data-i18n-title="messages.title" type="button" hidden>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/>
-      </svg>
-    </button>
-
-    <button class="icon-btn" id="sidebar-settings" title="Настройки" aria-label="Настройки" type="button" data-i18n-title="settings">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-        <circle cx="12" cy="12" r="3.2"/>
-        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
-
     <div class="notif-wrap">
       <button class="icon-btn notif-btn" id="btn-notifications" title="Уведомления" aria-label="Уведомления" data-i18n-title="topbar.notifications">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -135,6 +110,13 @@
         <div id="notifications-list"></div>
       </div>
     </div>
+
+    <button class="icon-btn" id="sidebar-settings" title="Настройки" aria-label="Настройки" type="button" data-i18n-title="settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="12" cy="12" r="3.2"/>
+        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
 
     <div class="top-profile" id="sidebar-profile-card">
       <button class="top-profile-main" id="sidebar-profile" type="button" aria-label="Мой профиль" data-i18n-aria="my.profile">
@@ -734,6 +716,18 @@
                 <label for="settings-profile-bio" data-i18n="about">О себе</label>
                 <textarea id="settings-profile-bio" rows="5" maxlength="300"></textarea>
                 <div class="hint" id="settings-profile-bio-hint" data-i18n="profile.bio.hint">До 300 символов и 5 строк.</div>
+              </div>
+              <div class="field">
+                <label data-i18n="profile.banner">Баннер профиля</label>
+                <div class="profile-banner-preview" id="settings-banner-preview">
+                  <span data-i18n="profile.banner.empty">Баннер не загружен</span>
+                </div>
+                <div class="settings-actions" style="margin-top:8px">
+                  <button class="btn btn-ghost" id="settings-banner-upload" type="button" data-i18n="upload">Загрузить</button>
+                  <button class="btn btn-ghost" id="settings-banner-remove" type="button" data-i18n="delete">Удалить</button>
+                  <input id="settings-banner-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+                </div>
+                <div class="hint" data-i18n="profile.banner.hint">PNG, JPEG или WebP. Автоматически обрезается до 16:9 (1280×720).</div>
               </div>
               <div class="form-error" id="settings-profile-error" hidden></div>
               <div class="settings-actions">

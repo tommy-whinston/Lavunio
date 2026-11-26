@@ -369,26 +369,6 @@ function bindStore() {
     renderLibrary();
   });
 
-  els.refresh.onclick = async () => {
-    if (S.refreshing) return;
-    S.refreshing = true;
-    els.refresh.classList.add('spinning');
-    try {
-      const modes = await api.refreshModes();
-      S.modes = Array.isArray(modes) ? modes : [];
-      S.state = (await api.getState()) || {};
-      renderStore();
-      renderLibrary();
-      if (S.view === 'detail' && S.selectedId) renderDetail();
-      toast(tKey("mode.list.refreshed"), 'ok');
-    } catch (err) {
-      toast(tKey("failed.to.refresh.list") + " " + err, 'error');
-    } finally {
-      S.refreshing = false;
-      els.refresh.classList.remove('spinning');
-    }
-  };
-
   document.addEventListener('click', (e) => {
     closeCardContext();
     if (!e.target.closest('.card-menu') && !e.target.closest('.card-menu-btn')) closeCardMenus();
@@ -438,19 +418,6 @@ function bindSidebar() {
         S.profileAfterLogin = true;
         openModal('modal-account');
       }
-    };
-  }
-  if (els.sidebarMessages) {
-    els.sidebarMessages.onclick = (event) => {
-      event.stopPropagation();
-      showSection('messages');
-    };
-  }
-  if (els.sideFriends) {
-    els.sideFriends.onclick = (event) => {
-      event.stopPropagation();
-      S.detailFrom = null;
-      showSection('friends');
     };
   }
   if (els.sidebarSettings) {
@@ -545,8 +512,6 @@ function updateSidebar() {
   });
   const profileCard = $('sidebar-profile-card');
   if (profileCard) profileCard.classList.toggle('active', S.section === 'profile');
-  if (els.sidebarMessages) els.sidebarMessages.classList.toggle('active', S.section === 'messages');
-  if (els.sideFriends) els.sideFriends.classList.toggle('active', S.section === 'friends');
   updatePublisherNav();
   updateModerationNav();
   updateAdminNav();
@@ -689,9 +654,6 @@ async function handleCardAction(modeId, action, autoPlay = false) {
 }
 
 function updateSocialNav() {
-  const logged = lavunioLoggedIn();
-  if (els.sidebarMessages) els.sidebarMessages.hidden = !logged;
-  if (els.sideFriends) els.sideFriends.hidden = !logged;
   updateAdminNav();
   updateSideGroups();
 }
