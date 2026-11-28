@@ -16,6 +16,7 @@ let updateActions = {
 let lastUpdateCheckAt = 0;
 let startupFinalized = false;
 const STARTUP_UPDATE_TIMEOUT_MS = 10000;
+export const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 export function configureUpdates(actions) {
   updateActions = { ...updateActions, ...actions };
@@ -68,7 +69,7 @@ export async function checkLauncherUpdate() {
 export async function checkUpdateInBackground(force = false) {
   if (!api.checkUpdate || S.autoUpdating || S.loading) return;
   const now = Date.now();
-  if (!force && now - lastUpdateCheckAt < 15 * 60 * 1000) return;
+  if (!force && now - lastUpdateCheckAt < UPDATE_CHECK_INTERVAL_MS) return;
   lastUpdateCheckAt = now;
   const info = await checkLauncherUpdate();
   if (!info) return;

@@ -84,7 +84,7 @@ export const RU = {
   "log": "Журнал",
   "completed": "Завершено",
   "title": "Заголовок",
-  "loading.modes.and.account": "Загружаем режимы и аккаунт…",
+  "loading.modes.and.account": "Проверяем обновления и запускаем лаунчер…",
   "upload.cape": "Загрузить плащ",
   "upload.skin": "Загрузить скин",
   "loading": "Загрузка",

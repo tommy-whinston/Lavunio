@@ -16,7 +16,7 @@ import { configureTeams, bindTeams, renderTeams, loadTeams, loadTeamInvitations,
 import { configurePublisher, bindPublisher, loadPublisher, renderPublisher } from './features/publisher/index.js';
 import { configureModeration, bindModeration, loadModeration, renderModeration } from './features/moderation/index.js';
 import { configureMessages, loadChatList, renderMessagesList, openChat, sendChatMessage } from './features/messages/view.js';
-import { configureUpdates, bindUpdateModal, checkLauncherUpdate, checkUpdateInBackground, finishStartup, handleStartupUpdate } from './features/updates/index.js';
+import { configureUpdates, bindUpdateModal, checkLauncherUpdate, checkUpdateInBackground, finishStartup, handleStartupUpdate, UPDATE_CHECK_INTERVAL_MS } from './features/updates/index.js';
 import { configureNotifications, bindNotifications, loadNotifications, renderNotifications } from './features/notifications/index.js';
 import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioStatus, renderLavunioPane, logoutLavunio } from './features/account/index.js';
 import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
@@ -168,7 +168,7 @@ async function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') checkUpdateInBackground();
   });
-  setInterval(() => checkUpdateInBackground(true), 30 * 60 * 1000);
+  setInterval(() => checkUpdateInBackground(), UPDATE_CHECK_INTERVAL_MS);
   document.addEventListener('lavunio:lang', () => {
     renderAccountChip();
     renderStore();

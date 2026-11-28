@@ -84,7 +84,7 @@ export const EN = {
   "log": "Log",
   "completed": "Completed",
   "title": "Title",
-  "loading.modes.and.account": "Loading modes and account…",
+  "loading.modes.and.account": "Checking for updates and starting Lavunio…",
   "upload.cape": "Upload cape",
   "upload.skin": "Upload skin",
   "loading": "Loading",
