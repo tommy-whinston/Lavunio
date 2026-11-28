@@ -108,8 +108,14 @@ async fn ensure_game_account(state: &AppState) -> Result<GameAccount, String> {
         }
     }
 
+    let name = if user.display_name.trim().is_empty() {
+        user.username.clone()
+    } else {
+        user.display_name.clone()
+    };
+
     Ok(GameAccount {
-        name: user.username,
+        name,
         uuid,
         skin_url: user.skin_url,
         access_token: session.game_access_token,
