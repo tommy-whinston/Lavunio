@@ -69,7 +69,7 @@ export function profileFriendsHtml() {
       <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
       <div class="profile-friend-copy">
         <b>${escapeHtml(friend.displayName || friend.username)}</b>
-        <span>@${escapeHtml(friend.displayName || friend.username)} · <span>${friend.online ? tKey("online.2") : tKey("offline.2")}</span></span>
+        <span>${escapeHtml(friend.displayName || friend.username)} · <span>${friend.online ? tKey("online.2") : tKey("offline.2")}</span></span>
       </div>
       <div class="profile-friend-actions">
         <button class="icon-btn" type="button" title="${tKey("profile")}" data-profile-action="friend-profile" data-username="${escapeHtml(friend.username)}">
@@ -94,7 +94,7 @@ export function profileRequestsHtml() {
       <h2>${tKey("friend.requests")}</h2>
       ${incoming.map((item) => `
         <div class="profile-request">
-          <span>@${escapeHtml(item.displayName || item.username)}</span>
+          <span>${escapeHtml(item.displayName || item.username)}</span>
           <span class="profile-request-actions">
             <button class="btn btn-primary btn-small" type="button" data-profile-action="accept-request" data-id="${escapeHtml(item.id)}">${tKey("accept")}</button>
             <button class="btn btn-ghost btn-small" type="button" data-profile-action="decline-request" data-id="${escapeHtml(item.id)}">${tKey("decline")}</button>
@@ -153,7 +153,7 @@ export function renderProfile(profile) {
       <span class="avatar" data-avatar-friend="${escapeHtml(item.username)}"></span>
       <span class="profile-social-preview-copy">
         <b>${escapeHtml(item.displayName || item.username)}</b>
-        <span>@${escapeHtml(item.displayName || item.username)}</span>
+        <span>${escapeHtml(item.displayName || item.username)}</span>
       </span>
       <span class="profile-social-presence ${item.online ? 'online' : ''}"><i></i></span>
     </button>
@@ -183,7 +183,7 @@ export function renderProfile(profile) {
       <section class="profile-social-header profile-hero">
         <div class="profile-social-cover${bannerUrl ? ' has-banner' : ''}">
           ${bannerUrl ? `<img class="profile-social-banner" src="${escapeHtml(bannerUrl)}" alt="">` : ''}
-          <span class="profile-social-cover-mark">@${escapeHtml(display)}</span>
+          <span class="profile-social-cover-mark">${escapeHtml(display)}</span>
         </div>
         <div class="profile-social-head">
           <div class="profile-social-avatar${own ? ' profile-avatar-editable' : ''}">
@@ -192,7 +192,6 @@ export function renderProfile(profile) {
           ${own ? `<span class="profile-avatar-hint" hidden>${tKey("profile.avatar.hint")}</span>` : ''}
           <div class="profile-social-identity profile-hero-main">
             <h1${nameClass ? ` class="${nameClass}"` : ''}>${escapeHtml(display)}</h1>
-            <div class="profile-handle">@${escapeHtml(display)}</div>
             <div class="profile-badges">
               <span class="profile-badge role">${escapeHtml(profileRoleLabel(profile.role))}</span>
               <span class="profile-badge ${profile.online ? 'online' : ''}">${escapeHtml(profileOnlineLabel(profile))}</span>

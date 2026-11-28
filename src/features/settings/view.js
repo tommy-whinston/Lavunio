@@ -89,9 +89,7 @@ export function renderSettingsProfile() {
   renderSettingsBanner(user);
   if (!user) return;
   const name = $('settings-profile-name');
-  const handle = $('settings-profile-handle');
   if (name) name.textContent = user.displayName || user.username;
-  if (handle) handle.textContent = `@${user.displayName || user.username}`;
   applyLavunioAvatar($('settings-profile-avatar'), user);
   const display = $('settings-profile-display');
   const bio = $('settings-profile-bio');
