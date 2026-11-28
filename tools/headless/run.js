@@ -362,20 +362,14 @@ async function checkRegistrationFields(cdp) {
   await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.openModal('modal-account'); window.LavunioDebug.S.lavunioRegisterMode = true; import('/features/account/index.js').then((m) => { m.renderLavunioPane(); })`);
   await sleep(200);
   const fields = await cdp.evaluate(`(() => {
-    const id = document.getElementById('lavunio-username');
     const name = document.getElementById('lavunio-display-name');
     return {
-      idVisible: !!id && !id.closest('.field').hidden,
-      idMax: id ? id.maxLength : null,
-      idPattern: id ? id.getAttribute('pattern') : null,
       nameVisible: !!name && !name.closest('.field').hidden,
-      nameMax: name ? name.maxLength : null
+      nameMax: name ? name.maxLength : null,
+      namePattern: name ? name.getAttribute('pattern') : null
     };
   })()`);
-  if (!fields.idVisible || fields.idMax !== 20 || fields.idPattern !== '[a-z0-9]{3,20}') {
-    throw new Error('registration ID field: ' + JSON.stringify(fields));
-  }
-  if (!fields.nameVisible || fields.nameMax !== 16) {
+  if (!fields.nameVisible || fields.nameMax !== 16 || fields.namePattern !== '[A-Za-z0-9_]{1,16}') {
     throw new Error('registration nickname field: ' + JSON.stringify(fields));
   }
   await cdp.evaluate(`window.LavunioDebug.S.lavunioRegisterMode = false; window.LavunioDebug.closeModals()`);
@@ -440,8 +434,7 @@ async function checkAuthCodes(cdp) {
   await cdp.evaluate(`(() => {
     document.getElementById('lavunio-email').value = 'new@example.com';
     document.getElementById('lavunio-password').value = 'password 123';
-    document.getElementById('lavunio-username').value = 'newplayer';
-    document.getElementById('lavunio-display-name').value = 'New Player';
+    document.getElementById('lavunio-display-name').value = 'New_Player';
     document.getElementById('lavunio-consent').checked = true;
     document.getElementById('lavunio-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   })()`);
@@ -719,28 +712,26 @@ async function checkSettingsProfile(cdp) {
   await cdp.evaluate(`window.LavunioDebug.closeModals(); window.LavunioDebug.openModal('modal-settings')`);
   await sleep(300);
   const fields = await cdp.evaluate(`(() => {
-    const id = document.getElementById('settings-profile-username');
     const name = document.getElementById('settings-profile-display');
     return {
-      id: !!id,
-      idMax: id ? id.maxLength : null,
-      idPattern: id ? id.getAttribute('pattern') : null,
+      id: !!document.getElementById('settings-profile-username'),
       nameMax: name ? name.maxLength : null,
+      namePattern: name ? name.getAttribute('pattern') : null,
       save: !!document.getElementById('settings-profile-save')
     };
   })()`);
-  if (!fields.id || fields.idMax !== 20 || fields.idPattern !== '[a-z0-9]{3,20}') {
-    throw new Error('profile ID field: ' + JSON.stringify(fields));
+  if (fields.id) {
+    throw new Error('profile ID field should be removed: ' + JSON.stringify(fields));
   }
-  if (fields.nameMax !== 16) {
-    throw new Error('profile nickname limit: ' + JSON.stringify(fields));
+  if (fields.nameMax !== 16 || fields.namePattern !== '[A-Za-z0-9_]{1,16}') {
+    throw new Error('profile nickname field: ' + JSON.stringify(fields));
   }
   if (!fields.save) {
     throw new Error('profile save button is missing: ' + JSON.stringify(fields));
   }
 
   await cdp.evaluate(`(() => {
-    document.getElementById('settings-profile-username').value = 'Tommy_Whinston';
+    document.getElementById('settings-profile-display').value = 'bad name';
     document.getElementById('settings-profile-save').click();
   })()`);
   await sleep(200);
@@ -749,11 +740,10 @@ async function checkSettingsProfile(cdp) {
     updates: (window.__profileUpdates || []).length
   })`);
   if (invalid.hidden || invalid.updates !== 0) {
-    throw new Error('invalid profile ID accepted: ' + JSON.stringify(invalid));
+    throw new Error('invalid nickname accepted: ' + JSON.stringify(invalid));
   }
 
   await cdp.evaluate(`(() => {
-    document.getElementById('settings-profile-username').value = 'tommywhinston';
     document.getElementById('settings-profile-display').value = 'Tommy_Whinston';
     document.getElementById('settings-profile-save').click();
   })()`);
@@ -763,7 +753,7 @@ async function checkSettingsProfile(cdp) {
     error: document.getElementById('settings-profile-error') ? document.getElementById('settings-profile-error').textContent : ''
   })`);
   const update = saved.updates[0];
-  if (!update || update[0] !== 'tommywhinston' || update[1] !== 'Tommy_Whinston') {
+  if (!update || update[0] !== 'steve' || update[1] !== 'Tommy_Whinston') {
     throw new Error('profile save: ' + JSON.stringify(saved));
   }
   await cdp.evaluate(`window.LavunioDebug.closeModals()`);

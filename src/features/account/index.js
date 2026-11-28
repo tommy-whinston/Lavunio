@@ -2,7 +2,7 @@
 
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
-import { $, normalizeIdInput } from '../../core/dom.js';
+import { $ } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { lavunioName, applyLavunioAvatar } from '../../core/lavunio.js';
 import { tKey } from '../../i18n/index.js';
@@ -64,8 +64,6 @@ export function bindAccountModal() {
   };
   $('lavunio-forgot-back').onclick = () => backToLavunioLogin();
   $('lavunio-forgot-sent-back').onclick = () => backToLavunioLogin();
-  const usernameInput = $('lavunio-username');
-  if (usernameInput) usernameInput.addEventListener('input', () => normalizeIdInput(usernameInput));
   $('lavunio-logout').onclick = () => logoutLavunio();
   $('lavunio-profile').onclick = () => {
     const user = S.lavunio && S.lavunio.user;
@@ -203,7 +201,6 @@ export function renderLavunioPane() {
     const register = !!S.lavunioRegisterMode;
     const emailInput = $('lavunio-email');
     const emailLabel = $('lavunio-email-label');
-    $('lavunio-username-field').hidden = !register;
     $('lavunio-display-name-field').hidden = !register;
     if (els.consentRow) els.consentRow.hidden = !register;
     emailLabel.textContent = register ? tKey("email") : tKey("email.or.account.id");
@@ -226,7 +223,6 @@ async function submitLavunioForm() {
   const error = $('lavunio-error');
   const login = $('lavunio-email').value.trim();
   const password = $('lavunio-password').value;
-  const username = $('lavunio-username').value.trim().toLowerCase();
   const displayName = $('lavunio-display-name').value.trim();
   const register = !!S.lavunioRegisterMode;
 
@@ -236,12 +232,7 @@ async function submitLavunioForm() {
     error.hidden = false;
     return;
   }
-  if (register && !/^[a-z0-9]{3,20}$/.test(username)) {
-    error.textContent = tKey("profile.id.invalid");
-    error.hidden = false;
-    return;
-  }
-  if (register && displayName.length > 16) {
+  if (register && !/^[A-Za-z0-9_]{1,16}$/.test(displayName)) {
     error.textContent = tKey("display.name.hint");
     error.hidden = false;
     return;
@@ -263,7 +254,7 @@ async function submitLavunioForm() {
   button.textContent = register ? tKey("creating") : tKey("signing.in");
   try {
     const status = register
-      ? await api.lavunioRegister(login, password, username || null, displayName || null, !!(els.consent && els.consent.checked))
+      ? await api.lavunioRegister(login, password, null, displayName || null, !!(els.consent && els.consent.checked))
       : await api.lavunioLogin(login, password);
     if (status && status.requiresVerification) {
       S.lavunioPending = { email: status.email || login, register };

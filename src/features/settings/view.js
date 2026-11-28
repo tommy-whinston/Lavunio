@@ -4,7 +4,7 @@ import { tKey } from '../../i18n/index.js';
 
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
-import { $, normalizeIdInput } from '../../core/dom.js';
+import { $ } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { formatBytes } from '../../core/format.js';
 import { applyLavunioAvatar } from '../../core/lavunio.js';
@@ -91,12 +91,10 @@ export function renderSettingsProfile() {
   const name = $('settings-profile-name');
   const handle = $('settings-profile-handle');
   if (name) name.textContent = user.displayName || user.username;
-  if (handle) handle.textContent = `@${user.username}`;
+  if (handle) handle.textContent = `@${user.displayName || user.username}`;
   applyLavunioAvatar($('settings-profile-avatar'), user);
-  const username = $('settings-profile-username');
   const display = $('settings-profile-display');
   const bio = $('settings-profile-bio');
-  if (username) username.value = user.username || '';
   if (display) display.value = user.displayName || user.username || '';
   if (bio) bio.value = limitBioValue((S.playerProfile && S.playerProfile.bio) || '');
   const error = $('settings-profile-error');
@@ -125,7 +123,6 @@ async function saveSettingsProfile() {
     return;
   }
   const error = $('settings-profile-error');
-  const username = $('settings-profile-username') ? $('settings-profile-username').value.trim().toLowerCase() : '';
   const displayName = $('settings-profile-display') ? $('settings-profile-display').value.trim() : '';
   const bio = $('settings-profile-bio') ? $('settings-profile-bio').value.trim() : '';
   const showError = (text) => {
@@ -133,11 +130,7 @@ async function saveSettingsProfile() {
     error.textContent = text;
     error.hidden = false;
   };
-  if (!/^[a-z0-9]{3,20}$/.test(username)) {
-    showError(tKey("profile.id.invalid"));
-    return;
-  }
-  if (!displayName || displayName.length > 16) {
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(displayName)) {
     showError(tKey("display.name.hint"));
     return;
   }
@@ -145,12 +138,12 @@ async function saveSettingsProfile() {
   if (button) button.disabled = true;
   if (error) error.hidden = true;
   try {
-    await api.playerUpdateProfile(username, displayName, bio);
+    await api.playerUpdateProfile(user.username, displayName, bio);
     if (api.lavunioRefreshProfile) {
       try { S.lavunio = await api.lavunioRefreshProfile(); } catch (_) {}
     }
     if (S.playerProfile) {
-      S.playerProfile = { ...S.playerProfile, username, displayName, bio };
+      S.playerProfile = { ...S.playerProfile, displayName, bio };
     }
     settingsActions.renderAccountChip();
     settingsActions.renderLavunioPane();
@@ -167,8 +160,6 @@ export function bindSettings() {
   document.querySelectorAll('[data-settings-tab]').forEach((button) => {
     button.onclick = () => setSettingsTab(button.dataset.settingsTab);
   });
-  const username = $('settings-profile-username');
-  if (username) username.addEventListener('input', () => normalizeIdInput(username));
   const bio = $('settings-profile-bio');
   if (bio) {
     bio.maxLength = 300;

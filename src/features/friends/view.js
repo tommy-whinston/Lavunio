@@ -46,15 +46,15 @@ export function bindFriends() {
     addForm.onsubmit = async (event) => {
       event.preventDefault();
       const input = document.getElementById('friends-add-input');
-      const username = (input ? input.value : '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (!/^[a-z0-9]{3,20}$/.test(username)) {
-        toast(tKey('profile.id.invalid'), 'error');
+      const nickname = (input ? input.value : '').trim();
+      if (!/^[A-Za-z0-9_]{1,16}$/.test(nickname)) {
+        toast(tKey('display.name.hint'), 'error');
         return;
       }
       const button = addForm.querySelector('button[type="submit"]');
       if (button) button.disabled = true;
       try {
-        await api.friendAdd(username);
+        await api.friendAdd(nickname);
         toast(tKey('request.sent'), 'ok');
         if (input) input.value = '';
         await friendActions.loadFriends(true);
@@ -122,7 +122,7 @@ export function renderFriends() {
           <span class="avatar" data-avatar-friend="${escapeHtml(friend.username)}"></span>
           <div class="friend-card-copy">
             <b>${escapeHtml(name)}</b>
-            <span>@${escapeHtml(friend.username)}</span>
+            <span>@${escapeHtml(friend.displayName || friend.username)}</span>
           </div>
           <span class="friend-presence ${friend.online ? 'online' : ''}"><i></i>${escapeHtml(status)}</span>
         </div>
@@ -145,7 +145,7 @@ export function renderFriends() {
             <span class="avatar" data-request-avatar="${escapeHtml(request.username)}"></span>
             <div class="friends-request-copy">
               <b>${escapeHtml(name)}</b>
-              <span>@${escapeHtml(request.username)}</span>
+              <span>@${escapeHtml(request.displayName || request.username)}</span>
             </div>
             <div class="friends-request-actions">
               <button class="btn btn-primary btn-small" type="button" data-request-action="accept" data-request-id="${escapeHtml(request.id)}">${escapeHtml(tKey('accept'))}</button>
