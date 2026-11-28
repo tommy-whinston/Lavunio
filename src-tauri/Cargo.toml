@@ -35,5 +35,5 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Securit
 [profile.release]
 opt-level = 2
 lto = "thin"
-codegen-units = 4
+codegen-units = 16
 strip = true
