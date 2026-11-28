@@ -207,7 +207,7 @@ export const EN = {
   "publisher": "Publisher",
   "mode.publishing": "Mode publishing",
   "java.path": "Java path",
-  "featured": "Featured",
+  "featured": "Recommendation of the day",
   "expand.all": "Expand all",
   "size": "Size",
   "tell.us.what.you": "Tell us what you plan to publish and include links to your portfolio or builds.",

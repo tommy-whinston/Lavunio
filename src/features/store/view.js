@@ -14,7 +14,7 @@ import { renderModeGrid } from '../catalog/grid.js';
 import { syncFilterButtons, modePassesFilter, sortCatalog, filterModes } from '../catalog/query.js';
 import { updateDashboardStats, updateSidebarCounts } from '../library/view.js';
 import { enqueueDownload } from '../downloads/queue.js';
-import { isUpdate, modeById, modeShortDescription, modeTags } from '../../core/modes.js';
+import { isUpdate, isInstalled, modeById, modeShortDescription, modeTags, modeUpdatedAt } from '../../core/modes.js';
 import { newsCardHtml } from '../news/index.js';
 
 let storeActions = {
@@ -198,7 +198,7 @@ export function renderStore() {
     return;
   }
 
-  const featured = S.modes.find((m) => m.imageUrl || m.image) || S.modes[0] || null;
+  const featured = pickDailyFeatured(S.modes);
   S.featuredId = featured ? featured.id : null;
   renderFeatured(featured);
   renderFeed();
@@ -260,6 +260,40 @@ function renderFeatured(mode) {
     .join('');
   const st = cardStatus(mode);
   els.featuredStatus.textContent = st.text;
+}
+
+function dayNumber() {
+  const now = new Date();
+  return Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+}
+
+function recommendationScore(mode) {
+  const rating = Math.max(0, Math.min(5, Number(mode.rating) || 0));
+  const installs = Math.max(0, Number(mode.installs) || 0);
+  const downloads = Math.max(
+    0,
+    Number(mode.downloads) || Number(mode.stats && mode.stats.downloads) || 0
+  );
+  const updated = Date.parse(modeUpdatedAt(mode) || mode.updatedAt || '');
+  const ageDays = Number.isFinite(updated) ? Math.max(0, (Date.now() - updated) / 86400000) : 365;
+  const freshness = Math.max(0, 35 - Math.min(35, ageDays));
+  return rating * 20 + Math.log10(installs + 1) * 14 + Math.log10(downloads + 1) * 6 + freshness;
+}
+
+// Одна рекомендация на день: популярность + рейтинг + свежесть.
+// Каждый день берём следующего из топ-5, чтобы витрина реально менялась.
+export function pickDailyFeatured(modes) {
+  const list = Array.isArray(modes) ? modes.filter((mode) => mode && (mode.imageUrl || mode.image || mode.coverUrl)) : [];
+  const pool = list.length ? list : (Array.isArray(modes) ? modes.filter(Boolean) : []);
+  if (!pool.length) return null;
+  const available = pool.filter((mode) => !isInstalled(mode));
+  const candidates = (available.length ? available : pool)
+    .map((mode) => ({ mode, score: recommendationScore(mode) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+  if (!candidates.length) return null;
+  const index = ((dayNumber() % candidates.length) + candidates.length) % candidates.length;
+  return candidates[index].mode;
 }
 
 let followsRequestSeq = 0;
