@@ -1149,6 +1149,8 @@ export const RU = {
   "theme.system": "Системная",
   "theme.system.hint": "Как в системе",
   "theme.hint": "Выбор темы сохраняется и применяется при следующем запуске.",
+  "settings.uiSounds": "Звуки интерфейса",
+  "settings.uiSounds.hint": "Тихие звуки нажатий, вкладок и действий.",
   "settings.profile.subtitle": "Аккаунт Lavunio, ник, ID и скин.",
   "settings.profile.guest": "Войди в Lavunio ID",
   "settings.profile.guest.hint": "Чтобы менять ник, ID и скин, нужен аккаунт Lavunio.",

@@ -1149,6 +1149,8 @@ export const EN = {
   "theme.system": "System",
   "theme.system.hint": "Match the system",
   "theme.hint": "Your choice is saved and applied on the next launch.",
+  "settings.uiSounds": "Interface sounds",
+  "settings.uiSounds.hint": "Quiet sounds for clicks, tabs and actions.",
   "settings.profile.subtitle": "Lavunio account, nickname, ID and skin.",
   "settings.profile.guest": "Sign in to Lavunio ID",
   "settings.profile.guest.hint": "A Lavunio account is required to change your nickname, ID and skin.",

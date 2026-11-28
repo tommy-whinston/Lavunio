@@ -56,6 +56,23 @@
   min-height: 12px;
 }
 
+.settings-check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 0;
+  color: var(--text);
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+.settings-check-row input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .settings-nav-legal {
   display: flex;
   flex-direction: column;

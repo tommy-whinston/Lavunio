@@ -1,0 +1,239 @@
+/* ============ MOTION / ЖИВЫЕ ДЕТАЛИ ============ */
+
+/* Медленное дыхание фона: без цвета, только мягкий свет/тень. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -12%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 18% 14%, color-mix(in srgb, var(--text) 9%, transparent), transparent 72%),
+    radial-gradient(38% 34% at 84% 22%, color-mix(in srgb, var(--text) 7%, transparent), transparent 74%),
+    radial-gradient(46% 40% at 52% 96%, color-mix(in srgb, var(--text) 5%, transparent), transparent 76%);
+  filter: blur(28px);
+  animation: ambient-drift 26s ease-in-out infinite alternate;
+}
+@keyframes ambient-drift {
+  0% { transform: translate3d(-1.2%, -0.8%, 0) scale(1); }
+  100% { transform: translate3d(1.4%, 1%, 0) scale(1.04); }
+}
+
+/* Карточки: мягкий подъём, свечение и зум обложки. */
+.mode-card {
+  transition:
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    transform 220ms var(--ease),
+    box-shadow 220ms var(--ease);
+}
+.mode-card:hover,
+.mode-card:focus-within {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--text) 16%, var(--border));
+  box-shadow:
+    0 20px 44px -28px color-mix(in srgb, #000 90%, transparent),
+    0 0 34px -20px color-mix(in srgb, var(--text) 14%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--text) 5%, transparent) inset;
+}
+.mode-card:hover .card-media > img,
+.mode-card:focus-within .card-media > img {
+  transform: scale(1.055);
+}
+.profile-library-card:hover .profile-library-cover img,
+.profile-team-card:hover .profile-team-card-thumb {
+  transform: scale(1.04);
+}
+.profile-library-cover img,
+.profile-team-card-thumb {
+  transition: transform 420ms var(--ease);
+}
+.profile-team-card-thumb { transform-origin: center; }
+
+/* Рекомендуемый режим: медленный блик по баннеру. */
+.featured {
+  transition: border-color var(--dur) var(--ease), box-shadow 260ms var(--ease);
+}
+.featured:hover {
+  border-color: var(--border-strong);
+  box-shadow:
+    0 26px 64px -42px color-mix(in srgb, #000 90%, transparent),
+    0 0 46px -30px color-mix(in srgb, var(--text) 14%, transparent);
+}
+.featured:hover #featured-img {
+  transform: scale(1.012);
+}
+.featured::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.11) 50%,
+    transparent 62%
+  );
+  transform: translateX(-130%);
+  animation: hero-sheen 9s ease-in-out infinite;
+}
+@keyframes hero-sheen {
+  0%, 58% { transform: translateX(-130%); }
+  82%, 100% { transform: translateX(130%); }
+}
+
+/* Вкладки: активная мягко «приподнимается». */
+.filter-chips button,
+.settings-tab,
+.detail-tab,
+.team-filter {
+  transition:
+    background var(--dur),
+    color var(--dur),
+    transform 160ms var(--ease);
+}
+.filter-chips button.active,
+.settings-tab.active,
+.detail-tab.active,
+.team-filter.active {
+  animation: tab-pop 180ms var(--ease);
+}
+@keyframes tab-pop {
+  50% { transform: translateY(-1px) scale(0.985); }
+}
+
+/* Верхнее меню: подчёркивание плавно появляется. */
+.top-nav .side-link::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  bottom: 3px;
+  height: 1px;
+  background: var(--text);
+  opacity: 0;
+  transform: scaleX(0.35);
+  transform-origin: center;
+  transition: opacity 180ms var(--ease), transform 220ms var(--ease);
+  pointer-events: none;
+}
+.top-nav .side-link.active::before {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* Модалки: чуть глубже фон и мягкое появление. */
+.modal-overlay {
+  background: color-mix(in srgb, var(--scrim) 92%, #000 8%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.modal {
+  animation: modal-rise 220ms var(--ease);
+}
+@keyframes modal-rise {
+  from { opacity: 0; transform: translateY(8px) scale(0.975); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Кнопки: лёгкий отклик. */
+.btn {
+  transition:
+    background var(--dur),
+    border-color var(--dur),
+    color var(--dur),
+    transform 150ms var(--ease),
+    box-shadow 150ms var(--ease);
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0) scale(0.985); }
+.icon-btn { transition: background var(--dur), color var(--dur), transform 150ms var(--ease); }
+.icon-btn:hover { transform: translateY(-1px); }
+.icon-btn:active { transform: scale(0.94); }
+
+/* Загрузка: мягкий бегущий блик вместо статичной плашки. */
+.skeleton-card {
+  background: linear-gradient(
+    100deg,
+    var(--panel) 20%,
+    var(--panel-2) 42%,
+    var(--panel-3) 50%,
+    var(--panel-2) 58%,
+    var(--panel) 80%
+  );
+  background-size: 220% 100%;
+  animation: skeleton-sweep 1.8s linear infinite;
+}
+@keyframes skeleton-sweep {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
+/* Точка обновления и баннер профиля. */
+.update-chip-dot { animation: dot-breathe 2.6s ease-in-out infinite; }
+@keyframes dot-breathe {
+  0%, 100% { opacity: 0.65; box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-2) 0%, transparent); }
+  50% { opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 10%, transparent); }
+}
+.profile-social-cover.has-banner .profile-social-banner {
+  transition: transform 700ms var(--ease);
+}
+.profile-social-cover.has-banner:hover .profile-social-banner {
+  transform: scale(1.025);
+}
+
+/* На светлой теме тени и свечение читаются слабее — добавляем им веса. */
+:root[data-theme='light'] body::before {
+  background:
+    radial-gradient(44% 40% at 16% 10%, rgba(23, 23, 22, 0.13), transparent 70%),
+    radial-gradient(38% 34% at 84% 18%, rgba(23, 23, 22, 0.09), transparent 72%),
+    radial-gradient(46% 40% at 50% 98%, rgba(23, 23, 22, 0.07), transparent 74%);
+  filter: blur(30px);
+}
+:root[data-theme='light'] .mode-card:hover,
+:root[data-theme='light'] .mode-card:focus-within {
+  box-shadow:
+    0 24px 48px -24px rgba(23, 23, 22, 0.32),
+    0 0 36px -18px rgba(23, 23, 22, 0.14);
+}
+:root[data-theme='light'] .featured:hover {
+  box-shadow:
+    0 28px 54px -34px rgba(23, 23, 22, 0.32),
+    0 0 44px -26px rgba(23, 23, 22, 0.14);
+}
+:root[data-theme='light'] .modal {
+  box-shadow: 0 30px 80px rgba(23, 23, 22, 0.18);
+}
+
+/* Едва заметная сетка точек: добавляет глубину и текстуру. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--text) 7%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+  opacity: 0.28;
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+}
+:root[data-theme='light'] body::after {
+  opacity: 0.42;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after,
+  .featured::after,
+  .mode-card,
+  .update-chip-dot { animation: none; }
+  .mode-card:hover,
+  .mode-card:focus-within,
+  .btn:hover:not(:disabled) { transform: none; }
+}

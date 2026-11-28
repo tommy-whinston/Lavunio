@@ -8,6 +8,7 @@ import { $ } from '../../core/dom.js';
 import { els } from '../../core/elements.js';
 import { formatBytes } from '../../core/format.js';
 import { applyLavunioAvatar } from '../../core/lavunio.js';
+import { uiSoundsEnabled, setUiSoundsEnabled } from '../../core/sound.js';
 import { getLocalProfileBanner, setLocalProfileBanner, clearLocalProfileBanner, cropImageToBanner, updateProfileBannerElement } from '../../core/profile-banner.js';
 import { toast } from '../../ui/toast.js';
 
@@ -202,6 +203,11 @@ export function bindSettings() {
       renderSettingsBanner(user);
       toast(tKey('profile.banner.removed'), 'ok');
     };
+  }
+  const sounds = $('set-ui-sounds');
+  if (sounds) {
+    sounds.checked = uiSoundsEnabled();
+    sounds.onchange = () => setUiSoundsEnabled(sounds.checked);
   }
   const profileSave = $('settings-profile-save');
   if (profileSave) profileSave.onclick = () => saveSettingsProfile();

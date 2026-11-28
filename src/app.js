@@ -22,6 +22,7 @@ import { configureAccount, renderAccountChip, bindAccountModal, refreshLavunioSt
 import { configureSocial, heartbeatPresence, loadFriends, respondFriendRequest } from './features/social/actions.js';
 import { configureFriends, bindFriends, renderFriends } from './features/friends/view.js';
 import { initTheme } from './core/theme.js';
+import { initUiSounds } from './core/sound.js';
 import { configureStore, renderStore, updateAllModes, notifyModeUpdates, loadFollows, loadStoreNews, updateCardProgress, refreshStore, loadStorePage } from './features/store/view.js';
 import { configureDetailActions, bindDetail, openDetail, showStore, startMode, openCardContext, closeCardContext, renderDetail, updateDetailAction } from './features/detail/actions.js';
 import { onGameEvent } from './features/game/events.js';
@@ -147,6 +148,7 @@ init();
 
 async function init() {
   initTheme();
+  initUiSounds();
   if (api && api.windowSplash) api.windowSplash().catch(() => {});
   bindWindowButtons();
   bindModals();
