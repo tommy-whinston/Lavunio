@@ -127,6 +127,28 @@ function tKey(key, vars) {
   return value;
 }
 
+function pluralForm(count) {
+  const n = Math.abs(Number(count) || 0);
+  if (LANG === "ru") {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "one";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "few";
+    return "many";
+  }
+  return n === 1 ? "one" : "other";
+}
+
+/* Формы множественного числа: ищем "key.one"/"key.few"/"key.many" (ru)
+   или "key.one"/"key.other" (en), иначе откатываемся на базовый ключ. */
+function pluralKey(key, count) {
+  const withForm = `${key}.${pluralForm(count)}`;
+  const dict = LANG === "en" ? KEYS_EN : KEYS_RU;
+  const raw = dict[withForm] ?? KEYS_RU[withForm];
+  const value = raw ?? dict[key] ?? KEYS_RU[key] ?? key;
+  return value.replaceAll("{0}", String(count));
+}
+
 function applyKeysToElement(element) {
   if (!element || element.nodeType !== 1) return;
   if (element.hasAttribute("data-i18n")) {
@@ -225,6 +247,7 @@ function init() {
 window.I18n = {
   t,
   tKey,
+  pluralKey,
   applyKeys: applyKeyTranslations,
   lang: () => LANG,
   locale,
@@ -241,4 +264,4 @@ if (document.readyState === "loading") {
 }
 
 export const I18n = window.I18n;
-export { tKey };
+export { tKey, pluralKey };

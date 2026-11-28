@@ -838,6 +838,7 @@ async function main() {
   if (keyResult.empty.length) keyErrors.push('empty keys: ' + JSON.stringify(keyResult.empty));
   if (keyResult.ruOnly.length) keyErrors.push('ru-only keys: ' + keyResult.ruOnly.join(', '));
   if (keyResult.enOnly.length) keyErrors.push('en-only keys: ' + keyResult.enOnly.join(', '));
+  if (keyResult.pluralOrphans.length) keyErrors.push('plural forms without base key: ' + keyResult.pluralOrphans.join(', '));
   if (keyResult.duplicatesRu.length) keyErrors.push('duplicate ru keys: ' + keyResult.duplicatesRu.join(', '));
   if (keyResult.duplicatesEn.length) keyErrors.push('duplicate en keys: ' + keyResult.duplicatesEn.join(', '));
   if (keyErrors.length) {

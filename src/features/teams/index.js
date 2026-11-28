@@ -1,6 +1,6 @@
 'use strict';
 
-import { tKey } from '../../i18n/index.js';
+import { tKey, pluralKey } from '../../i18n/index.js';
 
 import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
@@ -246,9 +246,9 @@ function teamCardHtml(team) {
         </div>
         <p class="team-card-description">${escapeHtml(team.description || tKey("no.description"))}</p>
         <div class="team-card-stats">
-          <span><b>${Number(team.membersCount) || 0}</b> ${tKey("members")}</span>
-          <span><b>${Number(team.modesCount) || 0}</b> ${tKey("modes")}</span>
-          <span><b>${Number(team.followers) || 0}</b> ${tKey("followers")}</span>
+          <span><b>${Number(team.membersCount) || 0}</b> ${pluralKey("members", team.membersCount)}</span>
+          <span><b>${Number(team.modesCount) || 0}</b> ${pluralKey("modes", team.modesCount)}</span>
+          <span><b>${Number(team.followers) || 0}</b> ${pluralKey("followers", team.followers)}</span>
         </div>
         <div class="team-card-actions">${actions.join('')}</div>
       </div>
@@ -1089,7 +1089,7 @@ export function renderTeamPage(team, profile) {
           ${modes.map((mode) => `
             <button class="profile-mode-row team-mode-row" type="button" data-team-mode="${escapeHtml(mode.slug)}">
               <span>${escapeHtml(mode.title)}</span>
-              <b>${tKey("pattern.x.installs", [Number(mode.installs) || 0])}</b>
+              <b>${pluralKey("pattern.x.installs", Number(mode.installs) || 0)}</b>
             </button>
           `).join('') || '<div class="hint">' + tKey("no.published.modes.yet.2") + '</div>'}
         </div>

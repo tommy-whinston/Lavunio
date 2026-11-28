@@ -147,14 +147,17 @@ export async function loadChatMessages() {
 
 export function renderChatMessages() {
   if (!els.chatMessages) return;
+  const chat = els.chatMessages;
+  // Автоскролл только когда пользователь и так у нижнего края, иначе опрос бросает чтение истории.
+  const nearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 80;
   const me = S.lavunio && S.lavunio.user ? S.lavunio.user.id : '';
-  els.chatMessages.innerHTML = (S.chatMessages || []).map((message) => `
+  chat.innerHTML = (S.chatMessages || []).map((message) => `
     <div class="chat-msg ${message.senderId === me ? 'own' : ''}">
       <div class="meta">${escapeHtml(message.senderDisplayName || message.senderUsername)} · ${escapeHtml(formatDateTime(message.createdAt))}</div>
       ${escapeHtml(message.body)}
     </div>
   `).join('') || '<div class="hint">' + tKey("no.messages.yet") + '</div>';
-  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  if (nearBottom) chat.scrollTop = chat.scrollHeight;
 }
 
 export async function sendChatMessage() {

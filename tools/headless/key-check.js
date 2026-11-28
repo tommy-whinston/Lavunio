@@ -71,8 +71,14 @@ function checkKeys() {
     else if (!ru[key] || !en[key]) empty.push({ key, where });
   }
 
-  const ruOnly = Object.keys(ru).filter((key) => !(key in en));
-  const enOnly = Object.keys(en).filter((key) => !(key in ru));
+  // Формы множественного числа (.one/.few/.many/.other) намеренно асимметричны:
+  // в ru есть few/many, в en — other. Симметрию требуем только у базовых ключей.
+  const PLURAL_SUFFIX = /\.(one|few|many|other|zero|two)$/;
+  const ruOnly = Object.keys(ru).filter((key) => !(key in en) && !PLURAL_SUFFIX.test(key));
+  const enOnly = Object.keys(en).filter((key) => !(key in ru) && !PLURAL_SUFFIX.test(key));
+  const pluralOrphans = Object.keys(ru)
+    .concat(Object.keys(en))
+    .filter((key) => PLURAL_SUFFIX.test(key) && !(key.replace(PLURAL_SUFFIX, '') in ru && key.replace(PLURAL_SUFFIX, '') in en));
   const duplicate = (text) => {
     const keys = [...text.matchAll(/^\s*"([^"]+)":/gm)].map((match) => match[1]);
     const seen = new Set();
@@ -81,7 +87,7 @@ function checkKeys() {
   const duplicatesRu = duplicate(fs.readFileSync(path.join(SRC, 'i18n/locales/ru.js'), 'utf8'));
   const duplicatesEn = duplicate(fs.readFileSync(path.join(SRC, 'i18n/locales/en.js'), 'utf8'));
 
-  return { used: used.size, ru: Object.keys(ru).length, en: Object.keys(en).length, missing, empty, ruOnly, enOnly, duplicatesRu, duplicatesEn };
+  return { used: used.size, ru: Object.keys(ru).length, en: Object.keys(en).length, missing, empty, ruOnly, enOnly, pluralOrphans, duplicatesRu, duplicatesEn };
 }
 
 module.exports = { checkKeys };

@@ -1,6 +1,6 @@
 'use strict';
 
-import { tKey } from '../../i18n/index.js';
+import { tKey, pluralKey } from '../../i18n/index.js';
 
 import { S } from '../../core/state.js';
 import { escapeHtml } from '../../core/dom.js';
@@ -86,7 +86,7 @@ export function modeCardHtml(mode, withMenu = false, playMode = false) {
         <div class="card-desc">${escapeHtml(modeShortDescription(mode))}</div>
         ${tags ? `<div class="tags">${tags}</div>` : ''}
         <div class="card-foot">
-          <span class="card-installs">${Number(mode.installs) ? tKey("pattern.x.installs", [Number(mode.installs)]) : ''}</span>
+          <span class="card-installs">${Number(mode.installs) ? pluralKey("pattern.x.installs", Number(mode.installs)) : ''}</span>
           ${mode.rating ? `<span class="card-installs">★ ${Number(mode.rating).toFixed(1)}</span>` : ''}
           <span class="card-size">${escapeHtml(mode.size || '-')}</span>
           ${playMode
