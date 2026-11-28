@@ -3,6 +3,7 @@
 import { $ } from '../core/dom.js';
 import { els } from '../core/elements.js';
 import { tKey } from '../i18n/index.js';
+import { playUiSound } from '../core/sound.js';
 import { closeSelectMenu, syncSelectLabels } from './select.js';
 import { growAllTextareas } from './textarea.js';
 import { fillSettingsForm } from '../features/settings/view.js';
@@ -50,6 +51,7 @@ export function openModal(id) {
     refreshLavunioStatus();
   }
   $(id).hidden = false;
+  playUiSound('pop');
   requestAnimationFrame(() => {
     syncSelectLabels();
     growAllTextareas($(id));
@@ -59,7 +61,12 @@ export function openModal(id) {
 
 export function closeModals() {
   closeSelectMenu();
-  document.querySelectorAll('.modal-overlay').forEach((m) => (m.hidden = true));
+  let closedAny = false;
+  document.querySelectorAll('.modal-overlay').forEach((m) => {
+    if (!m.hidden) closedAny = true;
+    m.hidden = true;
+  });
+  if (closedAny) playUiSound('close');
   if (confirmResolve) {
     const resolve = confirmResolve;
     confirmResolve = null;
@@ -84,6 +91,7 @@ export function askConfirm(title, text, okLabel = tKey("delete")) {
 
 function closeConfirm(value) {
   els.confirmModal.hidden = true;
+  playUiSound('close');
   if (confirmResolve) {
     const resolve = confirmResolve;
     confirmResolve = null;
@@ -100,6 +108,7 @@ function closeTopModal() {
     closeConfirm(false);
   } else {
     top.hidden = true;
+    playUiSound('close');
     restoreFocus();
   }
   return true;
@@ -115,6 +124,7 @@ export function bindModals() {
         closeConfirm(false);
       } else {
         const target = $(btn.dataset.close);
+        if (target && !target.hidden) playUiSound('close');
         if (target) target.hidden = true;
         restoreFocus();
       }
@@ -124,7 +134,7 @@ export function bindModals() {
     ov.addEventListener('mousedown', (e) => {
       if (e.target !== ov) return;
       if (ov.id === 'modal-confirm') closeConfirm(false);
-      else { ov.hidden = true; restoreFocus(); }
+      else { playUiSound('close'); ov.hidden = true; restoreFocus(); }
     });
   });
   document.addEventListener('keydown', (e) => {

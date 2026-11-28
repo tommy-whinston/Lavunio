@@ -4,7 +4,7 @@ const STORAGE_KEY = 'lavunio.uiSounds';
 let enabled = true;
 let context = null;
 let master = null;
-let lastSoundAt = 0;
+const lastSoundAt = {};
 
 try {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -45,49 +45,82 @@ function ensureContext() {
   return context;
 }
 
-function tone(frequency, delay, duration, volume = 0.2, type = 'sine') {
+/* Один мягкий тон: осциллятор → плавная огибающая → сглаживающий lowpass,
+   чтобы убрать резкий «цифровой» старт и сделать звук тёплым. */
+function tone({ freq, at = 0, dur, vol = 0.12, type = 'sine', glide = null, cutoff = null }) {
   const audio = ensureContext();
   if (!audio || !master) return;
-  const startAt = audio.currentTime + delay;
+  const startAt = audio.currentTime + at;
   const oscillator = audio.createOscillator();
   const gain = audio.createGain();
+  const filter = audio.createBiquadFilter();
+
   oscillator.type = type;
-  oscillator.frequency.setValueAtTime(frequency, startAt);
+  oscillator.frequency.setValueAtTime(freq, startAt);
+  if (glide) {
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(40, glide), startAt + dur);
+  }
+
+  filter.type = 'lowpass';
+  filter.frequency.value = cutoff || freq * 5;
+  filter.Q.value = 0.6;
+
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), startAt + 0.008);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-  oscillator.connect(gain);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), startAt + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+
+  oscillator.connect(filter);
+  filter.connect(gain);
   gain.connect(master);
   oscillator.start(startAt);
-  oscillator.stop(startAt + duration + 0.02);
+  oscillator.stop(startAt + dur + 0.03);
 }
 
 export function playUiSound(kind = 'click') {
   if (!enabled) return;
   const now = performance.now();
-  if (now - lastSoundAt < 28) return;
-  lastSoundAt = now;
-  if (kind === 'tab') {
-    tone(620, 0, 0.055, 0.15);
-    return;
+  /* Троттл на вид звука: разные события не глушат друг друга. */
+  if (now - (lastSoundAt[kind] || 0) < 28) return;
+  lastSoundAt[kind] = now;
+
+  switch (kind) {
+    case 'tab':
+      tone({ freq: 620, dur: 0.06, vol: 0.1 });
+      tone({ freq: 930, at: 0.006, dur: 0.05, vol: 0.035 });
+      return;
+    case 'toggle':
+      tone({ freq: 523.25, dur: 0.09, vol: 0.09 });
+      tone({ freq: 783.99, at: 0.04, dur: 0.1, vol: 0.07 });
+      return;
+    case 'success':
+      tone({ freq: 523.25, dur: 0.35, vol: 0.1 });
+      tone({ freq: 659.25, at: 0.09, dur: 0.35, vol: 0.09 });
+      tone({ freq: 783.99, at: 0.18, dur: 0.45, vol: 0.08 });
+      tone({ freq: 1046.5, at: 0.27, dur: 0.55, vol: 0.055 });
+      return;
+    case 'error':
+      tone({ freq: 392, dur: 0.16, vol: 0.1, glide: 370 });
+      tone({ freq: 311.13, at: 0.12, dur: 0.22, vol: 0.1, glide: 290 });
+      return;
+    case 'warn':
+      tone({ freq: 440, dur: 0.18, vol: 0.09, glide: 415 });
+      return;
+    case 'pop':
+      tone({ freq: 300, dur: 0.09, vol: 0.09, glide: 520 });
+      return;
+    case 'close':
+      tone({ freq: 430, dur: 0.09, vol: 0.08, glide: 240 });
+      return;
+    case 'begin':
+      tone({ freq: 660, dur: 0.05, vol: 0.09 });
+      tone({ freq: 990, at: 0.06, dur: 0.06, vol: 0.06 });
+      return;
+    default:
+      /* Клики: короткий мягкий «тук» вместо пика. */
+      tone({ freq: 190, dur: 0.05, vol: 0.11 });
+      tone({ freq: 950, dur: 0.03, vol: 0.035 });
+      return;
   }
-  if (kind === 'toggle') {
-    tone(560, 0, 0.05, 0.13);
-    tone(840, 0.035, 0.06, 0.08);
-    return;
-  }
-  if (kind === 'success') {
-    tone(523.25, 0, 0.12, 0.18);
-    tone(659.25, 0.07, 0.13, 0.16);
-    tone(783.99, 0.14, 0.16, 0.13);
-    return;
-  }
-  if (kind === 'error') {
-    tone(220, 0, 0.12, 0.14, 'triangle');
-    return;
-  }
-  tone(520, 0, 0.05, 0.16);
-  tone(780, 0.006, 0.04, 0.06);
 }
 
 export function initUiSounds() {

@@ -6,6 +6,7 @@ import { api } from '../../api/client.js';
 import { S } from '../../core/state.js';
 import { modeById } from '../../core/modes.js';
 import { parseDownloadSize } from '../../core/units.js';
+import { playUiSound } from '../../core/sound.js';
 import { imageSrc } from '../catalog/cards.js';
 import { toast } from '../../ui/toast.js';
 
@@ -84,6 +85,7 @@ function pumpDownloads() {
   }
 
   task.status = 'downloading';
+  playUiSound('begin');
   task.progress = 0;
   task.stage = tKey("preparing");
   task.speed = 0;
