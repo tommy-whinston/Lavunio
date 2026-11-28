@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const root = path.resolve(__dirname, '../..');
 const args = process.argv.slice(2);
@@ -32,6 +32,28 @@ const signingKeyFile = argValue('--signing-key')
 function fail(message) {
   console.error(`\n[release] ERROR: ${message}`);
   process.exit(1);
+}
+
+function runTestsParallel() {
+  console.log('[release] headless tests + cargo test (parallel)');
+  const jobs = [
+    { name: 'headless', command: 'node', argv: ['tools/headless/run.js'] },
+    { name: 'cargo test', command: 'cmd', argv: ['/c', 'call build-env.bat && cd src-tauri && cargo test --bin lavunio'] }
+  ];
+  return Promise.all(jobs.map((job) => new Promise((resolve) => {
+    const child = spawn(job.command, job.argv, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '';
+    child.stdout.on('data', (chunk) => { output += chunk; });
+    child.stderr.on('data', (chunk) => { output += chunk; });
+    child.on('close', (code) => resolve({ job, code, output }));
+  }))).then((results) => {
+    for (const { job, code, output } of results) {
+      console.log(`\n[release] === ${job.name} (exit ${code}) ===`);
+      if (output.trim()) console.log(output.trimEnd());
+    }
+    const failed = results.find(({ code }) => code !== 0);
+    if (failed) fail(`тесты провалились: ${failed.job.name}`);
+  });
 }
 
 function run(command, argv, options = {}) {
@@ -178,7 +200,7 @@ function buildSignedUpdate(version, keys) {
   return { manifestPath, signaturePath, dir };
 }
 
-function main() {
+async function main() {
   if (hasFlag('--help')) {
     console.log(`Usage: npm run release -- [options]
 
@@ -213,8 +235,7 @@ Options:
   console.log(`[release] notes:\n${notes}`);
 
   if (!skipTests) {
-    run('node', ['tools/headless/run.js']);
-    run('cmd', ['/c', 'call build-env.bat && cd src-tauri && cargo test --bin lavunio']);
+    await runTestsParallel();
   }
 
   if (!dryRun) {
