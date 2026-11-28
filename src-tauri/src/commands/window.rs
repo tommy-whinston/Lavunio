@@ -1,5 +1,5 @@
 use crate::state::AppState;
-use tauri::{AppHandle, Manager, State, Window};
+use tauri::{AppHandle, Emitter, Manager, State, Window};
 
 fn save_window_size(window: &Window, state: &AppState) {
     if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
@@ -62,6 +62,50 @@ pub fn win_hide(window: Window, state: State<'_, AppState>) -> Result<(), String
 pub fn win_close(app: AppHandle, window: Window, state: State<'_, AppState>) -> Result<(), String> {
     save_window_size(&window, state.inner());
     app.exit(0);
+    Ok(())
+}
+
+// ---------------------------------------------------------------- трей-меню
+
+#[tauri::command]
+pub fn tray_hide(window: Window) -> Result<(), String> {
+    window.hide().map_err(|e| e.to_string())
+}
+
+/* Действия из кастомного меню трея. Окно меню прячем всегда: размеры
+   основного окна сохраняем только для main, чтобы трей-меню их не затирало. */
+#[tauri::command]
+pub fn tray_action(app: AppHandle, window: Window, action: String) -> Result<(), String> {
+    let _ = window.hide();
+    match action.as_str() {
+        "show" => {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }
+        "hide" => {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.hide();
+            }
+        }
+        "updates" => {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+            let _ = app.emit("lavunio:tray-updates", ());
+        }
+        "quit" => {
+            if let Some(w) = app.get_webview_window("main") {
+                save_window_size_for_event(&w, &app);
+            }
+            app.exit(0);
+        }
+        _ => {}
+    }
     Ok(())
 }
 

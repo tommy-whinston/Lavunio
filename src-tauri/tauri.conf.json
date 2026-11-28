@@ -10,6 +10,20 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "traymenu",
+        "url": "tray.html",
+        "width": 246,
+        "height": 240,
+        "decorations": false,
+        "resizable": false,
+        "visible": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "shadow": false,
+        "transparent": true,
+        "theme": "Dark"
+      },
+      {
         "label": "main",
         "title": "Lavunio",
         "width": 380,

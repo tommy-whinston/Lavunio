@@ -41,6 +41,7 @@
     checkUpdate: () => invoke("check_update"),
     installUpdate: (url, sha256) => invoke("install_update", { url, sha256 }),
     onUpdateProgress: (cb) => listen("update:progress", (e) => cb(e.payload)),
+    onTrayUpdates: (cb) => listen("lavunio:tray-updates", () => cb()),
 
     // Lavunio ID
     lavunioStatus: () => invoke("lavunio_status"),

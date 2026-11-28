@@ -170,6 +170,7 @@ async function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') checkUpdateInBackground();
   });
+  if (api && api.onTrayUpdates) api.onTrayUpdates(() => checkUpdateInBackground(true));
   setInterval(() => checkUpdateInBackground(), UPDATE_CHECK_INTERVAL_MS);
   document.addEventListener('lavunio:lang', () => {
     renderAccountChip();

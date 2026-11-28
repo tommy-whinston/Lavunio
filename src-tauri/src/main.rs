@@ -14,7 +14,6 @@ mod update;
 mod util;
 
 use state::AppState;
-use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
 
@@ -27,22 +26,6 @@ fn show_main(app: &AppHandle) {
 }
 
 fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
-    let lang = app
-        .state::<AppState>()
-        .store
-        .lock()
-        .unwrap()
-        .settings
-        .lang
-        .clone();
-    let (show_label, quit_label) = if lang == "en" {
-        ("Open Lavunio", "Quit")
-    } else {
-        ("Р С›РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљРЎРЉ Lavunio", "Р вЂ™РЎвЂ№РЎвЂ¦Р С•Р Т‘")
-    };
-    let show_item = MenuItem::with_id(app, "show", show_label, true, None::<&str>)?;
-    let quit_item = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
     let Some(icon) = app.default_window_icon().cloned() else {
         return Ok(());
     };
@@ -50,37 +33,67 @@ fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
     TrayIconBuilder::new()
         .icon(icon)
         .tooltip("Lavunio")
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "show" => show_main(app),
-            "quit" => {
-                if let Some(window) = app.get_webview_window("main") {
-                    commands::save_window_size_for_event(&window, app);
-                }
-                app.exit(0);
-            }
-            _ => {}
-        })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
-                button: MouseButton::Left,
+                button,
                 button_state: MouseButtonState::Up,
+                position,
                 ..
             } = event
             {
                 let app = tray.app_handle();
-                if let Some(window) = app.get_webview_window("main") {
-                    if window.is_visible().unwrap_or(false) {
-                        let _ = window.hide();
-                    } else {
-                        show_main(app);
+                match button {
+                    MouseButton::Left => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                show_main(app);
+                            }
+                        }
                     }
+                    MouseButton::Right => toggle_tray_menu(app, position),
+                    _ => {}
                 }
             }
         })
         .build(app)?;
+
+    // Кастомное меню трея: прячем при клике мимо (потере фокуса).
+    if let Some(menu) = app.get_webview_window("traymenu") {
+        let window = menu.clone();
+        menu.on_window_event(move |event| {
+            if let tauri::WindowEvent::Focused(false) = event {
+                let _ = window.hide();
+            }
+        });
+    }
+
     Ok(())
+}
+
+fn toggle_tray_menu(app: &AppHandle, cursor: tauri::PhysicalPosition<f64>) {
+    let Some(menu) = app.get_webview_window("traymenu") else {
+        return;
+    };
+    if menu.is_visible().unwrap_or(false) {
+        let _ = menu.hide();
+        return;
+    }
+    let size = menu
+        .outer_size()
+        .unwrap_or(tauri::PhysicalSize::new(246, 240));
+    let mut x = cursor.x - size.width as f64 / 2.0;
+    let mut y = cursor.y - size.height as f64 - 8.0;
+    if x < 0.0 {
+        x = 0.0;
+    }
+    if y < 0.0 {
+        y = 0.0;
+    }
+    let _ = menu.set_position(tauri::PhysicalPosition::new(x, y));
+    let _ = menu.show();
+    let _ = menu.set_focus();
 }
 
 fn main() {
@@ -92,6 +105,8 @@ fn main() {
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::win_minimize,
+            commands::tray_hide,
+            commands::tray_action,
             commands::win_toggle_maximize,
             commands::win_toggle_fullscreen,
             commands::win_is_visible,
