@@ -85,11 +85,6 @@ pub fn tray_action(app: AppHandle, window: Window, action: String) -> Result<(),
                 let _ = w.set_focus();
             }
         }
-        "hide" => {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.hide();
-            }
-        }
         "updates" => {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.show();

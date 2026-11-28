@@ -18,16 +18,14 @@
   const LABELS = {
     ru: {
       show: 'Открыть Lavunio',
-      hide: 'Скрыть в трей',
       updates: 'Проверить обновления',
-      folder: 'Открыть папку игры',
+      appfolder: 'Открыть папку лаунчера',
       quit: 'Выйти'
     },
     en: {
       show: 'Open Lavunio',
-      hide: 'Hide to tray',
       updates: 'Check for updates',
-      folder: 'Open game folder',
+      appfolder: 'Open launcher folder',
       quit: 'Quit'
     }
   };
@@ -43,8 +41,8 @@
     button.addEventListener('click', async () => {
       const action = button.dataset.action;
       try {
-        if (action === 'folder') {
-          await invoke('game_open_folder');
+        if (action === 'appfolder') {
+          await invoke('app_open_folder');
         } else {
           await invoke('tray_action', { action });
         }

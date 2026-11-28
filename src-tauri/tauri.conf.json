@@ -13,7 +13,7 @@
         "label": "traymenu",
         "url": "tray.html",
         "width": 246,
-        "height": 240,
+        "height": 206,
         "decorations": false,
         "resizable": false,
         "visible": false,
